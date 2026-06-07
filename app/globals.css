@@ -1,26 +1,100 @@
 @import "tailwindcss";
 
+@theme {
+  --color-mint: #4ade80;
+  --color-mint-soft: #86efac;
+  --color-ink: #030403;
+  --font-sans: "Arial Narrow", "Helvetica Neue", Arial, ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "SFMono-Regular", "Roboto Mono", "Courier New", ui-monospace, monospace;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --mint: #4ade80;
+  --mint-soft: #86efac;
+  --background: #000000;
+  --foreground: #f8fafc;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+* {
+  box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
+  background: var(--background);
 }
 
 body {
-  background: var(--background);
+  margin: 0;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(74, 222, 128, 0.12), transparent 32rem),
+    #000;
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+}
+
+::selection {
+  background: rgba(74, 222, 128, 0.35);
+}
+
+.bg-grid {
+  background-image:
+    linear-gradient(rgba(74, 222, 128, 0.09) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(74, 222, 128, 0.09) 1px, transparent 1px);
+  background-size: 96px 96px;
+}
+
+.text-glow {
+  text-shadow:
+    0 0 26px rgba(74, 222, 128, 0.46),
+    0 0 90px rgba(74, 222, 128, 0.32);
+}
+
+.section-shell {
+  width: min(100%, 1280px);
+  margin-inline: auto;
+  padding: 72px 32px;
+  border-bottom: 1px solid rgba(74, 222, 128, 0.12);
+}
+
+.panel {
+  border: 1px solid rgba(74, 222, 128, 0.18);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.01)),
+    rgba(2, 8, 4, 0.72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.crosshair {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+}
+
+.crosshair::before,
+.crosshair::after {
+  content: "";
+  position: absolute;
+  background: rgba(74, 222, 128, 0.55);
+  box-shadow: 0 0 14px rgba(74, 222, 128, 0.5);
+}
+
+.crosshair::before {
+  left: 50%;
+  top: 0;
+  width: 1px;
+  height: 100%;
+}
+
+.crosshair::after {
+  left: 0;
+  top: 50%;
+  width: 100%;
+  height: 1px;
+}
+
+@media (max-width: 720px) {
+  .section-shell {
+    padding: 56px 20px;
+  }
 }
