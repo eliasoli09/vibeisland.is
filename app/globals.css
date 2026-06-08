@@ -4,8 +4,8 @@
   --color-mint: #4ade80;
   --color-mint-soft: #86efac;
   --color-ink: #030403;
-  --font-sans: "Arial Narrow", "Helvetica Neue", Arial, ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "SFMono-Regular", "Roboto Mono", "Courier New", ui-monospace, monospace;
+  --font-sans: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-ibm-plex-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 :root {

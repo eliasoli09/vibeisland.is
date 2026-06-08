@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import {
   ArrowUpRight,
@@ -328,16 +329,19 @@ function Hero({ lang, setLang }: { lang: Lang; setLang: (lang: Lang) => void }) 
         <div className="crosshair bottom-[24%] left-[18%]" />
         <div className="crosshair bottom-[24%] right-[18%]" />
 
-        <div className="select-none">
-          <h1 className="text-[clamp(5.3rem,18vw,14rem)] font-black uppercase leading-[0.72] tracking-[0.03em] text-mint text-glow">
-            VIBE
-          </h1>
-          <p className="mt-5 font-mono text-[clamp(2.4rem,7vw,5.2rem)] font-black uppercase leading-none tracking-[0.72em] text-mint text-glow max-sm:tracking-[0.32em]">
-            Ísland
-          </p>
+        <div className="relative -my-8 aspect-[3/2] w-[min(100%,980px)] select-none sm:-my-14 lg:-my-20">
+          <h1 className="sr-only">Vibe Ísland</h1>
+          <Image
+            src="/vibe-iceland-logo.png"
+            alt=""
+            fill
+            priority
+            sizes="(max-width: 768px) 94vw, 980px"
+            className="object-contain opacity-95 mix-blend-screen saturate-125"
+          />
         </div>
 
-        <p className="mt-12 font-mono text-sm uppercase tracking-[0.34em] text-white/85">{t.eyebrow}</p>
+        <p className="mt-8 font-mono text-sm uppercase tracking-[0.34em] text-white/85 sm:mt-10">{t.eyebrow}</p>
         <div className="mt-8 space-y-1 font-mono text-sm uppercase tracking-[0.22em]">
           <p className="text-mint">{t.date}</p>
           <p className="text-white/80">{t.city}</p>
@@ -598,9 +602,14 @@ function Footer({ lang }: { lang: Lang }) {
 
   return (
     <footer className="mx-auto flex max-w-7xl flex-col gap-8 px-6 pb-10 font-mono text-xs uppercase tracking-[0.2em] text-white/65 sm:px-10 md:flex-row md:items-end md:justify-between">
-      <div>
-        <p className="text-3xl font-black leading-none tracking-[0.08em] text-mint text-glow">VIBE</p>
-        <p className="text-[10px] font-black tracking-[0.58em] text-mint">Ísland</p>
+      <div className="relative h-14 w-40 overflow-hidden rounded-sm">
+        <Image
+          src="/vibe-iceland-wordmark.png"
+          alt="Vibe Ísland"
+          fill
+          sizes="144px"
+          className="object-cover object-center opacity-80 saturate-125"
+        />
       </div>
       <p className="text-mint/80">© 2026 Vibe Ísland</p>
       <div className="flex flex-wrap gap-8">
