@@ -14,10 +14,10 @@ const applicationCopy = {
     tag: "Application",
     title: "Vibe Iceland 2026 - Application",
     body: "Tell us who you are, what you want to build, and how you want to contribute during the weekend.",
-    destination: "Applications are sent as an email to hallo@vibeisland.is. They are not stored in a database yet.",
+    destination: "Applications go directly to the Vibe Ísland team.",
     submit: "Send Application",
-    emailSubject: "Vibe Iceland 2026 Application",
-    sentHint: "Your email app should open with the application filled in. Send it from there to complete the application.",
+    successMessage: "Thank you for applying. We have received your application.",
+    errorMessage: "Something went wrong. Please try again or email hallo@vibeisland.is.",
     sections: {
       basics: "Part 1 - Basic information",
       background: "Part 2 - Background",
@@ -55,10 +55,10 @@ const applicationCopy = {
     tag: "Umsókn",
     title: "Vibe Iceland 2026 - Umsókn",
     body: "Segðu okkur hver þú ert, hvað þig langar að byggja og hvernig þú vilt leggja þitt af mörkum yfir helgina.",
-    destination: "Umsóknin fer sem tölvupóstur á hallo@vibeisland.is. Hún vistast ekki í gagnagrunni ennþá.",
+    destination: "Umsóknin fer beint til teymisins hjá Vibe Ísland.",
     submit: "Senda umsókn",
-    emailSubject: "Vibe Iceland 2026 Umsókn",
-    sentHint: "Tölvupóstforritið þitt ætti að opnast með útfylltri umsókn. Sendu póstinn þaðan til að klára umsóknina.",
+    successMessage: "Takk fyrir umsóknina. Við höfum móttekið hana.",
+    errorMessage: "Eitthvað fór úrskeiðis. Vinsamlegast reyndu aftur eða sendu tölvupóst á hallo@vibeisland.is.",
     sections: {
       basics: "Hluti 1 - Grunnupplýsingar",
       background: "Hluti 2 - Bakgrunnur",
@@ -304,12 +304,16 @@ export default function ApplyPage() {
   };
   const [applyingAs, setApplyingAs] = useState<string>(options.applyingAs[0]);
   const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setSubmitError(false);
+    setSubmitting(true);
 
     const formData = new FormData(event.currentTarget);
-    const lines: string[] = [];
+    const data: Record<string, string | string[]> = {};
     const grouped = new Map<string, string[]>();
 
     formData.forEach((value, key) => {
@@ -319,11 +323,37 @@ export default function ApplyPage() {
     });
 
     grouped.forEach((values, key) => {
-      lines.push(`${key}: ${values.join(", ")}`);
+      data[key] = values.length === 1 ? values[0] : values;
     });
 
-    setSubmitted(true);
-    window.location.href = `mailto:hallo@vibeisland.is?subject=${encodeURIComponent(t.emailSubject)}&body=${encodeURIComponent(lines.join("\n"))}`;
+    const getField = (name: string) => {
+      const val = data[name];
+      return Array.isArray(val) ? val[0] : (val ?? "");
+    };
+
+    const applicationData = {
+      full_name: getField(t.fields.fullName),
+      email: getField(t.fields.email),
+      phone: getField(t.fields.phone),
+      birthdate: getField(t.fields.birthdate),
+      school: getField(t.fields.school),
+      residence: getField(t.fields.residence),
+      data,
+    };
+
+    try {
+      const res = await fetch("/api/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(applicationData),
+      });
+      if (!res.ok) throw new Error("Server error");
+      setSubmitted(true);
+    } catch {
+      setSubmitError(true);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -413,14 +443,26 @@ export default function ApplyPage() {
             </section>
 
             <div className="flex flex-col items-start gap-4 border-t border-mint/10 pt-10 sm:flex-row sm:items-center sm:justify-between">
-              <button
-                type="submit"
-                className="inline-flex h-14 items-center gap-5 rounded-md border border-mint bg-mint px-8 font-mono text-[12px] font-black uppercase tracking-tight text-black shadow-[0_0_34px_rgba(74,222,128,0.24)] transition hover:bg-mint-soft"
-              >
-                {t.submit}
-                <ArrowUpRight className="size-4" />
-              </button>
-              {submitted ? <p className="max-w-md font-mono text-xs leading-5 text-mint">{t.sentHint}</p> : null}
+              {submitted ? null : (
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="inline-flex h-14 items-center gap-5 rounded-md border border-mint bg-mint px-8 font-mono text-[12px] font-black uppercase tracking-tight text-black shadow-[0_0_34px_rgba(74,222,128,0.24)] transition hover:bg-mint-soft disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {submitting ? "..." : t.submit}
+                  {!submitting && <ArrowUpRight className="size-4" />}
+                </button>
+              )}
+              {submitted ? (
+                <p className="max-w-md rounded border border-mint/30 bg-mint/10 p-4 font-mono text-sm leading-6 text-mint">
+                  {t.successMessage}
+                </p>
+              ) : null}
+              {submitError ? (
+                <p className="max-w-md font-mono text-xs leading-5 text-red-400">
+                  {t.errorMessage}
+                </p>
+              ) : null}
             </div>
           </div>
         </form>
