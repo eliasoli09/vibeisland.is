@@ -8,3 +8,12 @@ test("application API uses a server-only Supabase key", () => {
   assert.match(source, /SUPABASE_SERVICE_ROLE_KEY|SUPABASE_SECRET_KEY/);
   assert.doesNotMatch(source, /NEXT_PUBLIC_SUPABASE_ANON_KEY/);
 });
+
+test("application API is pinned to the Node.js runtime", () => {
+  assert.match(source, /export const runtime = "nodejs"/);
+});
+
+test("application API handles invalid JSON requests", () => {
+  assert.match(source, /try\s*{[\s\S]*request\.json\(\)[\s\S]*}\s*catch/);
+  assert.match(source, /Invalid application request/);
+});

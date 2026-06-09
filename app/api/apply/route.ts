@@ -1,6 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
+export const runtime = "nodejs";
+
 export async function POST(request: Request) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SECRET_KEY;
@@ -16,7 +18,13 @@ export async function POST(request: Request) {
     },
   });
 
-  const body = await request.json();
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid application request." }, { status: 400 });
+  }
+
   const { full_name, email, phone, birthdate, school, residence, data } = body;
 
   if (!full_name || !email || !phone || !birthdate || !school || !residence || !data) {
