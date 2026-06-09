@@ -348,7 +348,7 @@ function Hero({ lang, setLang }: { lang: Lang; setLang: (lang: Lang) => void }) 
         </div>
         <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row">
           <ArrowButton href="/apply">{t.apply}</ArrowButton>
-          <ArrowButton href="mailto:hallo@vibeisland.is?subject=Vibe%20%C3%8Dsland%20partnership" variant="outline">
+          <ArrowButton href="/partner" variant="outline">
             {t.partner}
           </ArrowButton>
         </div>
@@ -575,7 +575,7 @@ function FinalCTA({ lang }: { lang: Lang }) {
             <p className="mt-8 max-w-md font-mono text-sm leading-7 text-white/62">{t.cta.body}</p>
             <div className="mt-8 flex flex-col gap-4 sm:flex-row">
               <ArrowButton href="/apply">{t.apply}</ArrowButton>
-              <ArrowButton href="mailto:hallo@vibeisland.is?subject=Vibe%20%C3%8Dsland%20partnership" variant="outline">
+              <ArrowButton href="/partner" variant="outline">
                 {t.partner}
               </ArrowButton>
             </div>
