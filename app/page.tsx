@@ -170,13 +170,13 @@ const factIcons = [CalendarDays, MapPin, Users, Zap];
 const menuResources = [
   {
     label: "Everything you need to know",
-    href: "/vibe-iceland-everything-you-need-to-know.pdf",
-    meta: "English PDF",
+    href: "/everything-you-need-to-know",
+    meta: "Scroll guide",
   },
   {
     label: "Allt sem þú þarft að vita",
-    href: "/vibe-island-allt-sem-thu-tharft-ad-vita.pdf",
-    meta: "Íslensk PDF",
+    href: "/allt-sem-thu-tharft-ad-vita",
+    meta: "Scroll síða",
   },
 ] as const;
 const contactDetails = {
@@ -333,8 +333,6 @@ function MenuDropdown({ lang, open }: { lang: Lang; open: boolean }) {
             <a
               key={resource.href}
               href={resource.href}
-              target="_blank"
-              rel="noreferrer"
               className="group rounded border border-white/10 bg-white/[0.03] p-3 transition hover:border-mint/45 hover:bg-mint/10"
             >
               <span className="block font-mono text-xs font-black uppercase tracking-[0.12em] text-white group-hover:text-mint">{resource.label}</span>

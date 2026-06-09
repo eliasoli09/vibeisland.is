@@ -9,11 +9,13 @@ test("landing page partner CTAs route to the partner form", () => {
   assert.doesNotMatch(source, /Vibe%20%C3%8Dsland%20partnership/);
 });
 
-test("landing page menu includes PDF guides and contact details", () => {
+test("landing page menu includes scroll guides and contact details", () => {
   assert.match(source, /Everything you need to know/);
   assert.match(source, /Allt sem þú þarft að vita/);
-  assert.match(source, /\/vibe-iceland-everything-you-need-to-know\.pdf/);
-  assert.match(source, /\/vibe-island-allt-sem-thu-tharft-ad-vita\.pdf/);
+  assert.match(source, /\/everything-you-need-to-know/);
+  assert.match(source, /\/allt-sem-thu-tharft-ad-vita/);
+  assert.doesNotMatch(source, /\/vibe-iceland-everything-you-need-to-know\.pdf/);
+  assert.doesNotMatch(source, /\/vibe-island-allt-sem-thu-tharft-ad-vita\.pdf/);
   assert.match(source, /Elías Óli Tinnusson Björnsson/);
   assert.match(source, /eliasoli0967@gmail\.com/);
   assert.match(source, /\+354 771 2109/);
