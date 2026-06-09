@@ -304,12 +304,12 @@ export default function ApplyPage() {
   };
   const [applyingAs, setApplyingAs] = useState<string>(options.applyingAs[0]);
   const [submitted, setSubmitted] = useState(false);
-  const [submitError, setSubmitError] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSubmitError(false);
+    setSubmitError("");
     setSubmitting(true);
 
     const formData = new FormData(event.currentTarget);
@@ -347,10 +347,14 @@ export default function ApplyPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(applicationData),
       });
-      if (!res.ok) throw new Error("Server error");
+      if (!res.ok) {
+        const serverError = await res.json().catch(() => null);
+        const message = typeof serverError?.error === "string" ? serverError.error : t.errorMessage;
+        throw new Error(message);
+      }
       setSubmitted(true);
-    } catch {
-      setSubmitError(true);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : t.errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -460,7 +464,7 @@ export default function ApplyPage() {
               ) : null}
               {submitError ? (
                 <p className="max-w-md font-mono text-xs leading-5 text-red-400">
-                  {t.errorMessage}
+                  {submitError}
                 </p>
               ) : null}
             </div>
