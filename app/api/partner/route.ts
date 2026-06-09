@@ -54,7 +54,18 @@ export async function POST(request: Request) {
 
   if (error) {
     console.error("Supabase partner insert failed", error);
-    return NextResponse.json({ error: "Could not save partner application." }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: "Could not save partner application.",
+        debug: {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+        },
+      },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({ success: true });
