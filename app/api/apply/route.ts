@@ -28,13 +28,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing required application fields." }, { status: 400 });
   }
 
+  let supabaseProjectUrl: string;
   try {
-    new URL(supabaseUrl);
+    supabaseProjectUrl = new URL(supabaseUrl).origin;
   } catch {
     return NextResponse.json({ error: "Application storage is misconfigured." }, { status: 500 });
   }
 
-  const supabase = createClient(supabaseUrl, supabaseKey, {
+  const supabase = createClient(supabaseProjectUrl, supabaseKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,

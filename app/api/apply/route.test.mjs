@@ -24,12 +24,18 @@ test("application API exposes a lightweight health check", () => {
 });
 
 test("application API validates the request before creating the Supabase client", () => {
-  assert.ok(source.indexOf("Missing required application fields.") < source.indexOf("createClient(supabaseUrl"));
+  assert.ok(source.indexOf("Missing required application fields.") < source.indexOf("createClient(supabaseProjectUrl"));
 });
 
 test("application API validates the Supabase URL format", () => {
   assert.match(source, /new URL\(supabaseUrl\)/);
   assert.match(source, /Application storage is misconfigured/);
+});
+
+test("application API normalizes Supabase URL to the project origin", () => {
+  assert.match(source, /supabaseProjectUrl = new URL\(supabaseUrl\)\.origin/);
+  assert.match(source, /createClient\(supabaseProjectUrl/);
+  assert.doesNotMatch(source, /createClient\(supabaseUrl/);
 });
 
 test("application API returns safe Supabase diagnostics on insert failure", () => {
