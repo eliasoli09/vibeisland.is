@@ -90,7 +90,7 @@ const copy = {
       body: "Join 60+ builders in Reykjavík for Iceland's first vibe coding hackathon.",
       facts: ["21 - 23 August 2026", "Reykjavík, Iceland", "60 Builders", "AI Powered"],
     },
-    footer: ["Instagram", "LinkedIn", "Email"],
+    footer: "Hafðu samband",
   },
   is: {
     navLocation: "Reykjavík, Ísland",
@@ -104,7 +104,7 @@ const copy = {
     essentials: {
       tag: "Aðalatriðin",
       title: "Þrír dagar. Endalausir möguleikar.",
-      body: "Við sameinum 60 þátttakendur, hönnuði og draumafólk til að skapa það næsta, knúið áfram af gervigreind.",
+      body: "Við sameinum 60 þátttakendur til að skapa það næsta, knúið áfram af gervigreind.",
       stats: [
         ["60", "Þátttakendur"],
         ["3", "Dagar"],
@@ -114,7 +114,7 @@ const copy = {
     },
     how: {
       tag: "Svona virkar þetta",
-      title: "Skapaðu. Sendu. Kynntu. Sigraðu.",
+      title: "Skapaðu. Skilaðu. Kynntu. Sigraðu.",
       steps: [
         ["Komdu með hugmynd", "Myndaðu teymi og komdu með hugmynd."],
         ["Skapaðu með AI", "Notaðu verkfæri eins og Claude, Cursor, Lovable, ChatGPT og fleiri."],
@@ -132,7 +132,7 @@ const copy = {
     },
     audience: {
       tag: "Fyrir hverja",
-      title: "Fyrir alla menntaskólanema (2010 - 2008).",
+      title: "Fyrir alla menntaskólanema (2008 - 2010).",
       note: "Engin forritunarreynsla nauðsynleg.",
       cards: [
         ["Nemendur", "Lærðu, byggðu og efldu hæfileikana þína."],
@@ -145,7 +145,7 @@ const copy = {
       title: "Þrír dagar til að byggja framtíðina.",
       days: [
         ["01", "Föstudagur", ["Opnunarathöfn", "Teymamyndun", "Hugmyndavinna", "Vinnustofur"]],
-        ["02", "Laugardagur", ["Byggingardagur", "Mentoravinna", "Vinnustofur", "Samfélagsviðburðir"]],
+        ["02", "Laugardagur", ["sköpunardagur", "Mentoravinna", "Vinnustofur", "Samfélagsviðburðir"]],
         ["03", "Sunnudagur", ["Lokasprettur", "Kynningakeppni", "Verðlaun & lokahóf"]],
       ],
     },
@@ -155,11 +155,11 @@ const copy = {
       coming: "[ Fleiri samstarfsaðilar kynntir síðar ]",
     },
     cta: {
-      title: "Tilbúin að byggja eitthvað magnað?",
+      title: "Tilbúin að skapa eitthvað magnað?",
       body: "Vertu með 60 þátttakendum í Reykjavík á fyrsta vibe coding hackathon Íslands.",
       facts: ["21. - 23. ágúst 2026", "Reykjavík, Ísland", "60 Þátttakendur", "Gervigreindarknúið"],
     },
-    footer: ["Instagram", "LinkedIn", "Netfang"],
+    footer: "Hafðu samband",
   },
 } as const;
 
@@ -681,13 +681,9 @@ function Footer({ lang }: { lang: Lang }) {
         />
       </div>
       <p className="text-mint/80">© 2026 Vibe Ísland</p>
-      <div className="flex flex-wrap gap-8">
-        {t.footer.map((item) => (
-          <a key={item} href={item === t.footer[2] ? "mailto:hallo@vibeisland.is" : "#"} className="transition hover:text-mint">
-            {item}
-          </a>
-        ))}
-      </div>
+      <a href="mailto:Eliasoli0967@gmail.com" className="transition hover:text-mint">
+        {t.footer}
+      </a>
     </footer>
   );
 }

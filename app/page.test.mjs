@@ -20,3 +20,19 @@ test("landing page menu includes scroll guides and contact details", () => {
   assert.match(source, /eliasoli0967@gmail\.com/);
   assert.match(source, /\+354 771 2109/);
 });
+
+test("landing page uses the updated Icelandic copy and footer contact link", () => {
+  assert.match(source, /Skapaðu\. Skilaðu\. Kynntu\. Sigraðu\./);
+  assert.doesNotMatch(source, /Skapaðu\. Sendu\. Kynntu\. Sigraðu\./);
+  assert.match(source, /Við sameinum 60 þátttakendur til að skapa það næsta, knúið áfram af gervigreind\./);
+  assert.doesNotMatch(source, /Við sameinum 60 þátttakendur, hönnuði og draumafólk/);
+  assert.match(source, /2008 - 2010/);
+  assert.doesNotMatch(source, /2010 - 2008/);
+  assert.match(source, /sköpunardagur/);
+  assert.doesNotMatch(source, /Byggingardagur/);
+  assert.match(source, /Tilbúin að skapa eitthvað magnað\?/);
+  assert.doesNotMatch(source, /Tilbúin að byggja eitthvað magnað\?/);
+  assert.match(source, /Hafðu samband/);
+  assert.match(source, /mailto:Eliasoli0967@gmail\.com/);
+  assert.doesNotMatch(source, /mailto:hallo@vibeisland\.is/);
+});
