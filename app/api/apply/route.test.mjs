@@ -31,3 +31,11 @@ test("application API validates the Supabase URL format", () => {
   assert.match(source, /new URL\(supabaseUrl\)/);
   assert.match(source, /Application storage is misconfigured/);
 });
+
+test("application API returns safe Supabase diagnostics on insert failure", () => {
+  assert.match(source, /debug:/);
+  assert.match(source, /code: error\.code/);
+  assert.match(source, /message: error\.message/);
+  assert.doesNotMatch(source, /debug:[\s\S]*supabaseKey/);
+  assert.doesNotMatch(source, /debug:[\s\S]*process\.env/);
+});
