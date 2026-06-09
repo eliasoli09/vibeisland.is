@@ -17,3 +17,8 @@ test("application API handles invalid JSON requests", () => {
   assert.match(source, /try\s*{[\s\S]*request\.json\(\)[\s\S]*}\s*catch/);
   assert.match(source, /Invalid application request/);
 });
+
+test("application API exposes a lightweight health check", () => {
+  assert.match(source, /export async function GET/);
+  assert.match(source, /application-api-ready/);
+});
