@@ -15,13 +15,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Application storage is not configured." }, { status: 500 });
   }
 
-  const supabase = createClient(supabaseUrl, supabaseKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
-
   let body: Record<string, unknown>;
   try {
     body = await request.json();
@@ -34,6 +27,19 @@ export async function POST(request: Request) {
   if (!full_name || !email || !phone || !birthdate || !school || !residence || !data) {
     return NextResponse.json({ error: "Missing required application fields." }, { status: 400 });
   }
+
+  try {
+    new URL(supabaseUrl);
+  } catch {
+    return NextResponse.json({ error: "Application storage is misconfigured." }, { status: 500 });
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
 
   const { error } = await supabase.from("applications").insert({
     full_name,

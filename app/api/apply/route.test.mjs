@@ -22,3 +22,12 @@ test("application API exposes a lightweight health check", () => {
   assert.match(source, /export async function GET/);
   assert.match(source, /application-api-ready/);
 });
+
+test("application API validates the request before creating the Supabase client", () => {
+  assert.ok(source.indexOf("Missing required application fields.") < source.indexOf("createClient(supabaseUrl"));
+});
+
+test("application API validates the Supabase URL format", () => {
+  assert.match(source, /new URL\(supabaseUrl\)/);
+  assert.match(source, /Application storage is misconfigured/);
+});
