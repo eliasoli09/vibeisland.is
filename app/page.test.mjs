@@ -21,6 +21,13 @@ test("landing page menu includes scroll guides and contact details", () => {
   assert.match(source, /\+354 771 2109/);
 });
 
+test("landing page menu stays above the hero logo when opened", () => {
+  assert.match(source, /<nav className="relative z-50 /);
+  assert.match(source, /<MenuDropdown lang=\{lang\} open=\{menuOpen\} \/>/);
+  assert.match(source, /<div className="relative z-10 mx-auto flex min-h-\[calc\(100vh-96px\)\]/);
+  assert.doesNotMatch(source, /<nav className="relative z-10 /);
+});
+
 test("landing page uses the updated Icelandic copy and footer contact link", () => {
   assert.match(source, /Skapaðu\. Skilaðu\. Kynntu\. Sigraðu\./);
   assert.doesNotMatch(source, /Skapaðu\. Sendu\. Kynntu\. Sigraðu\./);

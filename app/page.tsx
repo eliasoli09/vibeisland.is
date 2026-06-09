@@ -318,7 +318,7 @@ function MenuDropdown({ lang, open }: { lang: Lang; open: boolean }) {
   return (
     <div
       className={cn(
-        "absolute right-0 top-full mt-4 w-[min(88vw,25rem)] rounded-md border border-mint/20 bg-black/90 p-5 text-left shadow-[0_0_50px_rgba(74,222,128,0.14)] backdrop-blur-xl transition",
+        "absolute right-0 top-full z-50 mt-4 w-[min(88vw,25rem)] rounded-md border border-mint/20 bg-black/90 p-5 text-left shadow-[0_0_50px_rgba(74,222,128,0.14)] backdrop-blur-xl transition",
         open ? "pointer-events-auto translate-y-0 opacity-100" : "pointer-events-none -translate-y-2 opacity-0"
       )}
     >
@@ -370,7 +370,7 @@ function Hero({ lang, setLang }: { lang: Lang; setLang: (lang: Lang) => void }) 
       <div className="absolute left-[23%] top-0 h-full w-px bg-mint/10" />
       <div className="absolute right-[23%] top-0 h-full w-px bg-mint/10" />
 
-      <nav className="relative z-10 flex items-center justify-between px-6 py-8 sm:px-11">
+      <nav className="relative z-50 flex items-center justify-between px-6 py-8 sm:px-11">
         <div className="flex items-center gap-3 font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-white/80">
           <span className="size-2 rounded-full bg-mint shadow-[0_0_18px_rgba(74,222,128,0.85)]" />
           {t.navLocation}
