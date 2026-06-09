@@ -36,3 +36,11 @@ test("landing page uses the updated Icelandic copy and footer contact link", () 
   assert.match(source, /mailto:Eliasoli0967@gmail\.com/);
   assert.doesNotMatch(source, /mailto:hallo@vibeisland\.is/);
 });
+
+test("idea generator only shows the random idea control, not the full idea bank", () => {
+  assert.match(source, /Fá nýja hugmynd/);
+  assert.match(source, /Generate Idea/);
+  assert.doesNotMatch(source, /Hugmyndabanki/);
+  assert.doesNotMatch(source, /Idea pool/);
+  assert.doesNotMatch(source, /ideaPool\.map\(\(idea/);
+});

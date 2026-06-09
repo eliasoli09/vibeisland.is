@@ -59,7 +59,6 @@ const copy = {
       eyebrow: "Find your idea",
       body: "Need a spark? Shuffle through Iceland-first product ideas and use one as a starting point for your team.",
       button: "Generate Idea",
-      pool: "Idea pool",
     },
     audience: {
       tag: "Who It's For",
@@ -128,7 +127,6 @@ const copy = {
       eyebrow: "Random Vibe Code Idea Generator",
       body: "Vantar neistann? Smelltu og fáðu íslenska vibe coding hugmynd sem teymið getur notað sem upphafspunkt.",
       button: "Fá nýja hugmynd",
-      pool: "Hugmyndabanki",
     },
     audience: {
       tag: "Fyrir hverja",
@@ -530,34 +528,11 @@ function IdeaGenerator({ lang }: { lang: Lang }) {
                 <Lightbulb className="size-5" />
                 {String(activeIndex + 1).padStart(2, "0")} / {ideaPool.length}
               </div>
-              <p className="font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-white/40">{t.pool}</p>
             </div>
-            <article className="min-h-40 border-b border-mint/10 pb-8">
+            <article className="min-h-40">
               <h3 className="text-3xl font-medium leading-tight text-white sm:text-4xl">{activeIdea[0]}</h3>
               <p className="mt-5 max-w-2xl font-mono text-base leading-7 text-white/68">{activeIdea[1]}</p>
             </article>
-            <div className="mt-6 grid gap-2 sm:grid-cols-2">
-              {ideaPool.map((idea, index) => {
-                const [title] = idea[lang];
-                const active = index === activeIndex;
-
-                return (
-                  <button
-                    key={idea.is[0]}
-                    type="button"
-                    onClick={() => setActiveIndex(index)}
-                    className={cn(
-                      "rounded border px-3 py-2 text-left font-mono text-xs font-bold uppercase tracking-wide transition",
-                      active
-                        ? "border-mint bg-mint/10 text-mint"
-                        : "border-mint/10 bg-black/20 text-white/50 hover:border-mint/40 hover:text-white/80"
-                    )}
-                  >
-                    {title}
-                  </button>
-                );
-              })}
-            </div>
           </div>
         </div>
       </div>
