@@ -17,9 +17,3 @@ test("partner API uses the same server-only Supabase setup as applications", () 
   assert.match(source, /export const runtime = "nodejs"/);
   assert.doesNotMatch(source, /NEXT_PUBLIC_SUPABASE_ANON_KEY/);
 });
-
-test("partner API can expose safe insert diagnostics while debugging", () => {
-  assert.match(source, /debug:/);
-  assert.match(source, /code: error\.code/);
-  assert.match(source, /message: error\.message/);
-});
