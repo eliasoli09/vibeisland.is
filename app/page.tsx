@@ -167,6 +167,24 @@ const statIcons = [Users, CalendarDays, Zap, Star];
 const stepIcons = [Search, Code2, Rocket, Trophy];
 const audienceIcons = [GraduationCap, Rocket, Pencil];
 const factIcons = [CalendarDays, MapPin, Users, Zap];
+const menuResources = [
+  {
+    label: "Everything you need to know",
+    href: "/vibe-iceland-everything-you-need-to-know.pdf",
+    meta: "English PDF",
+  },
+  {
+    label: "Allt sem þú þarft að vita",
+    href: "/vibe-island-allt-sem-thu-tharft-ad-vita.pdf",
+    meta: "Íslensk PDF",
+  },
+] as const;
+const contactDetails = {
+  name: "Elías Óli Tinnusson Björnsson",
+  email: "eliasoli0967@gmail.com",
+  phone: "+354 771 2109",
+  phoneHref: "tel:+3547712109",
+} as const;
 const ideaPool = [
   {
     is: ["Reimur", "Giskar á landshlutann þinn af tali og kennir framburð."],
@@ -298,8 +316,55 @@ function LanguageToggle({ lang, setLang }: { lang: Lang; setLang: (lang: Lang) =
   );
 }
 
+function MenuDropdown({ lang, open }: { lang: Lang; open: boolean }) {
+  return (
+    <div
+      className={cn(
+        "absolute right-0 top-full mt-4 w-[min(88vw,25rem)] rounded-md border border-mint/20 bg-black/90 p-5 text-left shadow-[0_0_50px_rgba(74,222,128,0.14)] backdrop-blur-xl transition",
+        open ? "pointer-events-auto translate-y-0 opacity-100" : "pointer-events-none -translate-y-2 opacity-0"
+      )}
+    >
+      <div>
+        <p className="font-mono text-[10px] font-black uppercase tracking-[0.22em] text-mint">
+          {lang === "en" ? "Guides" : "Skjöl"}
+        </p>
+        <div className="mt-3 grid gap-2">
+          {menuResources.map((resource) => (
+            <a
+              key={resource.href}
+              href={resource.href}
+              target="_blank"
+              rel="noreferrer"
+              className="group rounded border border-white/10 bg-white/[0.03] p-3 transition hover:border-mint/45 hover:bg-mint/10"
+            >
+              <span className="block font-mono text-xs font-black uppercase tracking-[0.12em] text-white group-hover:text-mint">{resource.label}</span>
+              <span className="mt-1 block font-mono text-[10px] uppercase tracking-[0.16em] text-white/42">{resource.meta}</span>
+            </a>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-5 border-t border-mint/10 pt-5">
+        <p className="font-mono text-[10px] font-black uppercase tracking-[0.22em] text-mint">
+          Hafðu samband
+        </p>
+        <div className="mt-3 space-y-2 font-mono text-xs leading-5 text-white/70">
+          <p className="font-bold text-white">{contactDetails.name}</p>
+          <a className="block transition hover:text-mint" href={`mailto:${contactDetails.email}`}>
+            {contactDetails.email}
+          </a>
+          <a className="block transition hover:text-mint" href={contactDetails.phoneHref}>
+            {contactDetails.phone}
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Hero({ lang, setLang }: { lang: Lang; setLang: (lang: Lang) => void }) {
   const t = copy[lang];
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <header className="relative isolate min-h-screen overflow-hidden border-b border-mint/10">
@@ -314,12 +379,18 @@ function Hero({ lang, setLang }: { lang: Lang; setLang: (lang: Lang) => void }) 
           <span className="size-2 rounded-full bg-mint shadow-[0_0_18px_rgba(74,222,128,0.85)]" />
           {t.navLocation}
         </div>
-        <div className="flex items-center gap-4">
+        <div className="relative flex items-center gap-4">
           <LanguageToggle lang={lang} setLang={setLang} />
-          <div className="flex items-center gap-3 font-mono text-[10px] uppercase tracking-[0.22em] text-white/80">
+          <button
+            type="button"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((value) => !value)}
+            className="flex items-center gap-3 font-mono text-[10px] uppercase tracking-[0.22em] text-white/80 transition hover:text-mint"
+          >
             {t.menu}
             <Menu className="size-4 text-mint" />
-          </div>
+          </button>
+          <MenuDropdown lang={lang} open={menuOpen} />
         </div>
       </nav>
 
