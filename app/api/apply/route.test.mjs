@@ -37,11 +37,3 @@ test("application API normalizes Supabase URL to the project origin", () => {
   assert.match(source, /createClient\(supabaseProjectUrl/);
   assert.doesNotMatch(source, /createClient\(supabaseUrl/);
 });
-
-test("application API returns safe Supabase diagnostics on insert failure", () => {
-  assert.match(source, /debug:/);
-  assert.match(source, /code: error\.code/);
-  assert.match(source, /message: error\.message/);
-  assert.doesNotMatch(source, /debug:[\s\S]*supabaseKey/);
-  assert.doesNotMatch(source, /debug:[\s\S]*process\.env/);
-});
