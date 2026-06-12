@@ -614,6 +614,17 @@ function Partners({ lang }: { lang: Lang }) {
             />
           </div>
         </div>
+        <div className="panel flex min-h-32 w-full max-w-xs items-center justify-center px-8 py-8">
+          <div className="relative h-16 w-full">
+            <Image
+              src="/relay-logo.png"
+              alt="Relay"
+              fill
+              sizes="(max-width: 640px) 72vw, 260px"
+              className="object-contain"
+            />
+          </div>
+        </div>
       </div>
     </section>
   );
