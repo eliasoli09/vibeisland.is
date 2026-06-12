@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 const source = readFileSync(new URL("./page.tsx", import.meta.url), "utf8");
+const lovableLogoPath = new URL("../public/lovable-logo.png", import.meta.url);
 
 test("landing page partner CTAs route to the partner form", () => {
   assert.match(source, /href="\/partner"/);
@@ -19,6 +20,12 @@ test("landing page menu includes scroll guides and contact details", () => {
   assert.match(source, /Elías Óli Tinnusson Björnsson/);
   assert.match(source, /eliasoli0967@gmail\.com/);
   assert.match(source, /\+354 771 2109/);
+});
+
+test("landing page displays the Lovable logo in the partners section", () => {
+  assert.match(source, /src="\/lovable-logo\.png"/);
+  assert.match(source, /alt="Lovable"/);
+  assert.ok(existsSync(lovableLogoPath), "expected public/lovable-logo.png to exist");
 });
 
 test("landing page menu stays above the hero logo when opened", () => {

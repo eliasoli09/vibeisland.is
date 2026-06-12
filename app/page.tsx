@@ -602,6 +602,19 @@ function Partners({ lang }: { lang: Lang }) {
         </div>
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-white/52">{t.coming}</p>
       </div>
+      <div className="mt-12 flex flex-wrap items-center gap-6">
+        <div className="panel flex min-h-32 w-full max-w-md items-center justify-center px-8 py-8 sm:max-w-lg">
+          <div className="relative h-16 w-full sm:h-20">
+            <Image
+              src="/lovable-logo.png"
+              alt="Lovable"
+              fill
+              sizes="(max-width: 640px) 80vw, 420px"
+              className="object-contain"
+            />
+          </div>
+        </div>
+      </div>
     </section>
   );
 }
