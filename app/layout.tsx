@@ -18,7 +18,7 @@ const ibmPlexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: "Vibe Ísland — Iceland's First Vibe Coding Hackathon",
   description:
-    "21-23 August 2026 · Reykjavík, Iceland · A bilingual AI and vibe coding hackathon for high school students.",
+    "21-23 August 2026 · TBA · A bilingual AI and vibe coding hackathon for high school students.",
   icons: {
     icon: [{ url: "/vibe-site-icon.png", type: "image/png", sizes: "512x512" }],
     apple: [{ url: "/apple-touch-icon.png", type: "image/png", sizes: "180x180" }],
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Vibe Ísland",
     description:
-      "Iceland's first AI hackathon for high school students. August 21–23, 2026 · Reykjavík.",
+      "Iceland's first AI hackathon for high school students. August 21–23, 2026 · TBA.",
     siteName: "Vibe Ísland",
     type: "website",
   },

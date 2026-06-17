@@ -47,7 +47,7 @@ export const guides = {
       {
         eyebrow: "05",
         title: "Location",
-        body: "Vibe Iceland will take place at Gróska, one of Iceland's leading centers for innovation and entrepreneurship. It is home to startups, technology companies, investors, and entrepreneurs working together to build the future. By hosting the event at Gróska, participants get the opportunity to experience an environment where ideas become companies and innovation becomes reality. Gróska therefore creates the perfect platform for Iceland's next generation of entrepreneurs and technology leaders.",
+        body: "The location for Vibe Iceland 2026 is TBA. We will announce the venue as soon as it is confirmed, and it will be chosen to give participants a strong environment for creating, mentoring, and pitching their projects.",
       },
     ],
   },
@@ -83,7 +83,7 @@ export const guides = {
       {
         eyebrow: "05",
         title: "Staðsetning",
-        body: "Vibe Ísland fer fram í Grósku, einum helsta miðpunkti nýsköpunar og frumkvöðlastarfs á Íslandi. Þar starfa saman sprotafyrirtæki, tæknifyrirtæki, fjárfestar og frumkvöðlar sem vinna að því að byggja framtíðina. Með því að halda viðburðinn í Grósku fá þátttakendur tækifæri til að upplifa umhverfi þar sem hugmyndir verða að fyrirtækjum og nýsköpun verður að veruleika. Gróska skapar því fullkominn vettvang fyrir næstu kynslóð frumkvöðla og tæknileiðtoga Íslands.",
+        body: "Staðsetning Vibe Íslands 2026 er TBA. Við tilkynnum staðinn um leið og hann er staðfestur, og hann verður valinn með það í huga að þátttakendur fái gott umhverfi til að skapa, fá leiðsögn og kynna verkefnin sín.",
       },
     ],
   },

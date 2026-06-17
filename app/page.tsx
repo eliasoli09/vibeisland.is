@@ -24,12 +24,12 @@ type Lang = "en" | "is";
 
 const copy = {
   en: {
-    navLocation: "Reykjavík, Iceland",
+    navLocation: "TBA",
     menu: "Menu",
     langLabel: "Skipta yfir á íslensku",
     eyebrow: "Iceland's First Vibe Coding Hackathon",
     date: "21 - 23 August 2026",
-    city: "Reykjavík",
+    city: "TBA",
     apply: "Apply Now",
     partner: "Become a Partner",
     essentials: {
@@ -86,18 +86,18 @@ const copy = {
     },
     cta: {
       title: "Ready to build something incredible?",
-      body: "Join 60+ builders in Reykjavík for Iceland's first vibe coding hackathon.",
-      facts: ["21 - 23 August 2026", "Reykjavík, Iceland", "60 Builders", "AI Powered"],
+      body: "Join 60+ builders for Iceland's first vibe coding hackathon. Location TBA.",
+      facts: ["21 - 23 August 2026", "TBA", "60 Builders", "AI Powered"],
     },
     footer: "Hafðu samband",
   },
   is: {
-    navLocation: "Reykjavík, Ísland",
+    navLocation: "TBA",
     menu: "Valmynd",
     langLabel: "Switch to English",
     eyebrow: "Fyrsta Vibe Coding Hackathon Íslands",
     date: "21. - 23. ágúst 2026",
-    city: "Reykjavík",
+    city: "TBA",
     apply: "Sækja um",
     partner: "Gerast samstarfsaðili",
     essentials: {
@@ -154,8 +154,8 @@ const copy = {
     },
     cta: {
       title: "Tilbúin að skapa eitthvað magnað?",
-      body: "Vertu með 60 þátttakendum í Reykjavík á fyrsta vibe coding hackathon Íslands.",
-      facts: ["21. - 23. ágúst 2026", "Reykjavík, Ísland", "60 Þátttakendur", "Gervigreindarknúið"],
+      body: "Vertu með 60 þátttakendum á fyrsta vibe coding hackathon Íslands. Staðsetning TBA.",
+      facts: ["21. - 23. ágúst 2026", "TBA", "60 Þátttakendur", "Gervigreindarknúið"],
     },
     footer: "Hafðu samband",
   },

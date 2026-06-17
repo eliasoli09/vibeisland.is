@@ -15,6 +15,8 @@ test("English guide is a scroll page based on Vibe Iceland.pdf", () => {
   assert.match(guideSource, /What to Expect/);
   assert.match(guideSource, /Future vision/);
   assert.match(guideSource, /Location/);
+  assert.match(guideSource, /The location for Vibe Iceland 2026 is TBA/);
+  assert.doesNotMatch(guideSource, /will take place at Gróska/);
 });
 
 test("Icelandic guide is a scroll page based on Vibe Ísland (1).pdf", () => {
@@ -26,4 +28,6 @@ test("Icelandic guide is a scroll page based on Vibe Ísland (1).pdf", () => {
   assert.match(guideSource, /Við hverju má búast/);
   assert.match(guideSource, /Framtíðarsýn/);
   assert.match(guideSource, /Staðsetning/);
+  assert.match(guideSource, /Staðsetning Vibe Íslands 2026 er TBA/);
+  assert.doesNotMatch(guideSource, /fer fram í Grósku/);
 });

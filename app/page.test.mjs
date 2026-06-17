@@ -23,6 +23,15 @@ test("landing page menu includes scroll guides and contact details", () => {
   assert.match(source, /\+354 771 2109/);
 });
 
+test("landing page lists the event location as TBA in both languages", () => {
+  assert.match(source, /navLocation: "TBA"/);
+  assert.match(source, /city: "TBA"/);
+  assert.match(source, /\["21 - 23 August 2026", "TBA", "60 Builders", "AI Powered"\]/);
+  assert.match(source, /\["21\. - 23\. ágúst 2026", "TBA", "60 Þátttakendur", "Gervigreindarknúið"\]/);
+  assert.doesNotMatch(source, /navLocation: "Reykjavík/);
+  assert.doesNotMatch(source, /city: "Reykjavík"/);
+});
+
 test("landing page displays the Lovable logo in the partners section", () => {
   assert.match(source, /src="\/lovable-logo\.png"/);
   assert.match(source, /alt="Lovable"/);
