@@ -5,6 +5,7 @@ import test from "node:test";
 const source = readFileSync(new URL("./page.tsx", import.meta.url), "utf8");
 const lovableLogoPath = new URL("../public/lovable-logo.png", import.meta.url);
 const relayLogoPath = new URL("../public/relay-logo.png", import.meta.url);
+const frumtakLogoPath = new URL("../public/frumtak-logo.png", import.meta.url);
 
 test("landing page partner CTAs route to the partner form", () => {
   assert.match(source, /href="\/partner"/);
@@ -42,6 +43,12 @@ test("landing page displays the Relay logo next to Lovable", () => {
   assert.match(source, /src="\/relay-logo\.png"/);
   assert.match(source, /alt="Relay"/);
   assert.ok(existsSync(relayLogoPath), "expected public/relay-logo.png to exist");
+});
+
+test("landing page displays the Frumtak logo in the partners section", () => {
+  assert.match(source, /src="\/frumtak-logo\.png"/);
+  assert.match(source, /alt="Frumtak"/);
+  assert.ok(existsSync(frumtakLogoPath), "expected public/frumtak-logo.png to exist");
 });
 
 test("landing page menu stays above the hero logo when opened", () => {

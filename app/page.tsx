@@ -614,6 +614,17 @@ function Partners({ lang }: { lang: Lang }) {
             />
           </div>
         </div>
+        <div className="panel flex min-h-32 w-full max-w-md items-center justify-center px-8 py-8 sm:max-w-lg">
+          <div className="relative h-16 w-full sm:h-20">
+            <Image
+              src="/frumtak-logo.png"
+              alt="Frumtak"
+              fill
+              sizes="(max-width: 640px) 80vw, 420px"
+              className="object-contain"
+            />
+          </div>
+        </div>
         <div className="panel flex min-h-32 w-full max-w-xs items-center justify-center px-8 py-8">
           <div className="relative h-16 w-full">
             <Image
