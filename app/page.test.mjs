@@ -7,6 +7,14 @@ const lovableLogoPath = new URL("../public/lovable-logo.png", import.meta.url);
 const relayLogoPath = new URL("../public/relay-logo.png", import.meta.url);
 const frumtakLogoPath = new URL("../public/frumtak-logo.png", import.meta.url);
 
+function readPngSize(fileUrl) {
+  const png = readFileSync(fileUrl);
+  return {
+    width: png.readUInt32BE(16),
+    height: png.readUInt32BE(20),
+  };
+}
+
 test("landing page partner CTAs route to the partner form", () => {
   assert.match(source, /href="\/partner"/);
   assert.doesNotMatch(source, /Vibe%20%C3%8Dsland%20partnership/);
@@ -49,6 +57,9 @@ test("landing page displays the Frumtak logo in the partners section", () => {
   assert.match(source, /src="\/frumtak-logo\.png"/);
   assert.match(source, /alt="Frumtak"/);
   assert.ok(existsSync(frumtakLogoPath), "expected public/frumtak-logo.png to exist");
+  const size = readPngSize(frumtakLogoPath);
+  assert.ok(size.width < 1300, "expected Frumtak logo to be cropped horizontally");
+  assert.ok(size.height < 260, "expected Frumtak logo to be cropped vertically");
 });
 
 test("landing page menu stays above the hero logo when opened", () => {
