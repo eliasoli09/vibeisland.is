@@ -17,13 +17,13 @@ Bæta „Verkefni“ við aðalvalmynd Vibe Ísland og útbúa stækkanlegan ver
 - `app/verkefni/page.tsx` sýnir verkefnalista í núverandi svarta, mintugræna og mónósporaða útliti Vibe Ísland.
 - `app/verkefni/vallaeyjar/page.tsx` sýnir heiti, skýra leið til baka, stutta skýringu um staðbundna vistun og iframe-skoðarann.
 - `app/verkefni/vallaeyjar/vallaeyjar-viewer.tsx` sér um líftíma iframe og tæmir slóðina við afhleðslu svo teiknilykkjan haldi ekki áfram eftir leiðaskipti.
-- `public/projects/vallaeyjar/viewer.html` verður nákvæm afrit af meðfylgjandi `Kaplakriki_3D (2).html`. Skráin er sjálfbær og hefur engar ytri mynd-, stíl- eða skriftuháðnir.
+- `public/projects/vallaeyjar/viewer.html` varðveitir meðfylgjandi `Kaplakriki_3D (2).html`, þar á meðal allan JavaScript-kóða, rúmfræði og merki. Eini viðbótarhlekkurinn vísar á staðbundna `viewer-host.css`, sem gerir upprunalegu stýringarnar aðgengilegar í mjóu iframe. Engar ytri netþjónustur eru nauðsynlegar.
 
 ## Sjónræn stefna
 
-Verkefnalistinn fylgir núverandi iðnaðarlegu Vibe Ísland útliti: svartur bakgrunnur, fíngert mintugrænt hnitanet, skarpar línur, Space Grotesk og IBM Plex Mono. Kortið fær víða, ritstjórnarlega uppsetningu og einfalt sýnishorn sem gefur til kynna svífandi völl án þess að herma eftir sjálfum Three.js-heiminum.
+Verkefnalistinn fylgir núverandi Vibe Ísland útliti: svartur bakgrunnur, fíngert mintugrænt hnitanet, skarpar línur, Space Grotesk og IBM Plex Mono. Kortið sýnir raunverulegt skjáskot úr Vallaeyjum, vistað sem `preview.png`.
 
-Verkefnasíðan setur skoðarann í forgang. Hausinn er þéttur, til baka-hlekkurinn greinilegur og iframe fær nær allan sýnilegan skjá. Hæðin notar `dvh` með lágmarks- og hámarksgildum svo innri stýringar klippist ekki af á farsíma eða borðtölvu.
+Verkefnasíðan setur skoðarann í forgang. Hausinn er þéttur, til baka-hlekkurinn greinilegur og iframe fær rýmið undir honum með flex-uppsetningu og `dvh`. Lágmarkshæð á stuttum skjám heldur stýringum aðgengilegum með síðuskrolli.
 
 ## Hegðun og gagnageymsla
 
@@ -32,6 +32,7 @@ Verkefnasíðan setur skoðarann í forgang. Hausinn er þéttur, til baka-hlekk
 - `.stadium`-eyjar vistast aðeins í vafra viðkomandi notanda, samkvæmt núverandi IndexedDB-virkni skoðarans.
 - Verkefnasíðan útskýrir að notendur deili völlum með því að sækja og senda `.stadium`-skrár. Hún gefur ekki í skyn að innfluttar eyjar birtist hjá öðrum gestum sjálfkrafa.
 - Þegar farið er af Vallaeyjar-síðunni er iframe fært á `about:blank` og síðan fjarlægt af Next.js, sem stöðvar WebGL-teikningu og viðburðahlustara.
+- Þegar React endurvirkjar vistaða leið setur effect-uppsetningin rétta iframe-slóð aftur; þetta styður líka Strict Mode.
 
 ## Aðgengi og aðlögun
 
@@ -49,4 +50,4 @@ Verkefnasíðan setur skoðarann í forgang. Hausinn er þéttur, til baka-hlekk
 
 ## Afmörkun
 
-Skoðarinn verður ekki endurhannaður, þýddur eða tengdur við miðlægan bakenda. Innfluttar eyjar verða áfram staðbundnar fyrir hvern vafra. Engin önnur síða eða efni vefsins breytist umfram nýja valmyndartengilinn.
+Skoðarinn er ekki þýddur eða tengdur við miðlægan bakenda. Innfluttar eyjar eru áfram staðbundnar fyrir hvern vafra. Viðbótarstílskrá sýnir „Búa til völl“ og fullskjáhnappinn á síma og tryggir að flugstýringar rúmist. Engin önnur síða eða efni vefsins breytist umfram nýja valmyndartengilinn.

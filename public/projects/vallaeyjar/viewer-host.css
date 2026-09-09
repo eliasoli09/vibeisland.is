@@ -1,0 +1,25 @@
+/* Keep the original viewer controls reachable inside a narrow iframe. */
+body {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+header { flex-shrink: 0; }
+.layout { flex: 1; min-height: 0; height: auto; position: relative; }
+
+@media (max-width: 760px) {
+  header { height: auto; min-height: 64px; flex-wrap: wrap; padding-block: 10px; }
+  .head-actions { flex-wrap: wrap; justify-content: flex-end; }
+  #creator-button { display: block; }
+  .fullscreen { display: block; flex-shrink: 0; }
+  aside { top: 0; }
+  .camera-mode { flex: 1 0 60%; }
+  #drone-panel { top: 116px; max-height: calc(100% - 130px); overflow: auto; }
+  body:has(#drone-panel:not([hidden])) .bottom-bar { display: none; }
+}
+
+@media (max-width: 420px) {
+  header > div:has(#app-title) { width: 100%; }
+  .head-actions { margin-left: 0; width: 100%; justify-content: flex-start; }
+}

@@ -32,6 +32,11 @@ test("landing page menu includes scroll guides and contact details", () => {
   assert.match(source, /\+354 771 2109/);
 });
 
+test("landing page menu links to the projects index", () => {
+  assert.match(source, /href: "\/verkefni"/);
+  assert.match(source, /label: "Verkefni"/);
+});
+
 test("landing page lists the event location as TBA in both languages", () => {
   assert.match(source, /navLocation: "TBA"/);
   assert.match(source, /city: "TBA"/);

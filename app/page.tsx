@@ -165,6 +165,10 @@ const statIcons = [Users, CalendarDays, Zap, Star];
 const stepIcons = [Search, Code2, Rocket, Trophy];
 const audienceIcons = [GraduationCap, Rocket, Pencil];
 const factIcons = [CalendarDays, MapPin, Users, Zap];
+const menuProject = {
+  label: "Verkefni",
+  href: "/verkefni",
+} as const;
 const menuResources = [
   {
     label: "Everything you need to know",
@@ -322,8 +326,23 @@ function MenuDropdown({ lang, open }: { lang: Lang; open: boolean }) {
         open ? "pointer-events-auto translate-y-0 opacity-100" : "pointer-events-none -translate-y-2 opacity-0"
       )}
     >
+      <a
+        href={menuProject.href}
+        className="group flex items-center justify-between gap-5 rounded border border-mint/30 bg-mint/[0.08] p-4 transition hover:border-mint hover:bg-mint/[0.14]"
+      >
+        <span>
+          <span className="block font-mono text-sm font-black uppercase tracking-[0.16em] text-white transition group-hover:text-mint">
+            {menuProject.label}
+          </span>
+          <span className="mt-1 block font-mono text-[10px] uppercase tracking-[0.16em] text-white/48">
+            {lang === "en" ? "Interactive projects" : "Gagnvirk verkefni"}
+          </span>
+        </span>
+        <ArrowUpRight className="size-5 shrink-0 text-mint transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+      </a>
+
       <div>
-        <p className="font-mono text-[10px] font-black uppercase tracking-[0.22em] text-mint">
+        <p className="mt-5 font-mono text-[10px] font-black uppercase tracking-[0.22em] text-mint">
           {lang === "en" ? "Guides" : "Skjöl"}
         </p>
         <div className="mt-3 grid gap-2">

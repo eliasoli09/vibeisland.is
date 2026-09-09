@@ -1,0 +1,2 @@
+# Preserve whitespace in the supplied, bundled viewer (including shader strings).
+public/projects/vallaeyjar/viewer.html -whitespace
