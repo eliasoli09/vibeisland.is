@@ -52,6 +52,7 @@ with TemporaryDirectory(prefix="vallaeyjar-test-") as temp, sync_playwright() as
     context = browser.new_context(viewport={"width": 1440, "height": 1000}, permissions=["clipboard-read", "clipboard-write"])
     page = context.new_page()
     page.set_default_timeout(15000)
+    page.set_default_navigation_timeout(120000)
     capture(page)
     page.goto(BASE)
     page.get_by_role("button", name="Menu", exact=True).click()
@@ -61,6 +62,9 @@ with TemporaryDirectory(prefix="vallaeyjar-test-") as temp, sync_playwright() as
     page.get_by_role("link", name="Opna verkefni", exact=True).click()
     expect(page).to_have_url(DETAIL)
     frame = ready(page)
+    assert frame.evaluate("stadiumViewer.metadata.source") == "Blender"
+    assert frame.evaluate("stadiumViewer.metadata.seat_count_model") == 3050
+    assert frame.evaluate("stadiumViewer.metadata.source_objects.every(name => !/Unified mapped|Road centre|Painted parking|Parked car|Site ground/i.test(name))")
     assert frame.locator("body").get_attribute("class") == "world"
     expect(frame.locator(".island-card h3")).to_have_text(["Kaplakriki"])
     print("PASS menu, index reload, detail route, initial island chooser", flush=True)
@@ -73,6 +77,23 @@ with TemporaryDirectory(prefix="vallaeyjar-test-") as temp, sync_playwright() as
         )
 
     frame.locator(".enter").click()
+    with page.expect_download() as download:
+        frame.locator("#export-island").click()
+    blender_path = Path(temp) / "kaplakriki.stadium"
+    download.value.save_as(blender_path)
+    blender_export = json.loads(blender_path.read_text())
+    assert blender_path.stat().st_size <= 25 * 1024 * 1024, 'Export must fit the importer size limit'
+    assert blender_export["stadium"]["model"]["metadata"]["source"] == "Blender"
+    assert len(blender_export["stadium"]["model"]["batches"]) < 150
+    frame.locator("#add-island").click()
+    frame.locator("#stadium-file").set_input_files(blender_path)
+    expect(frame.locator("#confirm-import")).to_be_enabled(timeout=30000)
+    frame.locator("#confirm-import").click()
+    expect(frame.locator("#import-dialog")).not_to_be_visible(timeout=30000)
+    assert frame.evaluate("stadiumViewer.islands.length") == 1
+    frame.locator('[data-layer="roof"]').uncheck()
+    assert not frame.evaluate("stadiumViewer.groups.roof.visible")
+    frame.locator('[data-layer="roof"]').check()
     frame.locator('[data-view="top"]').click()
     assert frame.evaluate("stadiumViewer.camera.isOrthographicCamera")
     frame.locator('[data-view="main"]').click()
