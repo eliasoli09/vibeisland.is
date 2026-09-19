@@ -1,11 +1,66 @@
 /* Blender mesh adapter for the existing Vallaeyjar viewer. No external requests. */
 (() => {
   const prepared = new WeakMap();
+  const seatCatalogs = new WeakMap();
   const labels = {
     pitch: 'Völlur', main_stand: 'Stóra stúkan', roof: 'Þak og burðarvirki',
     small_stand: 'Minni stúkan', booth: 'Bláa húsið', goals: 'Mörk og hornfánar',
     advertising: 'Auglýsingafletir', surroundings: 'Umhverfi',
   };
+
+  // Numbers describe this reconstruction, not the venue's ticketing plan.
+  // Sort across material batches so the black FH seats share the white rows.
+  function seatCatalog(model) {
+    if (seatCatalogs.has(model)) return seatCatalogs.get(model);
+    const catalog = new Map();
+    for (const [stand, prefix, title] of [
+      ['south', /^South seat R/, 'Stóra stúkan'],
+      ['north', /^North (seat R|end short row)/, 'Minni stúkan'],
+    ]) {
+      const rows = new Map();
+      for (const batch of model.batches) {
+        if (!prefix.test(batch.name)) continue;
+        const entries = new Array(batch.matrices.length);
+        catalog.set(batch, entries);
+        batch.matrices.forEach((matrix, index) => {
+          const height = Math.round(matrix[13] * 1000);
+          if (!rows.has(height)) rows.set(height, []);
+          rows.get(height).push({ entries, index, x: matrix[12] });
+        });
+      }
+      [...rows.keys()].sort((a, b) => a - b).forEach((height, rowIndex) => {
+        rows.get(height).sort((a, b) => a.x - b.x).forEach((seat, index) => {
+          const row = rowIndex + 1, number = index + 1;
+          seat.entries[seat.index] = { stand, row, number,
+            label: `${title} · röð ${row} · sæti ${number}` };
+        });
+      });
+    }
+    seatCatalogs.set(model, catalog);
+    return catalog;
+  }
+
+  function seatPose(instance, world) {
+    const transform = (m, [x, y, z]) => [
+      m[0] * x + m[4] * y + m[8] * z + m[12],
+      m[1] * x + m[5] * y + m[9] * z + m[13],
+      m[2] * x + m[6] * y + m[10] * z + m[14],
+    ];
+    // Seat pan is 0.43 m above the terrace; eyes sit 0.72 m above it.
+    // Local -Z faces the pitch on both sides after the instance rotation.
+    return {
+      position: transform(world, transform(instance, [0, 1.15, .04])),
+      target: transform(world, transform(instance, [0, .7, -35])),
+    };
+  }
+
+  function seatAt(hit) {
+    const mesh = hit?.object, index = hit?.instanceId;
+    if (!Number.isInteger(index) || index < 0 || !mesh?.userData.seats?.[index]) return null;
+    mesh.updateWorldMatrix(true, false);
+    const matrix = mesh.instanceMatrix.array.subarray(index * 16, (index + 1) * 16);
+    return { ...mesh.userData.seats[index], ...seatPose(matrix, mesh.matrixWorld.elements) };
+  }
 
   async function prepare(model, THREE) {
     if (prepared.has(model)) return prepared.get(model);
@@ -74,6 +129,7 @@
     const root = new THREE.Group();
     root.name = model.metadata.name; root.userData = model.metadata;
     const groups = {}, materials = {}, geometries = {};
+    const seats = seatCatalog(model);
     for (const [key, label] of Object.entries(labels)) {
       const group = new THREE.Group(); group.name = label; group.userData.group = key;
       groups[key] = group; root.add(group);
@@ -105,6 +161,7 @@
       }
       const mesh = new THREE.InstancedMesh(geometries[batch.geometry], materials[materialKey], batch.matrices.length);
       mesh.name = batch.name; mesh.userData.group = batch.group;
+      if (seats.has(batch)) mesh.userData.seats = seats.get(batch);
       batch.matrices.forEach((matrix, i) => mesh.setMatrixAt(i, new THREE.Matrix4().fromArray(matrix)));
       mesh.instanceMatrix.needsUpdate = true;
       mesh.castShadow = batch.group !== 'pitch' && !/net cord|field paint/i.test(batch.name);
@@ -116,12 +173,12 @@
   function updateCamera(camera, target, mode) {
     if (!camera.isPerspectiveCamera) return;
     // Millimetre layers on the pitch and roofs need precision in distant views.
-    const near = mode === 'drone' ? .08 : Math.max(.08, Math.min(4, camera.position.distanceTo(target) / 70));
+    const near = mode === 'drone' || mode === 'seat' ? .08 : Math.max(.08, Math.min(4, camera.position.distanceTo(target) / 70));
     if (Math.abs(camera.near - near) > .001) {
       camera.near = near;
       camera.updateProjectionMatrix();
     }
   }
 
-  window.BlenderStadium = { prepare, create, updateCamera };
+  window.BlenderStadium = { prepare, create, updateCamera, seatCatalog, seatPose, seatAt };
 })();
