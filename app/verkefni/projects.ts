@@ -16,7 +16,7 @@ export const projects: readonly Project[] = [
     slug: "vallaeyjar",
     title: "Vallaeyjar",
     description:
-      "Þrívíður heimur þar sem íslenskir fótboltavellir svífa á eyjum í geimnum. Skoðaðu Kaplakrika og Víkingsvöll úr sæti, fljúgðu frjálst og bættu við þínum eigin völlum.",
+      "Þrívíður heimur þar sem íslenskir fótboltavellir svífa á eyjum í geimnum. Skoðaðu Kaplakrika, Víkingsvöll og Hlíðarenda úr sæti, fljúgðu frjálst og bættu við þínum eigin völlum.",
     href: "/verkefni/vallaeyjar",
     viewerPath: "/projects/vallaeyjar/viewer.html",
     preview: "/projects/vallaeyjar/preview.png",

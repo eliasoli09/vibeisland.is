@@ -39,7 +39,8 @@ test("Vallaeyjar detail page explains local stadium sharing", () => {
   assert.match(detailSource, /<VallaeyjarViewer/);
   assert.match(detailSource, /\.stadium/);
   assert.match(detailSource, /vafra/);
-  assert.match(detailSource, /sjálfkrafa/);
+  assert.match(detailSource, /aðgengileg öllum/);
+  assert.match(detailSource, /Eyjur sem þú bætir við vistast aðeins í þínum vafra/);
 });
 
 test("viewer iframe preserves required capabilities and stops on unmount", () => {

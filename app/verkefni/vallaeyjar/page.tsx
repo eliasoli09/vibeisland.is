@@ -11,7 +11,11 @@ export const metadata: Metadata = {
   description: project.description,
 };
 
-export default function VallaeyjarPage() {
+export default async function VallaeyjarPage({ searchParams }: {
+  searchParams: Promise<{ eyja?: string }>;
+}) {
+  const { eyja } = await searchParams;
+  const viewerPath = eyja === "valur" ? `${project.viewerPath}?island=valur` : project.viewerPath;
   return (
     <main lang="is" className="flex h-dvh flex-col bg-black text-white">
       <header className="shrink-0 border-b border-mint/15 bg-black px-4 py-4 sm:px-6 lg:px-8">
@@ -33,14 +37,14 @@ export default function VallaeyjarPage() {
 
           <p className="flex max-w-2xl items-start gap-3 text-xs leading-5 text-white/52 sm:text-right">
             <Database className="mt-0.5 size-4 shrink-0 text-mint" />
-            <span>Kaplakriki og Víkingsvöllur eru aðgengileg öllum. Eyjur sem þú bætir við vistast aðeins í þínum vafra. Deildu völlum með því að sækja og senda <code>.stadium</code>-skrár.</span>
+            <span>Kaplakriki, Víkingsvöllur og Hlíðarendi eru aðgengileg öllum. Eyjur sem þú bætir við vistast aðeins í þínum vafra. Deildu völlum með því að sækja og senda <code>.stadium</code>-skrár.</span>
             <FileDown className="mt-0.5 hidden size-4 shrink-0 text-mint/60 lg:block" />
           </p>
         </div>
       </header>
 
       <section aria-label="Vallaeyjar þrívíddarskoðari" className="min-h-[600px] flex-1 sm:min-h-[500px]">
-        <VallaeyjarViewer viewerPath={project.viewerPath} />
+        <VallaeyjarViewer viewerPath={viewerPath} />
       </section>
     </main>
   );

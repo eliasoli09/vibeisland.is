@@ -90,6 +90,7 @@
       }
       for (const [key, detail] of Object.entries(model.materialDetails || {})) {
         if (!Object.hasOwn(model.materials, key)) throw new Error('Óþekkt efni í Blender-líkaninu.');
+        if (detail.opacity !== undefined && (!Number.isFinite(detail.opacity) || detail.opacity < 0 || detail.opacity > 1)) throw new Error('Ógilt gagnsæi efnis.');
         if (!detail.image) continue;
         if (typeof detail.image !== 'string' || detail.image.length > 4 * 1024 * 1024 ||
           !/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(detail.image)) {
@@ -173,6 +174,7 @@
           color: detail.surface === 'turf' || textures[batch.material] ? '#ffffff' : color,
           roughness, metalness, side: THREE.DoubleSide, flatShading: !batch.smooth,
           map, alphaTest: textures[batch.material] ? .25 : 0, envMapIntensity: .65,
+          opacity: detail.opacity ?? 1, transparent: (detail.opacity ?? 1) < 1, depthWrite: (detail.opacity ?? 1) >= 1,
         });
       }
       const mesh = new THREE.InstancedMesh(geometries[batch.geometry], materials[materialKey], batch.matrices.length);
