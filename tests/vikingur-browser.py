@@ -5,7 +5,7 @@ with sync_playwright() as p:
  browser=p.chromium.launch(headless=True,args=['--use-angle=metal']);errors=[]
  for mobile in [False,True]:
   ctx=browser.new_context(viewport={'width':390,'height':844} if mobile else {'width':1440,'height':1000},has_touch=mobile,is_mobile=mobile)
-  page=ctx.new_page();page.on('pageerror',lambda e:errors.append(str(e)));page.goto(BASE+'/projects/vallaeyjar/viewer.html');page.wait_for_function('window.stadiumViewer?.islands.length===3',timeout=90000)
+  page=ctx.new_page();page.on('pageerror',lambda e:errors.append(str(e)));page.goto(BASE+'/projects/vallaeyjar/viewer.html');page.wait_for_function('window.stadiumViewer?.islands.some(i=>i.id==="vikingur")',timeout=90000)
   card=page.locator('.island-card').filter(has=page.get_by_role('heading',name='Víkingsvöllur',exact=True));expect(card).to_be_visible();assert card.locator('.remove-card').count()==0
   card.locator('.enter').click();page.wait_for_function('stadiumViewer.metadata.name==="Víkingsvöllur"');page.wait_for_timeout(1400)
   page.locator('#choose-seat').click();page.wait_for_timeout(200)
@@ -19,12 +19,13 @@ with sync_playwright() as p:
   eye=page.evaluate('stadiumViewer.camera.position.toArray()');page.keyboard.press('ArrowRight');assert page.evaluate('stadiumViewer.camera.position.toArray()')==eye
   page.screenshot(path='/tmp/vikingur-island-seat-mobile.png' if mobile else '/tmp/vikingur-island-seat.png')
   page.locator('#leave-seat').click();page.evaluate('stadiumViewer.showWorld(false)');page.locator('.island-card').filter(has=page.get_by_role('heading',name='Kaplakriki',exact=True)).locator('.enter').click();assert page.evaluate('stadiumViewer.metadata.seat_count_model')==3050
-  page.reload();page.wait_for_function('window.stadiumViewer?.islands.length===3',timeout=90000);page.screenshot(path='/tmp/vikingur-islands-mobile.png' if mobile else '/tmp/vikingur-islands.png')
+  page.reload();page.wait_for_function('window.stadiumViewer?.islands.some(i=>i.id==="vikingur")',timeout=90000);page.screenshot(path='/tmp/vikingur-islands-mobile.png' if mobile else '/tmp/vikingur-islands.png')
   card.locator('.enter').click();page.wait_for_function('stadiumViewer.metadata.name==="Víkingsvöllur"')
   if not mobile:
+   before_import_count=len(page.evaluate('stadiumViewer.islands'))
    with page.expect_download() as dl:page.locator('#export-island').click()
    pkg=json.load(open(dl.value.path()));assert sum(len(b.get('seats',[])) for b in pkg['stadium']['model']['batches'])==1076
-   page.evaluate('stadiumViewer.showWorld(false)');page.locator('#add-island').click();page.locator('#stadium-file').set_input_files({'name':'Vikingur.stadium','mimeType':'application/json','buffer':json.dumps(pkg).encode()});expect(page.locator('#confirm-import')).to_be_enabled();page.locator('#confirm-import').click();expect(page.locator('#import-dialog')).not_to_be_visible();assert len(page.evaluate('stadiumViewer.islands'))==3
-  print('PASS Vikingur', 'mobile' if mobile else 'desktop','three persistent islands, raycast seat, fixed eye, roof restore, Kaplakriki switch',flush=True);ctx.close()
+   page.evaluate('stadiumViewer.showWorld(false)');page.locator('#add-island').click();page.locator('#stadium-file').set_input_files({'name':'Vikingur.stadium','mimeType':'application/json','buffer':json.dumps(pkg).encode()});expect(page.locator('#confirm-import')).to_be_enabled();page.locator('#confirm-import').click();expect(page.locator('#import-dialog')).not_to_be_visible();assert len(page.evaluate('stadiumViewer.islands'))==before_import_count
+  print('PASS Vikingur', 'mobile' if mobile else 'desktop','persistent public islands, raycast seat, fixed eye, roof restore, Kaplakriki switch',flush=True);ctx.close()
  assert not errors,errors
  browser.close()

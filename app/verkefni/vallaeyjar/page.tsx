@@ -39,7 +39,7 @@ export default async function VallaeyjarPage({ searchParams }: {
 
           <p className="flex max-w-2xl items-start gap-3 text-xs leading-5 text-white/52 sm:text-right">
             <Database className="mt-0.5 size-4 shrink-0 text-mint" />
-            <span>Kaplakriki, Víkingsvöllur og Hlíðarendi eru aðgengileg öllum. Eyjur sem þú bætir við vistast aðeins í þínum vafra. Deildu völlum með því að sækja og senda <code>.stadium</code>-skrár.</span>
+            <span>Kaplakriki, Víkingsvöllur, Hlíðarendi og eyja G — Kópavogsvöllur — eru aðgengileg öllum. Eyjur sem þú bætir við vistast aðeins í þínum vafra. Deildu völlum með því að sækja og senda <code>.stadium</code>-skrár.</span>
             <FileDown className="mt-0.5 hidden size-4 shrink-0 text-mint/60 lg:block" />
           </p>
         </div>
