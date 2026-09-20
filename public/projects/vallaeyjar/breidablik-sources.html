@@ -1,0 +1,57 @@
+<!doctype html><html lang="is"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Eyja G — Breiðablik · heimildir</title><style>body{max-width:900px;margin:50px auto;padding:0 24px;background:#09150f;color:#deeee3;font:16px/1.7 system-ui}a{color:#4ade80}pre{white-space:pre-wrap;font:inherit}h1{line-height:1.1}</style><h1>Eyja G · Breiðablik</h1><p><a href="/verkefni/vallaeyjar?eyja=G">Opna eyjuna ↗</a> · <a download href="./breidablik-kopavogsvollur.blend">Sækja Blender-líkanið</a></p><pre># Breiðablik · Kópavogsvöllur
+
+Blender-líkan í metrakvarða með 1.733 smellanlegum sætum. **Þetta er mynd- og kortabyggð endurgerð, ekki staðfest 1:1 uppmæling.** Sætanúmer og raðaskipan eru óopinber og útsýnið er áætlað. Ekki nota það sem staðfest miðasölukort.
+
+## Opna og skoða
+
+- `start_viewer.command`: ræsir staðbundinn skoðara. Veldu vestur- eða austurstúku, smelltu á sæti eða veldu hluta/röð/númer og „Sjá úr sæti“. Dragðu til að líta í kring; örvar snúa sjónarhorni; Esc fer til baka. Valspjaldið má fela.
+- `open_blender.command`: opnar `Kopavogsvollur.blend` og virkjar sætavalið. Ýttu á N í þrívíddarglugganum, opnaðu Breiðablik-flipann og veldu vestur eða austur. „Líta í kring“ snýr myndavélinni án færslu; Esc lýkur snúningi.
+- Opnirðu `.blend` beint: keyrðu innbyggða textann `RUN_ME_Seat_View.py` einu sinni í Text Editor til að virkja hnappana. Engin almenn sjálfvirk skriftukeyrsla þarf að vera virk.
+- A–F: vesturstúka, 1.364 sæti. G–H: austurstúka, 369 sæti. Auðkennin vísa í líkanið.
+- `renders/`: yfirlitsmyndir, sætismyndir og skjáskot prófana.
+
+## Mál og nákvæmni
+
+| Atriði | Forsenda |
+|---|---|
+| Mælikvarði | 1 Blender-eining = 1 metri |
+| Leikflötur | 105 × 68 m samkvæmt birtum vallarlýsingum. OSM-grunnflötur mælist um 104,31 × 67,84 m; líkanið notar birt viðmið. |
+| Staðsetning | OSM-leikflötur 172868942; miðja 64.1041297, -21.8967301. X stefnir með lengd vallarins til norðausturs, Y til norðvesturs. |
+| Grunnfletir | Aðalstúka 220079451, minni stúka 220079452, Fífan 172868913, Smárinn 172868926. Kortagögn eru ekki landmælingavottorð. |
+| Vesturstúka | Um 73 m framhlið, 12 áætlaðar raðir. Raðabil 0,82 m, hækkun 0,34 m og sætabil 0,50 m; þrjú inngangssvæði sleppa sætum. |
+| Austurstúka | Um 24 × 12 m grunnflötur, 11 áætlaðar raðir; hækkun 0,38 m. Litasetning sæta túlkuð af myndum. |
+| Augnstaður | 1,15 m yfir gólfi raðar. Sitjandi myndavél snýst um fastan stað. |
+| Hlaupabraut | Sex brautir; 1,22 m breidd, 36,5 m innri radíus og 84,39 m beinar hliðar eru staðlaðar endurgerðarforsendur. Brautin er ekki uppmæld. |
+| Þak | Grunnform kortlagt; hæð, þykkt og stálgrind áætluð af ljósmyndum. |
+| Ljósamöstur | Fjögur, 25 m í líkani. Skipulag 2018 heimilaði allt að 25 m; þetta staðfestir ekki raunhæð eða stöðu 2026. |
+| Nærumhverfi | Kortlagðir grunnfletir með áætluðum hæðum. Tré/bílar eru einföld sjónræn viðmið. Fjarlæg borgarbyggð, landslag og mannfjöldi ekki endurgerð nákvæmlega. |
+
+Heimildir stangast á um sætafjölda (m.a. 1.709 og 1.869). Fjöldinn 1.733 verður til úr áætlaðri sætaskipan líkansins og er ekki fullyrðing um núverandi vottuð sæti. Myndirnar eru aðallega frá 2010 og 2017; endurgerðin staðfestir ekki allar breytingar til 2026. Gervigras kom 2019 og er notað í líkaninu.
+
+## Heimildir
+
+Skoðað 19.–20. september 2026. Ljósmyndir í `references/` eru rannsóknarviðmið; þær eru ekki innbyggðar sem áferðir eða birtar með vefeyjunni.
+
+1. [Nordic Stadiums — Kópavogsvöllur](https://www.nordicstadiums.com/kopavogsvollur/), heimsókn júlí 2017. `nordic-a` til `nordic-i`: stúkur, bakhlið, sætalitir, Fífan og Smárinn. © Nordic Stadiums.
+2. [StadiumDB — Kópavogsvöllur](https://stadiumdb.com/stadiums/isl/kopavogsvollur), myndir 2010 © Mansard Teiknistofa. `stadiumdb-1` til `stadiumdb-5`: burðarvirki þaks, inngöng, framhlið og sætaraðir.
+3. [F.C. København — Aftenens kamparena, 25. júlí 2023](https://www.fck.dk/nyhed/aftenens-kamparena-kopavogsvollur): texti um tvær stúkur, um 1.700 sæti og gervigras frá 2019. Hausmynd síðunnar passar ekki við staðfesta Kópavogsvallarstúku og var **ekki** notuð til líkangerðar.
+4. [Kópavogsbær — deiliskipulagsbreyting 2018](https://www.kopavogur.is/static/files/Skipulag/Skipulagikynningu/2018/kopavogsvollur-dalsmara-7-breytt-deiliskipulag.pdf): gervigras og fjögur ljósamöstur, allt að 25 m.
+5. [OpenStreetMap leikflötur](https://www.openstreetmap.org/way/172868942), [vesturstúka](https://www.openstreetmap.org/way/220079451), [austurstúka](https://www.openstreetmap.org/way/220079452). © [OpenStreetMap contributors, ODbL](https://www.openstreetmap.org/copyright). Gögn í `references/map.osm` og `footprints.json`.
+6. [Esri World Imagery](https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer): loftmynd til samanburðar á hlutföllum og staðsetningum. Myndatökudagur óstaðfestur; ekki birt sem hluti af líkaninu.
+7. [Kópavogsvöllur — vallarmál](https://en.wikipedia.org/wiki/K%C3%B3pavogsv%C3%B6llur): birt viðmið 105 × 68 m.
+
+## Endurgerð
+
+Frá þessari möppu:
+
+```sh
+/Applications/Blender.app/Contents/MacOS/Blender -b --python scripts/build.py
+python3 scripts/test_delivery.py
+/Applications/Blender.app/Contents/MacOS/Blender -b Kopavogsvollur.blend --python scripts/verify_blender.py
+/Applications/Blender.app/Contents/MacOS/Blender -b Kopavogsvollur.blend --python scripts/render_cycles.py
+```
+
+Vafrapróf: ræstu þjón á porti 8770 úr þessari möppu og keyrðu `python3 scripts/test_browser.py` (Python Playwright og Chromium). Vefeyjupróf eru í `../breidablik-publish/tests/breidablik-browser.py`.
+
+Skoðarinn notar metna möskva úr sömu Blender-senu. Three.js og leyfi fylgja í `viewer/vendor`; enginn CDN þarf. Vefeyjan sleppir víðfeðmu nærumhverfi og bílastæðum til að passa við aðrar svífandi eyjar. Öll sæti, stúkur, þak, leikflötur og hlaupabraut halda metrakvarða.
+</pre></html>

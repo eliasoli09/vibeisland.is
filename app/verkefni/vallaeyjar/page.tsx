@@ -15,7 +15,9 @@ export default async function VallaeyjarPage({ searchParams }: {
   searchParams: Promise<{ eyja?: string }>;
 }) {
   const { eyja } = await searchParams;
-  const viewerPath = eyja === "valur" ? `${project.viewerPath}?island=valur` : project.viewerPath;
+  const island = eyja === "G" || eyja === "g" ? "breidablik" : eyja;
+  const viewerPath = island && /^[a-z0-9-]{1,40}$/.test(island)
+    ? `${project.viewerPath}?island=${encodeURIComponent(island)}` : project.viewerPath;
   return (
     <main lang="is" className="flex h-dvh flex-col bg-black text-white">
       <header className="shrink-0 border-b border-mint/15 bg-black px-4 py-4 sm:px-6 lg:px-8">

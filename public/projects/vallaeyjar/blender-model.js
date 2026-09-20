@@ -34,7 +34,7 @@
     ]) {
       const rows = new Map();
       for (const batch of model.batches) {
-        if (!prefix.test(batch.name)) continue;
+        if (batch.seats !== undefined || !prefix.test(batch.name)) continue;
         const entries = new Array(batch.matrices.length);
         catalog.set(batch, entries);
         batch.matrices.forEach((matrix, index) => {
