@@ -44,7 +44,7 @@ with sync_playwright() as p:
         page.on('console', lambda m: ERRORS.append(m.text) if m.type=='error' else None)
         page.goto(BASE+'/projects/vallaeyjar/viewer.html', timeout=120000)
         expect(page.locator('#loader')).to_be_hidden(timeout=60000)
-        page.locator('.enter').click()
+        page.locator('.enter').first.click()
         expect(page.locator('#choose-seat')).to_be_visible()
         choose(page, 'South seat', 5, mobile)
         before=page.evaluate('stadiumViewer.camera.position.toArray()')

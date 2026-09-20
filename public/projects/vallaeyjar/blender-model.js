@@ -13,6 +13,21 @@
   function seatCatalog(model) {
     if (seatCatalogs.has(model)) return seatCatalogs.get(model);
     const catalog = new Map();
+    const ids = new Set();
+    for (const batch of model.batches) {
+      if (batch.seats === undefined) continue;
+      const validVector = value => Array.isArray(value) && value.length === 3 && value.every(n => Number.isFinite(n) && Math.abs(n) <= 350);
+      if (!Array.isArray(batch.seats) || batch.seats.length !== batch.matrices.length) throw new Error('Ógild sætaskipan.');
+      for (const seat of batch.seats) {
+        if (!seat || typeof seat.id !== 'string' || !/^[A-Z0-9-]{1,40}$/.test(seat.id) || ids.has(seat.id) ||
+          typeof seat.label !== 'string' || seat.label.length > 100 ||
+          !Number.isInteger(seat.row) || seat.row < 1 || seat.row > 1000 ||
+          !Number.isInteger(seat.number) || seat.number < 1 || seat.number > 1000 ||
+          !validVector(seat.eyeOffset) || !validVector(seat.lookOffset)) throw new Error('Ógild sætagögn.');
+        ids.add(seat.id);
+      }
+      catalog.set(batch, batch.seats);
+    }
     for (const [stand, prefix, title] of [
       ['south', /^South seat R/, 'Stóra stúkan'],
       ['north', /^North (seat R|end short row)/, 'Minni stúkan'],
@@ -40,7 +55,7 @@
     return catalog;
   }
 
-  function seatPose(instance, world) {
+  function seatPose(instance, world, seat = {}) {
     const transform = (m, [x, y, z]) => [
       m[0] * x + m[4] * y + m[8] * z + m[12],
       m[1] * x + m[5] * y + m[9] * z + m[13],
@@ -49,8 +64,8 @@
     // Seat pan is 0.43 m above the terrace; eyes sit 0.72 m above it.
     // Local -Z faces the pitch on both sides after the instance rotation.
     return {
-      position: transform(world, transform(instance, [0, 1.15, .04])),
-      target: transform(world, transform(instance, [0, .7, -35])),
+      position: transform(world, transform(instance, seat.eyeOffset || [0, 1.15, .04])),
+      target: transform(world, transform(instance, seat.lookOffset || [0, .7, -35])),
     };
   }
 
@@ -59,10 +74,11 @@
     if (!Number.isInteger(index) || index < 0 || !mesh?.userData.seats?.[index]) return null;
     mesh.updateWorldMatrix(true, false);
     const matrix = mesh.instanceMatrix.array.subarray(index * 16, (index + 1) * 16);
-    return { ...mesh.userData.seats[index], ...seatPose(matrix, mesh.matrixWorld.elements) };
+    return { ...mesh.userData.seats[index], ...seatPose(matrix, mesh.matrixWorld.elements, mesh.userData.seats[index]) };
   }
 
   async function prepare(model, THREE) {
+    seatCatalog(model);
     if (prepared.has(model)) return prepared.get(model);
     const pending = (async () => {
       const textures = {};
