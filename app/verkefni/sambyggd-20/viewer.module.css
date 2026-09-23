@@ -1,0 +1,136 @@
+.shell {
+  --ink: #201f1b;
+  --paper: #f2f0e9;
+  --olive: #b5b393;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.header {
+  height: 68px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0 2rem;
+  border-bottom: 1px solid #dedbd0;
+  background: #f8f7f2;
+  position: relative;
+  z-index: 5;
+}
+.brandRow, .headerActions { display: flex; align-items: center; gap: 1.55rem; }
+.backLink { display: inline-flex; align-items: center; gap: .6rem; color: #77756d; font-size: .74rem; letter-spacing: .075em; text-transform: uppercase; transition: color .2s; }
+.backLink:hover, .sourceButton:hover { color: #111; }
+.divider { width: 1px; height: 24px; background: #d9d5c9; }
+.brand { font-size: 1.13rem; letter-spacing: -.06em; font-weight: 700; white-space: nowrap; }
+.brand em { color: #9b947d; font-style: normal; font-weight: 400; }
+.status { font-size: .66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .16em; color: #77756e; white-space: nowrap; }
+.statusDot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #90967d; margin: 0 .55rem 1px 0; }
+.headerButton { width: 34px; height: 34px; border: 1px solid #d8d5ca; border-radius: 50%; display: grid; place-items: center; cursor: pointer; background: transparent; color: #6f6b5e; }
+.headerButton:hover { background: #eae7db; }
+
+.mainGrid { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 336px; }
+.stage { min-width: 0; min-height: 550px; background: #171711; }
+.photoFrame { position: relative; width: 100%; height: 100%; min-height: 550px; overflow: hidden; touch-action: pan-y; }
+.photoBlur { position: absolute; inset: -30px; background-size: cover; background-position: center; filter: blur(25px) brightness(.5); transform: scale(1.04); }
+.photoInner { position: absolute; inset: 0; animation: photoReveal .65s cubic-bezier(.2,.7,.2,1) both; }
+.photo { object-fit: cover; object-position: center; transform: translate(var(--photo-x,0),var(--photo-y,0)) scale(1.025); transition: transform .28s ease-out; }
+.photoVignette { pointer-events: none; position: absolute; inset: 0; background: linear-gradient(180deg,rgba(0,0,0,.37),transparent 24%,transparent 56%,rgba(0,0,0,.66)); }
+.photoTopline { position: absolute; top: 29px; left: 36px; right: 36px; display: flex; justify-content: space-between; color: white; text-shadow: 0 1px 8px #0008; }
+.fitButton { display: none; }
+.photoBadge, .photoCount { font-size: .65rem; letter-spacing: .18em; text-transform: uppercase; font-weight: 700; }
+.photoBadge span { padding: 0 .4rem; color: #fff9; }
+.photoCaption { position: absolute; left: 6.3%; right: 6%; bottom: 132px; color: #fff; text-shadow: 0 2px 16px #0007; }
+.photoCaption p { margin: 0 0 10px; font-size: .68rem; letter-spacing: .22em; text-transform: uppercase; font-weight: 700; }
+.photoCaption h1 { margin: 0; font-family: Georgia, 'Times New Roman', serif; font-weight: 400; font-size: clamp(2.8rem,5vw,6rem); line-height: 1.02; letter-spacing: -.045em; max-width: 12ch; }
+.photoCaption > span { display: block; margin-top: 14px; font-size: .72rem; color: #fffc; letter-spacing: .04em; }
+.walkControls { position: absolute; left: 6.3%; right: 6.3%; bottom: 32px; display: flex; justify-content: space-between; align-items: center; gap: 16px; color: white; }
+.walkControls button { width: 53px; height: 53px; flex: none; border: 1px solid #ffffff9c; border-radius: 50%; color: white; background: #ffffff1a; backdrop-filter: blur(10px); display: grid; place-items: center; cursor: pointer; transition: background .2s, transform .2s; }
+.walkControls button:hover { background: #fff; color: #161614; transform: scale(1.05); }
+.walkLabel { text-align: center; font-size: .69rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+.walkLabel span { display: block; margin-top: 6px; opacity: .65; font-weight: 400; font-size: .65rem; letter-spacing: .04em; text-transform: none; }
+
+.sidePanel { min-height: 0; overflow: auto; border-left: 1px solid #dedbd0; padding: 26px 25px 18px; scrollbar-width: thin; }
+.sideHead { display: flex; justify-content: space-between; align-items: start; }
+.eyebrow { display: block; font-size: .64rem; text-transform: uppercase; letter-spacing: .2em; font-weight: 700; color: #8c886f; }
+.sideHead h2 { margin: 6px 0 0; font: normal 1.75rem/1.1 Georgia,'Times New Roman',serif; letter-spacing: -.04em; }
+.sideIntro { margin: 12px 0 19px; font-size: .73rem; line-height: 1.55; color: #76736b; }
+.floorplanWrap { background: #e7e4da; padding: 16px 17px 10px; }
+.floorplan { position: relative; width: 100%; max-width: 220px; aspect-ratio: 581/1200; margin: auto; overflow: hidden; box-shadow: 0 3px 16px #3e3a2c22; }
+.planImage { object-fit: contain; }
+.planPin { position: absolute; z-index: 1; width: 24px; height: 24px; transform: translate(-50%,-50%); border: 1px solid #f8f5e8; border-radius: 50%; display: grid; place-items: center; background: #283128e8; color: white; font-size: .58rem; font-weight: 700; cursor: pointer; box-shadow: 0 2px 7px #0005; transition: background .2s, transform .2s; }
+.planPin:hover, .planPinActive { background: #d0a672; color: #17150f; transform: translate(-50%,-50%) scale(1.25); }
+.planCaption { display: block; margin-top: 9px; text-align: center; font-size: .58rem; letter-spacing: .1em; text-transform: uppercase; color: #817d70; }
+.roomList { margin-top: 18px; border-top: 1px solid #dcd8cb; }
+.room { display: flex; align-items: center; width: 100%; gap: 11px; padding: 11px 4px; text-align: left; border-bottom: 1px solid #dcd8cb; background: transparent; cursor: pointer; color: #858176; }
+.room span { font-size: .65rem; font-weight: 700; letter-spacing: .1em; }
+.room strong { flex: 1; color: #554f46; font-size: .73rem; font-weight: 500; }
+.room svg { opacity: 0; }
+.room:hover strong, .roomActive strong { color: #151510; font-weight: 700; }
+.roomActive svg { opacity: 1; color: #a88e67; }
+.closePlan { display: none; }
+
+.footer { min-height: 59px; padding: 0 2rem; flex: none; display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-top: 1px solid #dedbd0; background: #f8f7f2; }
+.facts { display: flex; align-items: center; gap: 14px; font-size: .69rem; letter-spacing: .02em; color: #807d72; }
+.facts b { color: #303027; font-weight: 700; }
+.facts i { display: block; width: 3px; height: 3px; border-radius: 50%; background: #aaa598; }
+.sourceButton { display: inline-flex; align-items: center; gap: 10px; font-size: .65rem; text-transform: uppercase; letter-spacing: .13em; font-weight: 700; color: #79766b; background: none; cursor: pointer; }
+.mobilePlanButton { display: none; }
+.planScrim { display: none; }
+
+.modalBackdrop { position: fixed; z-index: 30; inset: 0; background: #161611ae; backdrop-filter: blur(8px); display: grid; place-items: center; padding: 20px; }
+.modal { position: relative; width: min(100%, 600px); padding: clamp(28px,5vw,58px); background: #f5f2e9; box-shadow: 0 24px 80px #0005; }
+.modalClose { position: absolute; right: 20px; top: 20px; background: transparent; cursor: pointer; color: #4a473e; }
+.modal h2 { font: normal clamp(2rem,4vw,3rem)/1.08 Georgia,'Times New Roman',serif; letter-spacing: -.045em; margin: 16px 0 23px; }
+.modal p { font-size: .85rem; line-height: 1.65; color: #5d584e; margin: 0 0 14px; }
+.modal strong { color: #24221e; }
+.listingLink { display: inline-flex; gap: 9px; align-items: center; padding-bottom: 6px; border-bottom: 1px solid #3d3a32; margin-top: 18px; font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+
+@keyframes photoReveal { from { opacity: .25; transform: scale(1.045); } to { opacity: 1; transform: scale(1); } }
+
+@media (max-width: 1099px) {
+  .mainGrid { display: block; position: relative; }
+  .stage, .photoFrame { height: calc(100dvh - 127px); min-height: 500px; }
+  .sidePanel { position: fixed; z-index: 21; top: 0; bottom: 0; right: 0; width: min(88vw, 370px); background: var(--paper); transform: translateX(105%); transition: transform .3s ease; box-shadow: -15px 0 40px #0002; }
+  .sidePanelOpen { transform: translateX(0); }
+  .closePlan { display: grid; place-items: center; background: none; cursor: pointer; }
+  .planScrim { display: block; position: fixed; z-index: 20; inset: 0; background: #0008; }
+  .mobilePlanButton { display: inline-flex; align-items: center; gap: 8px; border: 1px solid #bbb6a8; padding: 10px 13px; background: transparent; font-size: .65rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; cursor: pointer; }
+}
+
+@media (max-width: 650px) {
+  .header { height: 58px; padding: 0 16px; }
+  .brandRow, .headerActions { gap: 12px; }
+  .backLink span, .divider, .status { display: none; }
+  .brand { font-size: 1rem; }
+  .stage, .photoFrame { height: calc(100dvh - 118px); min-height: 440px; }
+  .photoInner { inset: 0; }
+  .photo { object-fit: cover; transform: none !important; }
+  .photo.wholePhoto { object-fit: contain; }
+  .photoVignette { background: linear-gradient(180deg,#0006,transparent 21%,transparent 55%,#000b); }
+  .photoTopline { top: 20px; left: 19px; right: 19px; }
+  .photoBadge, .photoCount { font-size: .56rem; letter-spacing: .1em; }
+  .fitButton { position: absolute; display: block; top: 48px; right: 18px; padding: 5px 0; border-bottom: 1px solid #fffa; background: none; color: white; text-shadow: 0 1px 8px #0009; font-size: .63rem; letter-spacing: .05em; cursor: pointer; }
+  .photoCaption { left: 22px; bottom: 122px; }
+  .photoCaption h1 { font-size: clamp(2.5rem, 10vw, 4rem); }
+  .photoCaption > span { font-size: .65rem; }
+  .walkControls { left: 20px; right: 20px; bottom: 25px; }
+  .walkControls button { height: 48px; width: 48px; }
+  .walkLabel { font-size: .58rem; }
+  .walkLabel span { display: none; }
+  .footer { height: 60px; min-height: 60px; padding: 0 14px; }
+  .facts { display: none; }
+  .sourceButton { font-size: .57rem; letter-spacing: .05em; }
+  .mobilePlanButton { font-size: .58rem; letter-spacing: .04em; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .photoInner { animation: none; }
+  .photo, .sidePanel, .walkControls button { transition: none; }
+}

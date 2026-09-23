@@ -82,10 +82,10 @@ export default function ProjectsPage() {
               <div className="relative min-h-80 overflow-hidden border-t border-mint/15 bg-black lg:min-h-[30rem] lg:border-l lg:border-t-0">
                 <Image
                   src={project.preview}
-                  alt="Kaplakriki á svífandi eyju í Vallaeyjum"
+                  alt={project.previewAlt}
                   fill
                   sizes="(min-width: 1024px) 60vw, 100vw"
-                  className="object-contain"
+                  className={project.slug === "sambyggd-20" ? "object-cover" : "object-contain"}
                 />
               </div>
             </article>
