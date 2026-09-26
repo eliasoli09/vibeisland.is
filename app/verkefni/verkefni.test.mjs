@@ -67,3 +67,41 @@ test("static viewer keeps the complete Vallaeyjar feature set", () => {
   assert.match(staticViewerSource, /indexedDB/);
   assert.match(staticViewerSource, /id="quality"/);
 });
+
+const pongDetailSource = readIfPresent("./pixel-pong/page.tsx");
+const pongGameSource = readIfPresent("./pixel-pong/pixel-pong-game.tsx");
+const staticPongUrl = fileUrl("../../public/projects/pixel-pong/game.html");
+const staticPongSource = existsSync(staticPongUrl) ? readFileSync(staticPongUrl, "utf8") : "";
+
+test("Pixel Pong is registered as the second project", () => {
+  assert.match(projectsSource, /title: "Pixel Pong"/);
+  assert.match(projectsSource, /href: "\/verkefni\/pixel-pong"/);
+  assert.match(projectsSource, /viewerPath: "\/projects\/pixel-pong\/game\.html"/);
+  assert.match(projectsSource, /preview: "\/projects\/pixel-pong\/preview\.png"/);
+  assert.ok(existsSync(fileUrl("../../public/projects/pixel-pong/preview.png")), "expected a preview image");
+});
+
+test("project cards use per-project preview alt text", () => {
+  assert.match(indexSource, /alt=\{project\.previewAlt\}/);
+  assert.match(projectsSource, /previewAlt: string/);
+});
+
+test("Pixel Pong detail page embeds the game and explains controls", () => {
+  assert.match(pongDetailSource, /Til baka í verkefni/);
+  assert.match(pongDetailSource, /<PixelPongGame/);
+  assert.match(pongDetailSource, /músina/);
+  assert.match(pongGameSource, /src=\{gamePath\}/);
+  assert.match(pongGameSource, /frame\.src = "about:blank"/);
+  assert.doesNotMatch(pongGameSource, /sandbox=/);
+});
+
+test("static Pixel Pong game is a complete document with both fighters", () => {
+  assert.ok(existsSync(staticPongUrl), "expected the static game to exist");
+  assert.match(staticPongSource, /^<!DOCTYPE html>/);
+  assert.match(staticPongSource, /three\.js\/r128\/three\.min\.js/);
+  assert.match(staticPongSource, /name: 'CLAUDE'/);
+  assert.match(staticPongSource, /name: 'CODEX'/);
+  assert.match(staticPongSource, /id="btnStart"/);
+  assert.match(staticPongSource, /\[hidden\] \{ display: none !important; \}/);
+  assert.match(staticPongSource, /WIN = 7/);
+});
