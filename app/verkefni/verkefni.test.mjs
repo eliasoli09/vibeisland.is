@@ -69,7 +69,7 @@ test("static viewer keeps the complete Vallaeyjar feature set", () => {
 });
 
 const pongDetailSource = readIfPresent("./pixel-pong/page.tsx");
-const pongGameSource = readIfPresent("./pixel-pong/pixel-pong-game.tsx");
+const embedSource = readIfPresent("./project-embed.tsx");
 const staticPongUrl = fileUrl("../../public/projects/pixel-pong/game.html");
 const staticPongSource = existsSync(staticPongUrl) ? readFileSync(staticPongUrl, "utf8") : "";
 
@@ -88,11 +88,20 @@ test("project cards use per-project preview alt text", () => {
 
 test("Pixel Pong detail page embeds the game and explains controls", () => {
   assert.match(pongDetailSource, /Til baka í verkefni/);
-  assert.match(pongDetailSource, /<PixelPongGame/);
+  assert.match(pongDetailSource, /<ProjectEmbed/);
   assert.match(pongDetailSource, /músina/);
-  assert.match(pongGameSource, /src=\{gamePath\}/);
-  assert.match(pongGameSource, /frame\.src = "about:blank"/);
-  assert.doesNotMatch(pongGameSource, /sandbox=/);
+  assert.match(embedSource, /src=\{src\}/);
+  assert.match(embedSource, /frame\.src = "about:blank"/);
+  assert.doesNotMatch(embedSource, /sandbox=/);
+});
+
+test("Pixel Pong is playable directly on the projects index", () => {
+  assert.match(projectsSource, /playInline\?: boolean/);
+  assert.match(projectsSource, /slug: "pixel-pong",[\s\S]*playInline: true/);
+  assert.match(indexSource, /project\.playInline \?/);
+  assert.match(indexSource, /<ProjectEmbed/);
+  assert.match(indexSource, /loading="lazy"/);
+  assert.match(indexSource, /<Image/);
 });
 
 test("static Pixel Pong game is a complete document with both fighters", () => {

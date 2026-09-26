@@ -2,15 +2,21 @@
 
 import { useEffect, useRef } from "react";
 
-export function PixelPongGame({ gamePath }: { gamePath: string }) {
+type ProjectEmbedProps = {
+  src: string;
+  title: string;
+  loading?: "eager" | "lazy";
+};
+
+export function ProjectEmbed({ src, title, loading = "eager" }: ProjectEmbedProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
     const frame = iframeRef.current;
 
     // React may reactivate a cached route after its effects were cleaned up.
-    if (frame && frame.getAttribute("src") !== gamePath) {
-      frame.src = gamePath;
+    if (frame && frame.getAttribute("src") !== src) {
+      frame.src = src;
     }
 
     return () => {
@@ -18,13 +24,14 @@ export function PixelPongGame({ gamePath }: { gamePath: string }) {
         frame.src = "about:blank";
       }
     };
-  }, [gamePath]);
+  }, [src]);
 
   return (
     <iframe
       ref={iframeRef}
-      src={gamePath}
-      title="Pixel Pong - Claude á móti Codex"
+      src={src}
+      title={title}
+      loading={loading}
       allow="fullscreen; autoplay"
       allowFullScreen
       className="block h-full w-full border-0 bg-[#070b1a]"

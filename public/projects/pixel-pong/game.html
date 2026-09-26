@@ -111,11 +111,13 @@
   #overArt svg { width: 100%; height: auto; display: block; animation: hop 0.7s ease-in-out infinite; }
   @keyframes hop { 50% { transform: translateY(-12px); } }
 
+  @media (max-width: 720px) {
+    .hud-btns { top: auto; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+  }
   @media (max-width: 560px) {
     .cards { grid-template-columns: 1fr 1fr; }
     .vs { display: none; }
     .who .lbl { display: none; }
-    .hud-btns { top: auto; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
   }
   @media (prefers-reduced-motion: reduce) {
     .card { transition: none; }

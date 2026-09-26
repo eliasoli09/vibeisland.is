@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, Mouse } from "lucide-react";
 import { getProjectBySlug } from "../projects";
-import { PixelPongGame } from "./pixel-pong-game";
+import { ProjectEmbed } from "../project-embed";
 
 const project = getProjectBySlug("pixel-pong");
 
@@ -41,7 +41,7 @@ export default function PixelPongPage() {
       </header>
 
       <section aria-label="Pixel Pong leikur" className="min-h-[520px] flex-1">
-        <PixelPongGame gamePath={project.viewerPath} />
+        <ProjectEmbed src={project.viewerPath} title="Pixel Pong - Claude á móti Codex" />
       </section>
     </main>
   );

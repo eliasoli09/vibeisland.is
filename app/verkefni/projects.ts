@@ -9,6 +9,8 @@ export type Project = {
   previewAlt: string;
   status: string;
   tags: readonly string[];
+  /** Render the live project on the index card instead of the preview image. */
+  playInline?: boolean;
 };
 
 export const projects: readonly Project[] = [
@@ -37,6 +39,7 @@ export const projects: readonly Project[] = [
     previewAlt: "Claude krabbinn og Codex vélmennið spila borðtennis á neon borði",
     status: "Gagnvirkur 3D leikur",
     tags: ["Three.js", "Leikur", "Gervigreind"],
+    playInline: true,
   },
 ];
 
