@@ -67,3 +67,50 @@ test("static viewer keeps the complete Vallaeyjar feature set", () => {
   assert.match(staticViewerSource, /indexedDB/);
   assert.match(staticViewerSource, /id="quality"/);
 });
+
+const pongDetailSource = readIfPresent("./pixel-pong/page.tsx");
+const embedSource = readIfPresent("./project-embed.tsx");
+const staticPongUrl = fileUrl("../../public/projects/pixel-pong/game.html");
+const staticPongSource = existsSync(staticPongUrl) ? readFileSync(staticPongUrl, "utf8") : "";
+
+test("Pixel Pong is registered as the second project", () => {
+  assert.match(projectsSource, /title: "Pixel Pong"/);
+  assert.match(projectsSource, /href: "\/verkefni\/pixel-pong"/);
+  assert.match(projectsSource, /viewerPath: "\/projects\/pixel-pong\/game\.html"/);
+  assert.match(projectsSource, /preview: "\/projects\/pixel-pong\/preview\.png"/);
+  assert.ok(existsSync(fileUrl("../../public/projects/pixel-pong/preview.png")), "expected a preview image");
+});
+
+test("project cards use per-project preview alt text", () => {
+  assert.match(indexSource, /alt=\{project\.previewAlt\}/);
+  assert.match(projectsSource, /previewAlt: string/);
+});
+
+test("Pixel Pong detail page embeds the game and explains controls", () => {
+  assert.match(pongDetailSource, /Til baka í verkefni/);
+  assert.match(pongDetailSource, /<ProjectEmbed/);
+  assert.match(pongDetailSource, /músina/);
+  assert.match(embedSource, /src=\{src\}/);
+  assert.match(embedSource, /frame\.src = "about:blank"/);
+  assert.doesNotMatch(embedSource, /sandbox=/);
+});
+
+test("Pixel Pong is playable directly on the projects index", () => {
+  assert.match(projectsSource, /playInline\?: boolean/);
+  assert.match(projectsSource, /slug: "pixel-pong",[\s\S]*playInline: true/);
+  assert.match(indexSource, /project\.playInline \?/);
+  assert.match(indexSource, /<ProjectEmbed/);
+  assert.match(indexSource, /loading="lazy"/);
+  assert.match(indexSource, /<Image/);
+});
+
+test("static Pixel Pong game is a complete document with both fighters", () => {
+  assert.ok(existsSync(staticPongUrl), "expected the static game to exist");
+  assert.match(staticPongSource, /^<!DOCTYPE html>/);
+  assert.match(staticPongSource, /three\.js\/r128\/three\.min\.js/);
+  assert.match(staticPongSource, /name: 'CLAUDE'/);
+  assert.match(staticPongSource, /name: 'CODEX'/);
+  assert.match(staticPongSource, /id="btnStart"/);
+  assert.match(staticPongSource, /\[hidden\] \{ display: none !important; \}/);
+  assert.match(staticPongSource, /WIN = 7/);
+});
