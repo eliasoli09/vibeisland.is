@@ -114,3 +114,14 @@ test("static Pixel Pong game is a complete document with both fighters", () => {
   assert.match(staticPongSource, /\[hidden\] \{ display: none !important; \}/);
   assert.match(staticPongSource, /WIN = 7/);
 });
+
+test("Pixel Pong has timed spin shots, streaks and power-ups", () => {
+  assert.match(staticPongSource, /const SPIN = \{/);
+  assert.match(staticPongSource, /function tapSpin\(\)/);
+  assert.match(staticPongSource, /function integrate\(s, dt\)/);
+  assert.match(staticPongSource, /'BIG PADDLE'/);
+  assert.match(staticPongSource, /'SLOW-MO'/);
+  assert.match(staticPongSource, /id="spinPips"/);
+  assert.match(staticPongSource, /window\.__pong = \{/);
+  assert.match(pongDetailSource, /snúning/);
+});

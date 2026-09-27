@@ -111,6 +111,22 @@
   #overArt svg { width: 100%; height: auto; display: block; animation: hop 0.7s ease-in-out infinite; }
   @keyframes hop { 50% { transform: translateY(-12px); } }
 
+  .spin-hud { position: absolute; left: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+  .pips { display: flex; align-items: center; gap: 6px; padding: 7px 10px; font: 9px var(--pix); color: var(--muted); background: rgba(5, 9, 24, 0.82); border: 2px solid var(--edge); }
+  .pips i { width: 10px; height: 10px; background: #1a2550; }
+  .pips i.on { background: var(--lvl, var(--cyan)); box-shadow: 0 0 8px var(--lvl, var(--cyan)); }
+  .power { display: flex; flex-direction: column; gap: 6px; min-width: 120px; padding: 7px 10px; font: 9px var(--pix); color: var(--pc, var(--cyan)); background: rgba(5, 9, 24, 0.82); border: 2px solid var(--pc, var(--cyan)); }
+  .power b { display: block; height: 4px; background: #1a2550; }
+  .power em { display: block; height: 100%; width: 100%; background: var(--pc, var(--cyan)); }
+  #pop { position: absolute; left: 0; right: 0; bottom: 24%; z-index: 4; text-align: center; pointer-events: none; opacity: 0; font: clamp(12px, 2.6vw, 20px) var(--pix); text-shadow: 0 3px 0 rgba(0, 0, 0, 0.55); }
+  #pop.show { animation: rise 0.85s ease-out forwards; }
+  @keyframes rise {
+    0% { opacity: 0; transform: translateY(10px) scale(0.8); }
+    20% { opacity: 1; transform: none; }
+    75% { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-14px); }
+  }
+
   @media (max-width: 720px) {
     .hud-btns { top: auto; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
   }
@@ -141,9 +157,14 @@
       <button id="btnMute" type="button">SOUND ON</button>
       <button id="btnPause" type="button">PAUSE</button>
     </div>
+    <div class="spin-hud">
+      <div class="power" id="powerChip" hidden><span id="powerName">BIG PADDLE</span><b><em id="powerFill"></em></b></div>
+      <div class="pips" id="spinPips" aria-label="Spin streak">SPIN <i></i><i></i><i></i></div>
+    </div>
   </div>
 
   <div id="banner"></div>
+  <div id="pop"></div>
 
   <div id="menu" class="overlay">
     <div class="panel">
@@ -164,7 +185,7 @@
         <button class="pill" id="dHard" type="button" role="radio" data-diff="hard" aria-checked="false">HARD</button>
       </div>
       <button class="btn" id="btnStart" type="button">START MATCH</button>
-      <p class="hint">Move the mouse left and right to steer your paddle (or <kbd>A</kbd> / <kbd>D</kbd>). Where the ball hits your paddle sets its angle. <kbd>Space</kbd> pauses, <kbd>M</kbd> mutes.</p>
+      <p class="hint">Move the mouse left and right to steer your paddle (or <kbd>A</kbd> / <kbd>D</kbd>). Where the ball hits your paddle sets its angle. <strong>Click or tap just as the ball reaches your paddle to spin it</strong>, and chain 3 spins for a power-up. <kbd>Space</kbd> pauses, <kbd>M</kbd> mutes.</p>
     </div>
   </div>
 
@@ -278,6 +299,20 @@
     normal: { speed: 10.5, react: 0.17, aim: 0.8,  missP: 0.10, serve: 11,   max: 23 },
     hard:   { speed: 14,   react: 0.09, aim: 0.9,  missP: 0.04, serve: 12.5, max: 28 },
   };
+  const STEP = 1 / 120;               // fixed physics step
+  const SPIN = {
+    window: 0.33,                                   // a tap counts if it lands this long before contact
+    curve: [0, 5.5, 8, 11],                         // sideways acceleration per spin level
+    color: [0xbfe6ff, 0x43e0ff, 0xb36bff, 0xff4fa3],
+    css: ['#bfe6ff', '#43e0ff', '#b36bff', '#ff4fa3'],
+    aiChance: { easy: 0, normal: 0.2, hard: 0.4 },  // share of AI hits that spin
+    readFrac: { easy: 0.8, normal: 0.68, hard: 0.58 }, // share of the flight before the AI notices a curve
+    errPerLevel: 0.25,
+  };
+  const POWER = {
+    big: { name: 'BIG PADDLE', dur: 8, css: '#5be38a' },
+    slow: { name: 'SLOW-MO', dur: 5, css: '#43e0ff' },
+  };
 
   function glowTexture() {
     const c = document.createElement('canvas'); c.width = c.height = 128;
@@ -307,7 +342,7 @@
   const table = new THREE.Group(); scene.add(table);
   const top = new THREE.Mesh(
     new THREE.BoxGeometry(HW * 2 + 0.4, 0.3, HL * 2 + 0.4),
-    new THREE.MeshStandardMaterial({ color: 0x10245a, roughness: 0.25, metalness: 0.2 })
+    new THREE.MeshStandardMaterial({ color: 0x10245a, roughness: 0.7, metalness: 0.05 }) // matte: a glossy top mirrored the lights as a fake ball
   );
   top.position.y = -0.15; table.add(top);
   const lineMat = new THREE.MeshBasicMaterial({ color: 0xa8d8ff });
@@ -390,7 +425,7 @@
     group.add(new THREE.Mesh(geo, mat));
     group.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), edgeMat));
     scene.add(group);
-    return { side, group, mat, edgeMat, x: 0, vx: 0, isAI: true, think: 0, target: 0, err: 0, pulse: 0 };
+    return { side, group, mat, edgeMat, x: 0, vx: 0, w: PW, isAI: true, think: 0, target: 0, err: 0, pulse: 0, tapGlow: 0 };
   }
   const P = makePaddle(1);   // near (player)
   const A = makePaddle(-1);  // far (AI)
@@ -446,6 +481,8 @@
     },
     hit(key) { this.tone(key === 'claude' ? 440 : 620, 0.09, 'square', 0.06, 1.6); },
     wall() { this.tone(300, 0.06, 'triangle', 0.07); },
+    spin(l) { this.tone(240 + l * 90, 0.2, 'sawtooth', 0.035, 3); },
+    power() { [784, 988, 1175, 1568].forEach((f, i) => this.tone(f, 0.1, 'square', 0.05, 1, i * 0.06)); },
     bounce() { this.tone(170, 0.05, 'sine', 0.09, 0.8); },
     good() { [523, 659, 784].forEach((f, i) => this.tone(f, 0.12, 'square', 0.05, 1, i * 0.08)); },
     bad() { [330, 262, 196].forEach((f, i) => this.tone(f, 0.14, 'triangle', 0.07, 1, i * 0.09)); },
@@ -464,10 +501,15 @@
   let paused = false;
   let serveT = 0, pointT = 0, serveDir = -1, firstServe = true;
   const score = [0, 0];   // [you, ai]
-  const ball = { x: 0, z: 0, vx: 0, vz: 0, speed: 0 };
+  const ball = { x: 0, z: 0, vx: 0, vz: 0, speed: 0, curve: 0, spinLvl: 0, spinAge: 0, spinFlight: 1 };
   let targetX = 0, keyDir = 0, shake = 0, time = 0;
+  let simTime = 0, spinTapAt = -1, streak = 0;
+  const power = { type: null, t: 0 };
+  const dbg = { diff: null, spinP: null, forceLevel: 0, stats: null }; // test hooks (?debug)
 
-  const curDiff = () => (mode === 'menu' ? DIFF.normal : DIFF[diffKey]);
+  const curDiffKey = () => dbg.diff || (mode === 'menu' ? 'normal' : diffKey);
+  const curDiff = () => DIFF[curDiffKey()];
+  const padLim = (pad) => HW - pad.w / 2;
   const padKey = (pad) => (pad === P ? nearRig.key : farRig.key);
 
   function assignChars() {
@@ -500,6 +542,25 @@
     banner.classList.remove('show'); void banner.offsetWidth; banner.classList.add('show');
   }
   function updateHUD() { $('#sYou').textContent = score[0]; $('#sAi').textContent = score[1]; }
+  const pop = $('#pop');
+  function popText(text, color) {
+    pop.textContent = text; pop.style.color = color;
+    pop.classList.remove('show'); void pop.offsetWidth; pop.classList.add('show');
+  }
+  function updateSpinHUD() {
+    const lvl = Math.min(streak, 3);
+    const n = streak === 0 ? 0 : ((streak - 1) % 3) + 1; // progress toward the next power-up
+    const pips = $('#spinPips');
+    pips.style.setProperty('--lvl', SPIN.css[Math.max(lvl, 1)]);
+    pips.querySelectorAll('i').forEach((el, i) => el.classList.toggle('on', i < n));
+  }
+  function updatePowerHUD() {
+    const chip = $('#powerChip');
+    chip.hidden = !power.type;
+    if (!power.type) return;
+    $('#powerName').textContent = POWER[power.type].name;
+    chip.style.setProperty('--pc', POWER[power.type].css);
+  }
   function updateMuteBtn() { $('#btnMute').textContent = Sfx.muted ? 'SOUND OFF' : 'SOUND ON'; }
 
   function refreshMenu() {
@@ -516,6 +577,8 @@
     phase = 'serve';
     serveT = firstServe ? 1.3 : 0.85;
     ball.x = 0; ball.z = 0; ball.vx = 0; ball.vz = 0;
+    ball.curve = 0; ball.spinLvl = 0; ball.spinAge = 0;
+    spinTapAt = -1;
     trailHist = [];
     if (mode === 'game' && firstServe) showBanner('READY?', 'var(--ink)');
     firstServe = false;
@@ -539,6 +602,7 @@
     mode = 'game'; paused = false;
     score[0] = score[1] = 0; updateHUD();
     P.isAI = false; P.x = 0; A.x = 0; targetX = 0;
+    streak = 0; updateSpinHUD(); endPower();
     nearRig.loop = farRig.loop = false;
     assignChars();
     $('#menu').hidden = true; $('#over').hidden = true; $('#pauseMenu').hidden = true; $('#hud').hidden = false;
@@ -550,6 +614,7 @@
   function toMenu() {
     mode = 'menu'; paused = false;
     P.isAI = true;
+    streak = 0; updateSpinHUD(); endPower();
     nearRig.loop = farRig.loop = false;
     $('#menu').hidden = false; $('#over').hidden = true; $('#pauseMenu').hidden = true; $('#hud').hidden = true;
     document.body.classList.remove('playing');
@@ -575,6 +640,7 @@
     winRig.jumpT = 0.7; loseRig.shakeT = 0.8;
     if (mode !== 'game') { pointT = 0.9; return; }
     const youScored = winSide > 0;
+    if (!youScored && streak) { streak = 0; updateSpinHUD(); }
     score[youScored ? 0 : 1]++;
     updateHUD();
     shake = REDUCED ? 0 : 0.5;
@@ -587,6 +653,7 @@
 
   function gameOver() {
     phase = 'over';
+    endPower();
     const youWon = score[0] > score[1];
     const winKey = youWon ? nearRig.key : farRig.key;
     (youWon ? nearRig : farRig).loop = true;
@@ -607,18 +674,24 @@
   // ---------------------------------------------------------------- AI
   function rollErr(pad) {
     const D = curDiff();
-    let off = rand(-1, 1) * D.aim * (PW / 2);
-    if (Math.random() < D.missP) off = (Math.random() < 0.5 ? -1 : 1) * (PW / 2 + R + rand(0.4, 1.2));
-    return off;
+    let off = rand(-1, 1) * D.aim * (pad.w / 2);
+    if (Math.random() < D.missP) off = (Math.random() < 0.5 ? -1 : 1) * (pad.w / 2 + R + rand(0.4, 1.2));
+    return off + rand(-1, 1) * SPIN.errPerLevel * ball.spinLvl;
   }
+  // Simulates the ball forward with the game's own integrator. The AI only notices a curve once
+  // the ball is part-way down the table, so strong spin fools it at first but it can still recover.
   function predictX(zPlane) {
     if (ball.vz === 0) return ball.x;
-    const t = (zPlane - ball.z) / ball.vz;
-    if (t < 0) return ball.x;
-    const period = 4 * WL;
-    let u = ((ball.x + ball.vx * t + WL) % period + period) % period;
-    if (u > 2 * WL) u = period - u;
-    return u - WL;
+    const noticed = !ball.curve || ball.spinAge >= SPIN.readFrac[curDiffKey()] * ball.spinFlight;
+    // until it notices the spin, the AI trusts the straight path it saw leave the paddle
+    return simulateTo(noticed ? { ...ball } : { ...ball.launch }, zPlane);
+  }
+  function simulateTo(s, zPlane) {
+    for (let i = 0; i < 900; i++) {
+      if ((s.vz > 0 && s.z >= zPlane) || (s.vz < 0 && s.z <= zPlane)) break;
+      integrate(s, STEP);
+    }
+    return s.x;
   }
   function updateAI(pad, dt) {
     const D = curDiff();
@@ -630,18 +703,66 @@
     }
     const want = clamp((pad.target - pad.x) * 8, -D.speed, D.speed);
     const prev = pad.x;
-    pad.x = clamp(pad.x + want * dt, -(HW - PW / 2), HW - PW / 2);
+    pad.x = clamp(pad.x + want * dt, -padLim(pad), padLim(pad));
     pad.vx = (pad.x - prev) / dt;
   }
 
   // ---------------------------------------------------------------- physics
+  // Decides the spin level of a hit. Player: a timed tap; AI: a chance per difficulty.
+  function spinLevelFor(pad) {
+    if (pad === P && !P.isAI) {
+      const timed = spinTapAt >= 0 && simTime - spinTapAt <= SPIN.window;
+      spinTapAt = -1;
+      if (!timed) { if (streak) { streak = 0; updateSpinHUD(); } return 0; }
+      streak++;
+      if (dbg.stats) dbg.stats.spinShots++;
+      const lvl = Math.min(streak, 3);
+      popText(lvl > 1 ? `SPIN x${lvl}` : 'SPIN!', SPIN.css[lvl]);
+      if (streak % 3 === 0) awardPower();
+      updateSpinHUD();
+      return lvl;
+    }
+    const chance = dbg.spinP ?? SPIN.aiChance[curDiffKey()];
+    if (Math.random() >= chance) return 0;
+    const lvl = dbg.forceLevel || (Math.random() < 0.6 ? 1 : 2);
+    if (mode === 'game' && pad === A) popText('INCOMING SPIN', SPIN.css[lvl]);
+    return lvl;
+  }
+
+  function awardPower() {
+    endPower();
+    power.type = Math.random() < 0.5 ? 'big' : 'slow';
+    power.t = POWER[power.type].dur;
+    if (power.type === 'big') P.w = PW * 1.5;
+    if (dbg.stats) dbg.stats.powers++;
+    showBanner(POWER[power.type].name + '!', POWER[power.type].css);
+    Sfx.power();
+    updatePowerHUD();
+  }
+  function endPower() {
+    power.type = null; power.t = 0; P.w = PW;
+    updatePowerHUD();
+  }
+
   function hit(pad, xc) {
     const D = curDiff();
-    const rel = clamp((xc - pad.x) / (PW / 2), -1, 1);
+    const rel = clamp((xc - pad.x) / (pad.w / 2), -1, 1);
     ball.speed = Math.min(ball.speed * 1.045, D.max);
     const ang = clamp(rel * 0.9 + clamp(pad.vx * 0.012, -0.25, 0.25), -1, 1);
     ball.vx = Math.sin(ang) * ball.speed;
     ball.vz = -pad.side * Math.cos(ang) * ball.speed;
+    const lvl = spinLevelFor(pad);
+    const opp = pad === P ? A : P;
+    ball.spinLvl = lvl; ball.spinAge = 0; ball.curve = 0;
+    ball.spinFlight = (2 * FACE) / Math.abs(ball.vz); // rough time to reach the other paddle
+    if (lvl) {
+      // brush direction = paddle movement; a still paddle curves the ball away from the opponent
+      const dir = Math.abs(pad.vx) > 1.5 ? Math.sign(pad.vx) : (Math.sign(ball.x - opp.x) || (Math.random() < 0.5 ? -1 : 1));
+      ball.curve = dir * SPIN.curve[lvl];
+      Sfx.spin(lvl);
+    }
+    ball.launch = { x: ball.x, z: ball.z, vx: ball.vx, vz: ball.vz, speed: ball.speed, curve: 0 };
+    if (dbg.stats) dbg.straightX = simulateTo({ ...ball.launch }, -pad.side * FACE);
     pad.pulse = 1;
     const rig = pad === P ? nearRig : farRig;
     rig.pulse = 1;
@@ -660,12 +781,27 @@
     return y;
   }
 
+  // Shared ball integrator for the game and the AI's prediction. Returns true on a rail bounce.
+  function integrate(s, dt) {
+    if (s.curve) {
+      // sideways push; speed is preserved and |vx| capped so the ball always travels down the table
+      const lim = s.speed * 0.8;
+      s.vx = clamp(s.vx + s.curve * dt, -lim, lim);
+      s.vz = Math.sign(s.vz) * Math.sqrt(Math.max(s.speed * s.speed - s.vx * s.vx, 1e-4));
+    }
+    s.x += s.vx * dt;
+    s.z += s.vz * dt;
+    let bounced = false;
+    if (s.x > WL) { s.x = clamp(2 * WL - s.x, -WL, WL); s.vx = -Math.abs(s.vx); bounced = true; }
+    else if (s.x < -WL) { s.x = clamp(-2 * WL - s.x, -WL, WL); s.vx = Math.abs(s.vx); bounced = true; }
+    if (bounced) s.curve *= -0.5; // spin flips and fades off the rail so the ball can't hug it
+    return bounced;
+  }
+
   function moveBall(dt) {
     const pz = ball.z, px = ball.x;
-    ball.x += ball.vx * dt;
-    ball.z += ball.vz * dt;
-    if (ball.x > WL) { ball.x = clamp(2 * WL - ball.x, -WL, WL); ball.vx = -Math.abs(ball.vx); Sfx.wall(); }
-    else if (ball.x < -WL) { ball.x = clamp(-2 * WL - ball.x, -WL, WL); ball.vx = Math.abs(ball.vx); Sfx.wall(); }
+    if (integrate(ball, dt)) Sfx.wall();
+    ball.spinAge += dt;
     // table bounce tick (visual bounce points at z = ±HL/2)
     if (Math.abs(ball.z) <= HL && Math.sign(Math.abs(pz) - HL / 2) !== Math.sign(Math.abs(ball.z) - HL / 2)) Sfx.bounce();
     if (phase !== 'play') return;
@@ -676,29 +812,35 @@
       if (!crossed) continue;
       const t = (plane - pz) / (ball.z - pz || 1);
       const xc = clamp(px + (ball.x - px) * t, -WL, WL);
-      if (Math.abs(xc - pad.x) <= PW / 2 + R * 0.8) {
+      const lvl = ball.spinLvl;
+      if (dbg.stats && dbg.straightX !== undefined) { dbg.stats.bend[lvl] += Math.abs(xc - dbg.straightX); dbg.stats.bendN[lvl]++; }
+      if (Math.abs(xc - pad.x) <= pad.w / 2 + R * 0.8) {
+        if (dbg.stats) dbg.stats.ret[lvl]++;
         ball.z = plane - (ball.z - plane);
         ball.x = xc;
         hit(pad, xc);
-      }
+      } else if (dbg.stats) dbg.stats.miss[lvl]++;
     }
     if (ball.z > PZ + 0.5) scorePoint(-1);
     else if (ball.z < -PZ - 0.5) scorePoint(1);
   }
 
   function step(dt) {
+    simTime += dt;
+    if (power.type) { power.t -= dt; if (power.t <= 0) endPower(); }
     // player paddle
     if (P.isAI) updateAI(P, dt);
     else {
-      if (keyDir) targetX = clamp(targetX + keyDir * 13 * dt, -(HW - PW / 2), HW - PW / 2);
+      if (keyDir) targetX = clamp(targetX + keyDir * 13 * dt, -padLim(P), padLim(P));
       const prev = P.x;
-      P.x += (clamp(targetX, -(HW - PW / 2), HW - PW / 2) - P.x) * Math.min(1, dt * 22);
+      P.x += (clamp(targetX, -padLim(P), padLim(P)) - P.x) * Math.min(1, dt * 22);
       P.vx = (P.x - prev) / dt;
     }
     updateAI(A, dt);
 
     if (phase === 'serve') { serveT -= dt; if (serveT <= 0) launch(); return; }
-    if (phase === 'play' || phase === 'point') moveBall(dt);
+    // SLOW-MO only slows balls coming toward the player
+    if (phase === 'play' || phase === 'point') moveBall(power.type === 'slow' && ball.vz > 0 ? dt * 0.65 : dt);
     if (!Number.isFinite(ball.x) || !Number.isFinite(ball.z)) { resetServe(); return; }
     if (phase === 'point') {
       pointT -= dt;
@@ -731,13 +873,26 @@
     rig.pedMat.opacity = 0.55 + 0.25 * Math.sin(time * 2 + rig.phase);
   }
 
+  let shownSpin = -1;
   function render(dt) {
     time += dt;
     for (const pad of [P, A]) {
       pad.pulse = Math.max(0, pad.pulse - dt * 4);
       pad.group.position.set(pad.x, PY, pad.side * (PZ - 0.2 * pad.pulse));
       pad.group.rotation.z = clamp(-pad.vx * 0.01, -0.25, 0.25);
-      pad.mat.emissiveIntensity = 0.35 + pad.pulse * 0.9;
+      pad.group.scale.x += (pad.w / PW - pad.group.scale.x) * Math.min(1, dt * 12);
+      pad.tapGlow = Math.max(0, pad.tapGlow - dt * 5);
+      pad.mat.emissiveIntensity = 0.35 + pad.pulse * 0.9 + pad.tapGlow * 0.7;
+    }
+    if (power.type) $('#powerFill').style.width = `${clamp(power.t / POWER[power.type].dur, 0, 1) * 100}%`;
+    if (shownSpin !== ball.spinLvl) {
+      shownSpin = ball.spinLvl;
+      const c = SPIN.color[shownSpin];
+      ballGlow.material.color.setHex(c);
+      ballMesh.material.color.setHex(shownSpin ? c : 0xffffff);
+      ballMesh.material.emissive.setHex(shownSpin ? c : 0xffffff);
+      trail.forEach((m) => m.material.color.setHex(c));
+      ballGlow.scale.setScalar(0.95 + shownSpin * 0.18);
     }
     animRig(nearRig, P, dt);
     animRig(farRig, A, dt);
@@ -806,10 +961,22 @@
   const ndc = new THREE.Vector2();
   const paddlePlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -PZ);
   const hitPt = new THREE.Vector3();
-  window.addEventListener('pointermove', (e) => {
+  function aimAt(e) {
     ndc.set((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
     ray.setFromCamera(ndc, refCam);
-    if (ray.ray.intersectPlane(paddlePlane, hitPt)) targetX = clamp(hitPt.x, -(HW - PW / 2), HW - PW / 2);
+    if (ray.ray.intersectPlane(paddlePlane, hitPt)) targetX = clamp(hitPt.x, -padLim(P), padLim(P));
+  }
+  window.addEventListener('pointermove', aimAt);
+
+  // Spin: a click / trackpad tap / touch on the table (not on buttons), or Shift.
+  function tapSpin() {
+    if (mode !== 'game' || paused || phase !== 'play') return;
+    spinTapAt = simTime;
+    P.tapGlow = 1;
+  }
+  canvas.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'mouse') aimAt(e);
+    if (e.pointerType !== 'mouse' || e.button === 0) tapSpin();
   });
 
   const keysDown = new Set();
@@ -818,6 +985,7 @@
     if (k === 'ArrowLeft' || k === 'a' || k === 'A') keysDown.add('L');
     if (k === 'ArrowRight' || k === 'd' || k === 'D') keysDown.add('R');
     keyDir = (keysDown.has('R') ? 1 : 0) - (keysDown.has('L') ? 1 : 0);
+    if (k === 'Shift' && !e.repeat) tapSpin();
     if (k === 'm' || k === 'M') { Sfx.muted = !Sfx.muted; store.set('pp-muted', Sfx.muted ? '1' : '0'); updateMuteBtn(); }
     if (mode === 'game' && phase !== 'over' && (k === ' ' || k === 'p' || k === 'P' || k === 'Escape')) {
       e.preventDefault(); setPaused(!paused);
@@ -857,8 +1025,55 @@
   updateMuteBtn();
   toMenu();
 
-  const STEP = 1 / 120;
   let last = performance.now(), acc = 0;
+
+  if (new URLSearchParams(location.search).has('debug')) {
+    const freshStats = () => ({ ret: [0, 0, 0, 0], miss: [0, 0, 0, 0], bend: [0, 0, 0, 0], bendN: [0, 0, 0, 0], powers: 0, spinShots: 0, maxStreak: 0 });
+    window.__pong = {
+      // Headless AI-vs-AI run: invariants plus return/miss counts per spin level.
+      sim(seconds, opts = {}) {
+        toMenu();
+        dbg.diff = opts.diff || null; dbg.spinP = opts.spinP ?? null; dbg.forceLevel = opts.forceLevel || 0;
+        dbg.stats = freshStats();
+        const crossings = () => dbg.stats.ret.concat(dbg.stats.miss).reduce((x, y) => x + y, 0);
+        let bad = 0, rally = 0, maxRally = 0, flight = 0, maxFlight = 0, points = 0;
+        for (let i = 0, n = Math.round(seconds / STEP); i < n; i++) {
+          const before = phase, seen = crossings();
+          step(STEP);
+          if (!Number.isFinite(ball.x) || !Number.isFinite(ball.z) || Math.abs(ball.x) > WL + 1e-6) bad++;
+          rally = phase === 'play' ? rally + STEP : 0;
+          flight = phase === 'play' && crossings() === seen ? flight + STEP : 0; // time without reaching a paddle
+          maxRally = Math.max(maxRally, rally);
+          maxFlight = Math.max(maxFlight, flight);
+          if (before === 'play' && phase === 'point') points++;
+        }
+        const out = { bad, maxRally, maxFlight, points, ...dbg.stats };
+        Object.assign(dbg, { diff: null, spinP: null, forceLevel: 0, stats: null });
+        toMenu();
+        return out;
+      },
+      // Scripted player that tracks the ball and taps `tapAt` seconds before contact.
+      simPlayer(seconds, opts = {}) {
+        startGame();
+        dbg.diff = opts.diff || null; dbg.stats = freshStats();
+        let tapped = false;
+        for (let i = 0, n = Math.round(seconds / STEP); i < n && phase !== 'over'; i++) {
+          if (phase === 'play' && ball.vz > 0) {
+            targetX = clamp(predictX(FACE), -padLim(P), padLim(P));
+            if (!tapped && (FACE - ball.z) / ball.vz <= (opts.tapAt ?? 0.15)) { tapSpin(); tapped = true; }
+          } else tapped = false;
+          step(STEP);
+          dbg.stats.maxStreak = Math.max(dbg.stats.maxStreak, streak);
+        }
+        const out = { ...dbg.stats, score: [...score], streak, power: power.type };
+        Object.assign(dbg, { diff: null, stats: null });
+        if (!opts.keep) toMenu();
+        return out;
+      },
+      // Live overrides for manual/visual checks, e.g. __pong.set({ spinP: 1, forceLevel: 3 }).
+      set(opts = {}) { dbg.spinP = opts.spinP ?? null; dbg.forceLevel = opts.forceLevel || 0; if (mode === 'game') P.isAI = !!opts.autoPlayer; },
+    };
+  }
   function frame(now) {
     requestAnimationFrame(frame);
     const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
