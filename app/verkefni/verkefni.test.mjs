@@ -125,3 +125,31 @@ test("Pixel Pong has timed spin shots, streaks and power-ups", () => {
   assert.match(staticPongSource, /window\.__pong = \{/);
   assert.match(pongDetailSource, /snúning/);
 });
+
+const auroraDetailSource = readIfPresent("./nordurljos/page.tsx");
+const staticAuroraUrl = fileUrl("../../public/projects/nordurljos/app.html");
+const staticAuroraSource = existsSync(staticAuroraUrl) ? readFileSync(staticAuroraUrl, "utf8") : "";
+
+test("Norðurljós is registered as the third project", () => {
+  assert.match(projectsSource, /number: "03",\s*slug: "nordurljos"/);
+  assert.match(projectsSource, /title: "Norðurljós"/);
+  assert.match(projectsSource, /href: "\/verkefni\/nordurljos"/);
+  assert.match(projectsSource, /viewerPath: "\/projects\/nordurljos\/app\.html"/);
+  assert.match(projectsSource, /preview: "\/projects\/nordurljos\/preview\.png"/);
+  assert.ok(existsSync(fileUrl("../../public/projects/nordurljos/preview.png")), "expected a preview image");
+});
+
+test("Norðurljós detail page embeds the app", () => {
+  assert.match(auroraDetailSource, /Til baka í verkefni/);
+  assert.match(auroraDetailSource, /<ProjectEmbed src=\{project\.viewerPath\}/);
+});
+
+test("static Norðurljós app is a complete document with all its scripts", () => {
+  assert.ok(existsSync(staticAuroraUrl), "expected the static app to exist");
+  assert.match(staticAuroraSource, /^<!doctype html>/i);
+  assert.match(staticAuroraSource, /<meta name="viewport"/);
+  for (const script of ["data/cgm.js", "data/land.js", "data/iceland.js", "js/gl.js", "js/astro.js", "js/sky.js", "js/sun.js", "js/magneto.js", "js/atmos.js", "js/globe.js", "js/iceland.js", "js/app.js"]) {
+    assert.match(staticAuroraSource, new RegExp(`src="${script}"`));
+    assert.ok(existsSync(fileUrl(`../../public/projects/nordurljos/${script}`)), `expected ${script}`);
+  }
+});
