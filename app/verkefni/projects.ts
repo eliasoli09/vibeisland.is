@@ -54,6 +54,19 @@ export const projects: readonly Project[] = [
     status: "Gagnvirk vísindasíða",
     tags: ["WebGL", "Vísindi", "Ísland"],
   },
+  {
+    number: "04",
+    slug: "svefnvelin",
+    title: "Svefnvélin",
+    description:
+      "Gagnvirkur íslenskur vefur um svefn og líkamann, byggður á 300 þáttum af Huberman Lab. Skoðaðu kafla, samanburð, þrívíða líffærafræði og leitaðu í uppskriftum þáttanna.",
+    href: "/verkefni/svefnvelin",
+    viewerPath: "/projects/svefnvelin/index.html",
+    preview: "/projects/svefnvelin/preview.png",
+    previewAlt: "Forsíða Svefnvélarinnar með köflum um svefn og líkamann",
+    status: "Gagnvirkur fræðsluvefur",
+    tags: ["Svefn", "Líkaminn", "Three.js"],
+  },
 ];
 
 export function getProjectBySlug(slug: string): Project {

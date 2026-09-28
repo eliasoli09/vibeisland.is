@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="is">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Svefnvélin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="css/app.css?v=1790599267">
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap topbar">
+    <div class="brand">Svefn<b>vélin</b></div>
+    <nav class="main" id="nav">
+      <button data-v="heim" aria-current="true">Heim</button>
+      <button data-v="kaflar">Kaflar</button>
+      <button data-v="samanburdur">Samanburður</button>
+      <button data-v="likami">Líkaminn</button>
+      <button data-v="thaettir">Þættir</button>
+      <button data-v="baetiefni">Bætiefni og líkaminn</button>
+      <button data-v="adferd">Aðferð</button>
+    </nav>
+    <div class="density">
+      <span>Texti</span>
+      <div class="seg" id="dens">
+        <button data-d="low">Lítill</button>
+        <button data-d="med" aria-pressed="true">Miðlungs</button>
+        <button data-d="high">Mikill</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- HEIM -->
+  <section class="view" id="v-heim">
+    <p class="kicker">Byggt á 300 þáttum af Huberman Lab</p>
+    <h1 style="font-size:clamp(2rem,5vw,3.1rem);margin-block:10px 14px">Hvað gerist í líkamanum - og hvað segja gögnin?</h1>
+    <p class="lede">Hver kafli sýnir vélbúnaðinn í þrívídd og setur við hliðina á honum orðréttar tölur úr þáttunum: hópurinn sem gerir eitthvað á móti hópnum sem gerir það ekki.</p>
+
+    <div class="stats" id="stats"></div>
+
+    <div class="d-med">
+      <div class="note">
+        <b>Hvaðan koma tölurnar.</b> Allur texti í samanburðinum er <b>orðréttur úr uppskriftum þáttanna</b> - ekki endursagður og ekki lagaður til. Uppskriftirnar eru sjálfvirkar myndatextar, þess vegna eru þær lágstafa og án greinarmerkja. Það er vísvitandi: ef ég snyrti þær gæti ég breytt merkingunni.
+      </div>
+    </div>
+    <div class="d-high">
+      <div class="note">
+        <b>Hvað þetta er ekki.</b> Þetta er ekki læknisráðgjöf. Margar tölurnar koma úr <b>fylgnirannsóknum</b> (ekki tilraunum), sem þýðir að þær sýna samband en sanna ekki orsök. Þar sem þáttastjórnandinn nefnir rannsókn eða stofnun er það merkt. Þar sem ekkert slíkt er merkt er fullyrðingin bara fullyrðing.
+      </div>
+    </div>
+
+    <hr class="sep">
+    <h2 style="font-size:1.5rem;margin-bottom:14px">Kaflarnir</h2>
+    <div class="grid g3" id="homeChapters"></div>
+  </section>
+
+  <!-- KAFLAR -->
+  <section class="view" id="v-kaflar" hidden></section>
+
+  <!-- SAMANBURDUR -->
+  <section class="view" id="v-samanburdur" hidden>
+    <p class="kicker">Þeir sem gera það á móti þeim sem gera það ekki</p>
+    <h1 style="font-size:clamp(1.7rem,4vw,2.5rem);margin-block:8px 12px">Samanburður</h1>
+    <p class="lede" id="cmpLede"></p>
+    <div class="filters" id="cmpTopics"></div>
+    <div class="filters">
+      <button class="chip" id="fStudy">Aðeins þar sem rannsókn er nefnd</button>
+      <button class="chip" id="fInst">Aðeins þar sem stofnun er nefnd</button>
+    </div>
+    <input type="search" id="cmpSearch" placeholder="Leita í orðréttum texta…" style="margin-bottom:16px">
+    <p class="muted tnum" id="cmpCount"></p>
+    <div class="grid" id="cmpList" style="gap:13px"></div>
+  </section>
+
+  <!-- LIKAMI -->
+  <section class="view" id="v-likami" hidden>
+    <p class="kicker">Raunveruleg líffærafræði · 13 kerfi</p>
+    <h1 style="font-size:clamp(1.7rem,4vw,2.5rem);margin-block:8px 12px">Líkaminn</h1>
+    <p class="lede">Sömu möskvar og eru notaðir í myndböndunum. Dragðu til að snúa, skrollaðu til að þysja, kveiktu og slökktu á kerfum fyrir neðan.</p>
+    <p class="muted d-med">Hvert kerfi hleðst fyrst þegar kveikt er á því. Safnið í heild er 23,8 milljón marghyrningar sem enginn vafri ræður við, svo það er skipt niður - og æðakerfin eru einfölduð í 55%, kvenlíkaminn í 25%.</p>
+    <div id="stageWrap" style="margin-block:18px">
+      <div id="stage"><div class="loading" id="stageMsg">hleð líffærafræði…</div></div>
+    </div>
+    <div class="filters" id="sysFilters"></div>
+  </section>
+
+  <!-- THAETTIR -->
+  <section class="view" id="v-thaettir" hidden>
+    <p class="kicker">Allt safnið</p>
+    <h1 style="font-size:clamp(1.7rem,4vw,2.5rem);margin-block:8px 12px">Þættirnir</h1>
+    <p class="lede" id="epLede"></p>
+    <input type="search" id="epSearch" placeholder="Leita í titlum…" style="margin-block:16px">
+    <p class="muted tnum" id="epCount"></p>
+    <div id="epDetail"></div>
+    <div class="eplist" id="epList"></div>
+  </section>
+
+  <!-- BAETIEFNI -->
+  <section class="view" id="v-baetiefni" hidden></section>
+
+  <!-- ADFERD -->
+  <section class="view" id="v-adferd" hidden></section>
+
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="js/app.js?v=1790594152"></script>
+</body>
+</html>
