@@ -41,6 +41,19 @@ export const projects: readonly Project[] = [
     tags: ["Three.js", "Leikur", "Gervigreind"],
     playInline: true,
   },
+  {
+    number: "03",
+    slug: "nordurljos",
+    title: "Norðurljós",
+    description:
+      "Gagnvirkt ferðalag frá sólinni niður á íslenskan næturhiminn. Sjáðu hvernig norðurljósin myndast, af hverju þau eru græn, rauð og fjólublá, og hvenær og hvar best er að sjá þau á Íslandi.",
+    href: "/verkefni/nordurljos",
+    viewerPath: "/projects/nordurljos/app.html",
+    preview: "/projects/nordurljos/preview.png",
+    previewAlt: "Hermd norðurljós yfir íslensku stöðuvatni og fjöllum",
+    status: "Gagnvirk vísindasíða",
+    tags: ["WebGL", "Vísindi", "Ísland"],
+  },
 ];
 
 export function getProjectBySlug(slug: string): Project {

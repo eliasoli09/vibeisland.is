@@ -1,0 +1,707 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Norðurljós</title>
+<meta name="description" content="An interactive, research-based guide to how the northern lights form, why they glow green, red and violet, and when and where to see them in Iceland.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  color-scheme: dark;
+  --night:#04060b;
+  --night-2:#0a0f18;
+  --night-3:#111827;
+  --line:rgba(190,210,245,.13);
+  --line-2:rgba(190,210,245,.24);
+  --frost:#e8eef6;
+  --mist:#9aa8bc;
+  --mist-2:#6c7a8f;
+  --o557:#5dffa0;
+  --o630:#ff5268;
+  --n428:#8f86ff;
+  --n391:#b28cff;
+  --n2pink:#ff72cf;
+  --sun:#ffb23e;
+  --good:#5dffa0;
+  --warn:#ffd166;
+  --bad:#ff7b7b;
+  --serif:"Instrument Serif", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --sans:"Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --gutter:clamp(16px, 4vw, 40px);
+  --rail:0px;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+img{max-width:100%}
+html{scroll-behavior:smooth;background:var(--night)}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--night);color:var(--frost);font:400 17px/1.62 var(--sans);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:var(--o557);text-underline-offset:3px;text-decoration-thickness:1px}
+a:hover{text-decoration-thickness:2px}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--o557);outline-offset:3px;border-radius:4px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---------- hero ---------- */
+.hero{position:relative;height:min(94vh, 940px);min-height:560px;overflow:hidden;background:#010204}
+.hero canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab;touch-action:pan-y}
+.hero canvas.dragging{cursor:grabbing}
+.hero-top{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px var(--gutter);pointer-events:none;z-index:2}
+.pill{display:inline-flex;align-items:center;gap:8px;font:500 11.5px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--frost);padding:8px 12px;border:1px solid var(--line-2);border-radius:999px;background:rgba(4,6,11,.45);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.pill .dot{width:7px;height:7px;border-radius:50%;background:var(--o557);box-shadow:0 0 10px var(--o557)}
+.hero-copy{position:absolute;left:var(--gutter);bottom:clamp(150px, 20vh, 200px);max-width:min(640px, calc(100% - 2*var(--gutter)));z-index:2;pointer-events:none;text-shadow:0 2px 24px rgba(0,0,0,.6)}
+.eyebrow{font:500 12px/1.3 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--mist)}
+.hero h1{margin:.2em 0 .1em;font:italic 400 clamp(64px, 12vw, 164px)/.86 var(--serif);letter-spacing:-.01em}
+.hero h1 .sub{display:block;font:500 clamp(18px, 2.3vw, 26px)/1.25 var(--sans);font-style:normal;letter-spacing:.01em;margin-top:.5em;color:var(--frost)}
+.hero p.lede{margin:.8em 0 0;font-size:clamp(15px,1.5vw,18px);color:#cfd8e6;max-width:52ch}
+.hero-controls{position:absolute;left:var(--gutter);right:var(--gutter);bottom:18px;z-index:3;display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:rgba(5,8,14,.62);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.hero-controls .kp{flex:1 1 280px;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:6px 12px}
+.hero-hint{font:400 12px/1.3 var(--mono);color:var(--mist);letter-spacing:.04em}
+.scroll-cue{position:absolute;right:var(--gutter);bottom:clamp(150px,20vh,200px);z-index:2;font:500 11px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--mist);writing-mode:vertical-rl;text-decoration:none}
+.scroll-cue::after{content:"";display:block;width:1px;height:48px;margin:12px auto 0;background:linear-gradient(var(--mist),transparent)}
+
+/* ---------- controls ---------- */
+label.lbl,.lbl{font:500 11.5px/1.2 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mist)}
+.val{font:500 13px/1.2 var(--mono);color:var(--frost);font-variant-numeric:tabular-nums;white-space:nowrap}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:28px;background:transparent;cursor:pointer;margin:0}
+input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:4px;background:linear-gradient(90deg,var(--o557) var(--p,50%),rgba(190,210,245,.18) var(--p,50%))}
+input[type=range]::-moz-range-track{height:4px;border-radius:4px;background:rgba(190,210,245,.18)}
+input[type=range]::-moz-range-progress{height:4px;border-radius:4px;background:var(--o557)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--frost);margin-top:-7px;box-shadow:0 0 0 4px rgba(93,255,160,.18)}
+input[type=range]::-moz-range-thumb{width:18px;height:18px;border:0;border-radius:50%;background:var(--frost);box-shadow:0 0 0 4px rgba(93,255,160,.18)}
+input[type=range].sun::-webkit-slider-runnable-track{background:linear-gradient(90deg,var(--sun) var(--p,50%),rgba(190,210,245,.18) var(--p,50%))}
+input[type=range].sun::-moz-range-progress{background:var(--sun)}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border-radius:10px;border:1px solid var(--line-2);background:rgba(255,255,255,.04);cursor:pointer;font:500 14px/1.1 var(--sans);transition:background .15s,border-color .15s,transform .1s;white-space:nowrap}
+.btn:hover{background:rgba(255,255,255,.08);border-color:rgba(190,210,245,.4)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--o557);border-color:var(--o557);color:#03170b;font-weight:600}
+.btn.primary:hover{background:#86ffbb}
+.btn.sunb{border-color:rgba(255,178,62,.5);color:#ffd49a}
+.btn.sunb:hover{background:rgba(255,178,62,.12)}
+.seg{display:inline-flex;border:1px solid var(--line-2);border-radius:10px;overflow:hidden}
+.seg button{border:0;background:transparent;padding:8px 12px;cursor:pointer;font:500 13.5px/1.1 var(--sans);color:var(--mist)}
+.seg button[aria-pressed=true]{background:rgba(232,238,246,.12);color:var(--frost)}
+.seg button+button{border-left:1px solid var(--line)}
+select,input[type=date]{background:var(--night-3);border:1px solid var(--line-2);border-radius:8px;padding:7px 10px;font-size:14px}
+
+/* ---------- altimeter rail ---------- */
+.rail{display:none}
+@media (min-width:1180px){
+  :root{--rail:150px}
+  .rail{display:block;position:fixed;left:0;top:0;bottom:0;width:var(--rail);z-index:20;pointer-events:none;opacity:0;transition:opacity .4s}
+  .rail.on{opacity:1}
+  .rail-inner{position:absolute;left:26px;top:12vh;bottom:12vh;width:110px}
+  .rail-track{position:absolute;left:6px;top:0;bottom:0;width:1px;background:linear-gradient(var(--sun),var(--line-2) 30%,var(--line-2) 70%,var(--o557))}
+  .rail-tick{position:absolute;left:0;display:flex;align-items:center;gap:8px;transform:translateY(-50%);font:400 10px/1.2 var(--mono);color:var(--mist-2);letter-spacing:.04em}
+  .rail-tick i{display:block;width:13px;height:1px;background:var(--line-2)}
+  .rail-mark{position:absolute;left:0;transform:translateY(-50%);display:flex;align-items:center;gap:8px;transition:top .12s linear}
+  .rail-mark b{display:block;width:13px;height:13px;border-radius:50%;background:var(--frost);box-shadow:0 0 0 4px rgba(232,238,246,.12),0 0 16px rgba(232,238,246,.5)}
+  .rail-read{position:absolute;left:0;bottom:-8vh;font:500 11px/1.35 var(--mono);color:var(--frost)}
+  .rail-read span{display:block;color:var(--mist);font-weight:400;letter-spacing:.08em;text-transform:uppercase;font-size:10px}
+}
+.mobile-alt{position:sticky;top:env(safe-area-inset-top,0px);z-index:15;display:flex;justify-content:space-between;gap:10px;padding:8px var(--gutter);font:500 11px/1.2 var(--mono);letter-spacing:.06em;background:rgba(4,6,11,.82);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line);color:var(--mist)}
+.mobile-alt b{color:var(--frost);font-weight:500}
+.mobile-alt{transition:opacity .3s}
+.mobile-alt.off{opacity:0;visibility:hidden}
+@media (min-width:1180px){.mobile-alt{display:none}}
+
+/* ---------- sections ---------- */
+main{padding-left:var(--rail)}
+.chapter{padding-block:clamp(72px, 11vw, 140px);padding-inline:var(--gutter);border-top:1px solid var(--line);position:relative}
+.wrap{max-width:1240px;margin:0 auto}
+.ch-head{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;margin-bottom:clamp(28px,4vw,48px);max-width:900px}
+.kicker{font:500 12px/1.3 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--mist);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.kicker .km{color:var(--frost);padding:4px 8px;border:1px solid var(--line-2);border-radius:6px;letter-spacing:.06em}
+h2{margin:0;font:400 clamp(40px, 6.2vw, 84px)/.98 var(--serif);letter-spacing:-.012em;text-wrap:balance}
+h2 em{font-style:italic;color:#fff}
+h3{margin:0 0 .4em;font:600 19px/1.3 var(--sans);letter-spacing:.005em}
+.lead{font-size:clamp(18px,1.8vw,21px);line-height:1.55;color:#d6deea;max-width:62ch;margin:0}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr);gap:clamp(28px,4vw,56px);align-items:start}
+@media (min-width:980px){.grid2{grid-template-columns:minmax(0,5fr) minmax(0,7fr)}.grid2.flip{grid-template-columns:minmax(0,7fr) minmax(0,5fr)}}
+.prose{max-width:64ch}
+.prose p{margin:0 0 1em;color:#cdd6e3}
+.prose p strong{color:var(--frost);font-weight:600}
+.prose ul{margin:0 0 1em;padding-left:1.1em;color:#cdd6e3}
+.prose li{margin:.3em 0}
+.note{font-size:14px;color:var(--mist);line-height:1.5}
+.tag{font:500 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;padding:4px 7px;border-radius:5px;border:1px solid currentColor;display:inline-block;vertical-align:1px}
+
+/* instruments = the interactive figures */
+.instrument{position:relative;border:1px solid var(--line);border-radius:18px;background:linear-gradient(180deg,rgba(17,24,39,.55),rgba(10,15,24,.35));overflow:hidden}
+.instrument .stage{position:relative;width:100%;aspect-ratio:16/10;max-width:100%}
+.instrument .stage.tall{aspect-ratio:4/5}
+.instrument .stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.instrument .bar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;padding:14px 16px;border-top:1px solid var(--line)}
+.instrument .bar .grow{flex:1 1 220px;min-width:0}
+.instrument .cap{position:absolute;left:14px;top:12px;font:500 10.5px/1.3 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--mist);pointer-events:none}
+.instrument .cap.r{left:auto;right:14px;text-align:right}
+.readouts{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;background:var(--line);border-top:1px solid var(--line)}
+.readouts div{background:var(--night-2);padding:12px 16px}
+.readouts .k{display:block;font:500 10.5px/1.2 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mist);margin-bottom:5px}
+.readouts .v{font:500 19px/1.2 var(--mono);font-variant-numeric:tabular-nums}
+.readouts .v small{font-size:12px;color:var(--mist);font-weight:400}
+
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:28px}
+.fact{padding:16px 18px;border-left:2px solid var(--line-2)}
+.fact b{display:block;font:400 30px/1.05 var(--serif);margin-bottom:6px}
+.fact span{font-size:14px;color:var(--mist);line-height:1.45;display:block}
+
+/* spectral line chips */
+.line-chip{display:inline-flex;align-items:center;gap:6px;font:500 12.5px/1 var(--mono);padding:5px 8px;border-radius:6px;background:rgba(255,255,255,.04);border:1px solid var(--line);white-space:nowrap}
+.line-chip i{width:9px;height:9px;border-radius:50%;display:block}
+
+/* emission table */
+.emit{display:grid;gap:0;margin:20px 0;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.emit-row{display:grid;grid-template-columns:8px minmax(0,1fr);background:var(--night-2)}
+.emit-row+.emit-row{border-top:1px solid var(--line)}
+.emit-row .sw{height:100%}
+.emit-row .bd{padding:12px 16px;display:grid;grid-template-columns:minmax(0,1fr);gap:4px}
+.emit-row .t{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:baseline}
+.emit-row .t b{font:500 15px/1.2 var(--mono)}
+.emit-row .t span{color:var(--mist);font-size:14px}
+.emit-row p{margin:0;font-size:14.5px;color:#c6cfdc;line-height:1.5}
+
+/* phases */
+.phases{display:flex;flex-wrap:wrap;gap:8px;padding:14px 16px;border-top:1px solid var(--line)}
+.phase{flex:1 1 120px;text-align:left;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.02);cursor:pointer;display:grid;gap:2px}
+.phase b{font:600 14px/1.2 var(--sans)}
+.phase span{font:400 11.5px/1.3 var(--mono);color:var(--mist)}
+.phase[aria-pressed=true]{border-color:var(--o557);background:rgba(93,255,160,.07)}
+.phase-text{padding:16px;border-top:1px solid var(--line);min-height:112px}
+.phase-text p{margin:0;color:#cdd6e3;font-size:15.5px;max-width:70ch}
+.phase-text .when{font:500 11px/1.2 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--o557);margin-bottom:6px;display:block}
+
+/* globe */
+.globe-wrap{display:grid;grid-template-columns:minmax(0,1fr);gap:0}
+@media (min-width:980px){.globe-wrap{grid-template-columns:minmax(0,1.45fr) minmax(0,1fr)}}
+.globe-stage{position:relative;aspect-ratio:1/1;max-width:100%;min-height:0}
+.globe-stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.globe-stage canvas.gl{cursor:grab;touch-action:pan-y}
+.globe-side{border-top:1px solid var(--line);display:flex;flex-direction:column;min-width:0}
+@media (min-width:980px){.globe-side{border-top:0;border-left:1px solid var(--line)}}
+.globe-side .ctl{padding:14px 16px;display:grid;gap:12px;border-bottom:1px solid var(--line)}
+.ctl-row{display:grid;grid-template-columns:minmax(84px,auto) minmax(0,1fr) auto;align-items:center;gap:10px}
+.cities{list-style:none;margin:0;padding:6px 0;overflow:auto;max-height:420px}
+.cities li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;padding:8px 16px;align-items:center;cursor:pointer}
+.cities li:hover{background:rgba(255,255,255,.03)}
+.cities .nm{font-weight:500;font-size:15px}
+.cities .sub{grid-column:1/2;font:400 11.5px/1.3 var(--mono);color:var(--mist)}
+.st{font:500 11px/1 var(--mono);letter-spacing:.04em;padding:5px 7px;border-radius:6px;white-space:nowrap;grid-row:1/3;grid-column:2}
+.st.ov{background:rgba(93,255,160,.14);color:var(--good);box-shadow:inset 0 0 0 1px rgba(93,255,160,.35)}
+.st.lo{background:rgba(255,209,102,.12);color:var(--warn);box-shadow:inset 0 0 0 1px rgba(255,209,102,.3)}
+.st.cam{background:rgba(143,134,255,.12);color:#b8b1ff;box-shadow:inset 0 0 0 1px rgba(143,134,255,.3)}
+.st.no{background:rgba(255,255,255,.04);color:var(--mist-2);box-shadow:inset 0 0 0 1px var(--line)}
+.st.day{background:rgba(255,178,62,.1);color:#ffcf8a;box-shadow:inset 0 0 0 1px rgba(255,178,62,.28)}
+.st.pc{background:rgba(93,255,160,.06);color:#9fe8bf;box-shadow:inset 0 0 0 1px rgba(93,255,160,.2)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;padding:12px 16px;border-top:1px solid var(--line);font-size:12.5px;color:var(--mist)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.presets{display:flex;flex-wrap:wrap;gap:8px}
+.presets .btn{font-size:13px;padding:7px 10px}
+
+/* planner */
+.plan-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:18px}
+.chart svg{display:block;width:100%;height:auto}
+.chart .axis text{fill:var(--mist);font:400 11px var(--mono)}
+.chart .axis line,.chart .grid line{stroke:var(--line)}
+.checks{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:1px;background:var(--line);border-top:1px solid var(--line)}
+.check{background:var(--night-2);padding:14px 16px;display:grid;gap:4px;align-content:start}
+.check .k{font:500 10.5px/1.2 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mist);display:flex;align-items:center;gap:8px}
+.check .k i{width:8px;height:8px;border-radius:50%;background:var(--mist-2)}
+.check.ok .k i{background:var(--good);box-shadow:0 0 8px var(--good)}
+.check.meh .k i{background:var(--warn)}
+.check.bad .k i{background:var(--bad)}
+.check .v{font:500 17px/1.25 var(--sans)}
+.check p{margin:0;font-size:13.5px;color:var(--mist);line-height:1.45}
+
+/* Iceland */
+.map-wrap{display:grid;grid-template-columns:minmax(0,1fr);gap:0}
+@media (min-width:980px){.map-wrap{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)}}
+.map-stage svg{display:block;width:100%;height:auto}
+.spot-info{padding:18px;border-top:1px solid var(--line);display:grid;gap:8px;align-content:start}
+@media (min-width:980px){.spot-info{border-top:0;border-left:1px solid var(--line)}}
+.spot-info h3{font:400 32px/1.05 var(--serif);margin:0}
+.spot-info .meta{font:400 12px/1.5 var(--mono);color:var(--mist)}
+.spot-info p{margin:0;color:#cdd6e3;font-size:15px}
+.tips{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;margin-top:28px}
+.tip{padding:18px;border:1px solid var(--line);border-radius:14px;background:var(--night-2)}
+.tip h3{font-size:16.5px}
+.tip p,.tip li{font-size:14.5px;color:#c6cfdc;line-height:1.5;margin:0}
+.tip ul{margin:0;padding-left:1.1em}
+.tip .mono{font:500 13px/1.6 var(--mono);color:var(--frost)}
+
+/* timeline */
+.timeline{list-style:none;margin:0;padding:0;display:grid;gap:0;border-left:1px solid var(--line-2);margin-left:6px}
+.timeline li{position:relative;padding:0 0 26px 26px;display:grid;grid-template-columns:minmax(0,1fr);gap:4px;max-width:78ch}
+.timeline li::before{content:"";position:absolute;left:-5px;top:8px;width:9px;height:9px;border-radius:50%;background:var(--night);border:1px solid var(--o557)}
+.timeline .yr{font:400 28px/1 var(--serif);color:var(--frost)}
+.timeline p{margin:0;color:#c6cfdc;font-size:15.5px}
+
+/* quiz */
+.quiz{display:grid;gap:16px;max-width:860px}
+.q{border:1px solid var(--line);border-radius:14px;padding:18px;background:var(--night-2)}
+.q h3{font:500 18px/1.35 var(--sans);margin-bottom:12px}
+.q .opts{display:grid;gap:8px}
+.q .opts button{text-align:left;padding:10px 14px;border-radius:10px;border:1px solid var(--line-2);background:transparent;cursor:pointer;font-size:15px;line-height:1.35}
+.q .opts button:hover:not([disabled]){background:rgba(255,255,255,.04)}
+.q .opts button.right{border-color:var(--good);background:rgba(93,255,160,.08)}
+.q .opts button.wrong{border-color:var(--bad);background:rgba(255,123,123,.07)}
+.q .opts button[disabled]{cursor:default}
+.q .why{margin-top:12px;font-size:14.5px;color:#cdd6e3;line-height:1.5}
+.score{font:500 13px/1.2 var(--mono);color:var(--mist);letter-spacing:.06em}
+
+.sources{columns:2 320px;column-gap:40px;font-size:14px;color:var(--mist);padding-left:1.1em}
+.sources li{margin:0 0 10px;break-inside:avoid}
+footer{padding:40px var(--gutter) 60px;padding-left:calc(var(--rail) + var(--gutter));color:var(--mist-2);font-size:13px;border-top:1px solid var(--line)}
+.gl-failed{display:none!important}
+.nogl{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:var(--mist);font-size:14px}
+@media (max-width:640px){
+  body{font-size:16px}
+  .hero{height:auto;min-height:760px}
+  .hero-copy{bottom:238px}
+  .scroll-cue{display:none}
+  .instrument .stage{aspect-ratio:4/5}
+  .ctl-row{grid-template-columns:minmax(0,1fr) auto}
+  .ctl-row .lbl{grid-column:1/3}
+}
+</style>
+
+</head>
+<body>
+<aside class="rail" id="rail" aria-hidden="true">
+  <div class="rail-inner">
+    <div class="rail-track"></div>
+    <div id="rail-ticks"></div>
+    <div class="rail-mark" id="rail-mark"><b></b></div>
+    <div class="rail-read" id="rail-read"><span>distance from you</span><b id="rail-km">—</b></div>
+  </div>
+</aside>
+
+<header class="hero" id="top">
+  <canvas id="sky" aria-label="Simulated aurora over an Icelandic lake. Drag to look around."></canvas>
+  <div class="hero-top">
+    <span class="pill"><span class="dot"></span>Iceland · 64°N · after dark</span>
+    <span class="pill" id="hero-mode-pill">Camera view</span>
+  </div>
+  <div class="hero-copy">
+    <div class="eyebrow">An interactive field guide</div>
+    <h1>Norðurljós<span class="sub">How the northern lights actually work</span></h1>
+    <p class="lede">Follow the solar wind 150 million kilometres from the Sun to the sky above an Icelandic lake. Find out why the sky glows green, red and violet, where on Earth to stand, and when to look up.</p>
+  </div>
+  <a class="scroll-cue" href="#sun">Begin the journey</a>
+  <div class="hero-controls" role="group" aria-label="Sky controls">
+    <div class="kp">
+      <label class="lbl" for="kp">Activity (Kp)</label>
+      <input type="range" id="kp" min="0" max="9" step="0.1" value="3">
+      <span class="val" id="kp-val">Kp 3.0</span>
+    </div>
+    <div class="seg" role="group" aria-label="View as">
+      <button type="button" id="mode-cam" aria-pressed="true">Camera</button>
+      <button type="button" id="mode-eye" aria-pressed="false">Your eyes</button>
+    </div>
+    <button type="button" class="btn" id="look-up">Look straight up</button>
+    <button type="button" class="btn primary" id="substorm">Trigger a substorm</button>
+    <span class="hero-hint" id="hero-hint">Drag the sky to look around</span>
+  </div>
+</header>
+
+<div class="mobile-alt" id="mobile-alt"><span>Distance from you</span><b id="mobile-km">0 km</b></div>
+
+<main>
+
+<!-- ============ THE SUN ============ -->
+<section class="chapter" id="sun" data-alt="149600000" data-alt-label="The Sun">
+  <div class="wrap">
+    <div class="ch-head">
+      <div class="kicker"><span class="km">150,000,000 km</span> Chapter 1 · The source</div>
+      <h2>It starts on the <em>Sun</em></h2>
+    </div>
+    <div class="grid2">
+      <div class="prose">
+        <p class="lead">Every aurora begins as a wind — not of air, but of electrically charged particles blowing off the Sun in every direction, all the time.</p>
+        <p>The Sun's outer atmosphere, the <strong>corona</strong>, is heated to more than a million degrees. It is so hot that the Sun's gravity cannot hold on to it, so it streams away into space as the <strong>solar wind</strong>: a thin gas of electrons and protons (a <em>plasma</em>) that carries a piece of the Sun's magnetic field with it.</p>
+        <p>Near Earth the wind is astonishingly thin — around <strong>5 particles per cubic centimetre</strong> — but it moves fast:</p>
+        <ul>
+          <li><strong>Slow wind:</strong> roughly 300–500 km/s.</li>
+          <li><strong>Fast wind</strong> from <em>coronal holes</em> (open-field regions on the Sun): about 600–800 km/s. Coronal holes can survive for several solar rotations, so their storms often <strong>repeat every ~27 days</strong>.</li>
+          <li><strong>Coronal mass ejections (CMEs):</strong> huge clouds of magnetised plasma, often around a billion tonnes, blasted out at up to ~3,000 km/s. CMEs cause the biggest storms.</li>
+        </ul>
+        <p>Spacecraft parked at the <strong>L1 point</strong>, 1.5 million km sunward of Earth, sample the wind before it arrives. That is where the 15–60 minute "aurora alerts" come from.</p>
+        <p class="note">Drag the speed slider and watch the travel time change — the numbers are calculated from the real Sun–Earth distance (149.6 million km). Sizes and distances in the drawing are not to scale.</p>
+      </div>
+      <figure class="instrument" style="margin:0">
+        <div class="stage"><canvas id="sun-canvas" aria-label="Animation of solar wind travelling from the Sun to Earth"></canvas>
+          <div class="cap">Sun → Earth · not to scale</div></div>
+        <div class="bar">
+          <label class="lbl" for="sw-speed">Wind speed</label>
+          <div class="grow"><input type="range" class="sun" id="sw-speed" min="250" max="3000" step="10" value="420"></div>
+          <span class="val" id="sw-speed-val">420 km/s</span>
+        </div>
+        <div class="bar">
+          <div class="seg" role="group" aria-label="Wind presets">
+            <button type="button" data-sw="400" aria-pressed="true">Slow wind</button>
+            <button type="button" data-sw="700" aria-pressed="false">Coronal hole</button>
+          </div>
+          <button type="button" class="btn sunb" id="cme-btn">Launch a CME</button>
+        </div>
+        <div class="readouts">
+          <div><span class="k">Sun → Earth</span><span class="v" id="ro-travel">4.1 <small>days</small></span></div>
+          <div><span class="k">Warning from L1</span><span class="v" id="ro-l1">60 <small>min</small></span></div>
+          <div><span class="k">Kind of wind</span><span class="v" id="ro-kind" style="font-size:15px">Slow wind</span></div>
+        </div>
+      </figure>
+    </div>
+    <div class="facts">
+      <div class="fact"><b>8 min 20 s</b><span>How long sunlight takes to reach us. The particles take days.</span></div>
+      <div class="fact"><b>14.6 hours</b><span>The fastest Sun-to-Earth CME trip on record (August 1972). The famous 1859 Carrington storm took about 17.6 hours.</span></div>
+      <div class="fact"><b>October 2024</b><span>Solar Cycle 25 peaked (smoothed sunspot number ≈ 161). Big storms stay common for years after a peak.</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ MAGNETOSPHERE ============ -->
+<section class="chapter" id="shield" data-alt="64000" data-alt-label="Magnetosphere">
+  <div class="wrap">
+    <div class="ch-head">
+      <div class="kicker"><span class="km">~64,000 km</span> Chapter 2 · The shield</div>
+      <h2>Earth's invisible <em>shield</em> — and its back door</h2>
+    </div>
+    <div class="grid2 flip">
+      <figure class="instrument" style="margin:0">
+        <div class="stage"><canvas id="mag-canvas" aria-label="Diagram of Earth's magnetosphere with animated plasma flow"></canvas>
+          <div class="cap">Sun ← · noon–midnight slice · not to scale</div>
+          <div class="cap r" id="mag-status">Reconnection: fast</div></div>
+        <div class="bar">
+          <span class="lbl">Solar wind field (IMF)</span>
+          <div class="seg" role="group" aria-label="IMF direction">
+            <button type="button" id="imf-south" aria-pressed="true">Points south (Bz −)</button>
+            <button type="button" id="imf-north" aria-pressed="false">Points north (Bz +)</button>
+          </div>
+        </div>
+        <div class="bar">
+          <label class="lbl" for="imf-str">Field strength</label>
+          <div class="grow"><input type="range" id="imf-str" min="2" max="30" step="1" value="8"></div>
+          <span class="val" id="imf-str-val">8 nT</span>
+        </div>
+        <div class="legend">
+          <span><i style="width:16px;height:2px;background:#6aa8ff;display:block"></i>Closed field lines</span>
+          <span><i style="width:16px;height:2px;background:var(--o557);display:block"></i>Open (connected to the Sun's field)</span>
+          <span><i style="width:16px;height:2px;background:var(--sun);display:block"></i>Solar wind field</span>
+          <span><i style="width:9px;height:9px;border-radius:50%;background:#fff;display:block"></i>Reconnection point</span>
+        </div>
+      </figure>
+      <div class="prose">
+        <p class="lead">Earth is a giant magnet. Its field, made by churning liquid iron in the outer core, pushes the solar wind aside and carves out a protected bubble: the <strong>magnetosphere</strong>.</p>
+        <p>On the day side the wind squeezes the bubble to about <strong>10 Earth radii</strong> (~64,000 km). On the night side it stretches it into a long <strong>magnetotail</strong> that reaches far beyond the Moon's orbit. Most of the wind simply flows around.</p>
+        <p>The back door opens when the solar wind's own magnetic field points <strong>south</strong> (scientists write <strong>Bz &lt; 0</strong>). Then it is opposite to Earth's field at the front of the bubble and the two <strong>reconnect</strong> — they break and rejoin. Solar-wind field lines become tied to Earth, get dragged over the poles into the tail, reconnect again there and snap back toward Earth. That snap flings particles down along the field lines toward the poles.</p>
+        <p>This loop is the <strong>Dungey cycle</strong>, proposed by James Dungey in 1961. When the wind's field points <strong>north</strong>, reconnection moves to high latitudes behind the poles, much less energy gets in and the aurora is usually faint.</p>
+        <p class="note">That is why aurora forecasters obsess over a single number: <span class="mono" style="font-family:var(--mono)">Bz</span>. Fast wind plus a strong southward Bz that lasts for hours is the recipe for a great night.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ COLOURS ============ -->
+<section class="chapter" id="colors" data-alt="250" data-alt-label="Upper atmosphere">
+  <div class="wrap">
+    <div class="ch-head">
+      <div class="kicker"><span class="km">400 → 90 km</span> Chapter 3 · The glow</div>
+      <h2>Why <em style="color:var(--o557)">green</em>? Why <em style="color:var(--o630)">red</em>?</h2>
+    </div>
+    <div class="grid2">
+      <div class="prose">
+        <p class="lead">A few thousand kilometres above the poles, electric fields accelerate electrons to energies of roughly <strong>1–10 keV</strong>. They spiral down the field lines at tens of thousands of km per second and crash into the thin upper air.</p>
+        <p>Each collision can kick an oxygen atom or a nitrogen molecule into an <em>excited</em> state. When it relaxes, it releases the extra energy as light of one exact colour — a fingerprint of that atom. The trick is <strong>how long</strong> each atom must wait before it can glow:</p>
+        <div class="emit" role="list">
+          <div class="emit-row" role="listitem"><div class="sw" style="background:var(--o557)"></div><div class="bd"><div class="t"><b style="color:var(--o557)">557.7 nm · green</b><span>atomic oxygen · brightest ~100–150 km</span></div><p>A "forbidden" transition: the atom must sit undisturbed for <strong>about 0.7 seconds</strong>. That works from roughly 100 km upward. Below that, collisions steal the energy first.</p></div></div>
+          <div class="emit-row" role="listitem"><div class="sw" style="background:var(--o630)"></div><div class="bd"><div class="t"><b style="color:var(--o630)">630.0 nm · red</b><span>atomic oxygen · mostly above ~200 km</span></div><p>Even more patient: the excited state lives <strong>about 110 seconds</strong>. Only very high up, where air is so thin that collisions are rare, can it survive long enough to glow. Lower down it is "quenched".</p></div></div>
+          <div class="emit-row" role="listitem"><div class="sw" style="background:var(--n428)"></div><div class="bd"><div class="t"><b style="color:var(--n428)">427.8 &amp; 391.4 nm · blue-violet</b><span>ionised nitrogen (N₂⁺) · peaks near 110–120 km</span></div><p>Emitted almost instantly — in well under a millionth of a second. Mixed with the green it gives many curtains their faint blue tint.</p></div></div>
+          <div class="emit-row" role="listitem"><div class="sw" style="background:var(--n2pink)"></div><div class="bd"><div class="t"><b style="color:var(--n2pink)">pink-magenta lower edge</b><span>molecular nitrogen · ~90–100 km</span></div><p>During strong storms, very energetic electrons reach deeper into denser air, where nitrogen's red bands plus the blue give the curtains a pink hem.</p></div></div>
+        </div>
+        <p>So the colour of an aurora is really a <strong>map of altitude and energy</strong>: soft (low-energy) electrons stop high up and make red; harder ones reach down to where green, blue and pink are made.</p>
+      </div>
+      <figure class="instrument" style="margin:0">
+        <div class="stage tall"><canvas id="atm-canvas" aria-label="Electrons entering the atmosphere and making light at different altitudes"></canvas>
+          <div class="cap">Upper atmosphere · altitude to scale</div></div>
+        <div class="bar">
+          <label class="lbl" for="e-energy">Electron energy</label>
+          <div class="grow"><input type="range" id="e-energy" min="0" max="1000" step="1" value="600"></div>
+          <span class="val" id="e-energy-val">5 keV</span>
+        </div>
+        <div class="readouts">
+          <div><span class="k">Electron speed</span><span class="v" id="ro-ev">41,600 <small>km/s</small></span></div>
+          <div><span class="k">Stops near</span><span class="v" id="ro-ealt">112 <small>km</small></span></div>
+          <div><span class="k">Dominant colour</span><span class="v" id="ro-ecol" style="font-size:15px">Green</span></div>
+        </div>
+        <div class="chart" id="spectrum" style="padding:12px 16px 14px;border-top:1px solid var(--line)"></div>
+      </figure>
+    </div>
+    <div class="facts">
+      <div class="fact"><b>Rods, not cones</b><span>In dim light your eyes use rod cells, which can't see colour. Faint aurora often looks grey-white to the eye; a camera's long exposure reveals the green and red.</span></div>
+      <div class="fact"><b>See-through</b><span>Aurora is a glowing gas, not a cloud. Stars shine straight through even the brightest curtains.</span></div>
+      <div class="fact"><b>Green is lucky</b><span>557.7 nm sits almost exactly at the peak sensitivity of our colour (cone) vision, so once an aurora is bright enough to look coloured, green is what we see first.</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SHAPES / SUBSTORMS ============ -->
+<section class="chapter" id="shapes" data-alt="110" data-alt-label="Overhead">
+  <div class="wrap">
+    <div class="ch-head">
+      <div class="kicker"><span class="km">~110 km overhead</span> Chapter 4 · The show</div>
+      <h2>Arcs, rays, coronas — and the <em>substorm</em></h2>
+      <p class="lead">Aurora is rarely steady. It often follows a rhythm called a <strong>substorm</strong>, which can repeat several times in one night. Step through it below, or press play.</p>
+    </div>
+    <figure class="instrument" style="margin:0">
+      <div class="stage" style="aspect-ratio:16/8"><canvas id="lab-sky" aria-label="Simulated aurora stepping through the phases of a substorm"></canvas>
+        <div class="cap" id="lab-cap">Looking north</div>
+        <div class="cap r" id="split-cap" hidden>← your eyes · camera →</div></div>
+      <div class="phases" role="group" aria-label="Substorm phase">
+        <button type="button" class="phase" data-phase="quiet" aria-pressed="true"><b>Quiet arc</b><span>calm evening</span></button>
+        <button type="button" class="phase" data-phase="growth" aria-pressed="false"><b>Growth</b><span>~30–60 min</span></button>
+        <button type="button" class="phase" data-phase="onset" aria-pressed="false"><b>Onset</b><span>seconds–minutes</span></button>
+        <button type="button" class="phase" data-phase="expansion" aria-pressed="false"><b>Expansion</b><span>~20–40 min</span></button>
+        <button type="button" class="phase" data-phase="recovery" aria-pressed="false"><b>Recovery</b><span>~1–2 hours</span></button>
+      </div>
+      <div class="phase-text" id="phase-text" aria-live="polite"></div>
+      <div class="bar">
+        <button type="button" class="btn" id="lab-play">▶ Play the substorm</button>
+        <button type="button" class="btn" id="lab-up">Look straight up</button>
+        <div class="seg" role="group" aria-label="Compare">
+          <button type="button" id="lab-cam" aria-pressed="true">Camera</button>
+          <button type="button" id="lab-split" aria-pressed="false">Eyes vs camera</button>
+        </div>
+      </div>
+    </figure>
+    <div class="facts">
+      <div class="fact"><b>Corona</b><span>When curtains are right overhead, their rays — which run along the magnetic field — seem to burst from one point. It's perspective, like railway tracks meeting at the horizon. In Iceland the field dips about 75–76°, so that point sits a little south of straight up.</span></div>
+      <div class="fact"><b>Pulsating aurora</b><span>After midnight, patches often blink on and off with periods of a few to about 20 seconds, driven by waves far out in space.</span></div>
+      <div class="fact"><b>STEVE</b><span>A thin mauve ribbon found by amateur photographers and described scientifically in 2018. It's not a normal aurora: no particle rain, but a fast, hot river of ions.</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ WHERE: GLOBE ============ -->
+<section class="chapter" id="where" data-alt="0" data-alt-label="Iceland">
+  <div class="wrap">
+    <div class="ch-head">
+      <div class="kicker">Chapter 5 · Where on Earth</div>
+      <h2>The <em>auroral oval</em></h2>
+      <p class="lead">The aurora isn't everywhere at once. It forms a glowing ring around each <strong>magnetic</strong> pole. The ring stays fixed facing away from the Sun while Earth turns beneath it — so any place under the ring gets its show at night.</p>
+    </div>
+    <figure class="instrument" style="margin:0">
+      <div class="globe-wrap">
+        <div class="globe-stage" id="globe-stage">
+          <canvas class="gl" id="globe-gl" aria-label="3D globe showing the auroral oval, day and night"></canvas>
+          <canvas id="globe-ov" style="pointer-events:none" aria-hidden="true"></canvas>
+          <div class="cap" id="globe-cap">Drag to spin</div>
+        </div>
+        <div class="globe-side">
+          <div class="ctl">
+            <div class="ctl-row"><label class="lbl" for="g-kp">Kp index</label><input type="range" id="g-kp" min="0" max="9" step="1" value="3"><span class="val" id="g-kp-val">Kp 3</span></div>
+            <div class="ctl-row"><label class="lbl" for="g-time">Time (UTC)</label><input type="range" id="g-time" min="0" max="23.75" step="0.25" value="23"><span class="val" id="g-time-val">23:00</span></div>
+            <div class="ctl-row"><label class="lbl" for="g-date">Date</label><input type="range" id="g-date" min="0" max="364" step="1" value="269"><span class="val" id="g-date-val">27 Sep</span></div>
+            <div class="presets">
+              <button type="button" class="btn" id="g-play">▶ Spin a day</button>
+              <button type="button" class="btn" data-g="rvk">Iceland tonight</button>
+              <button type="button" class="btn" data-g="may2024">10–11 May 2024 (Kp 9)</button>
+              <button type="button" class="btn" data-g="south">Southern lights</button>
+            </div>
+          </div>
+          <ul class="cities" id="cities" aria-label="Visibility by city"></ul>
+          <div class="legend">
+            <span><span class="st ov" style="grid-row:auto">Overhead</span></span>
+            <span><span class="st lo" style="grid-row:auto">Low in sky</span></span>
+            <span><span class="st cam" style="grid-row:auto">Camera only</span></span>
+          </div>
+        </div>
+      </div>
+    </figure>
+    <div class="grid2" style="margin-top:40px">
+      <div class="prose">
+        <h3>Why the ring is off-centre</h3>
+        <p>Earth's magnetic axis is tilted about 10° from its spin axis, and the magnetic pole sits over the Canadian Arctic, near northwest Greenland. The oval is centred there — not on the geographic North Pole. That pulls it south over North America and Iceland and north over Siberia.</p>
+        <p>What matters is your <strong>magnetic latitude</strong>. On a quiet night the oval's night-side edge lies near 66° magnetic latitude, and it moves about <strong>2° toward the equator for every step of Kp</strong> — down to roughly 48° at Kp 9 (NOAA SWPC).</p>
+      </div>
+      <div class="prose">
+        <h3>How the map works</h3>
+        <p>Magnetic latitudes and magnetic local time are computed from the <strong>AACGM-v2</strong> model used by researchers. The oval's shape follows the Kp rule above, with its day-side edge several degrees further poleward. Real ovals are lumpier and change minute by minute, so treat it as a guide, not a forecast.</p>
+        <p class="note">"Low in sky" means the oval is within about 3° (≈330 km) of your magnetic latitude; "camera only" means within about 7°, where a long exposure may catch a glow on the horizon.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ WHEN ============ -->
+<section class="chapter" id="when">
+  <div class="wrap">
+    <div class="ch-head">
+      <div class="kicker">Chapter 6 · When to look</div>
+      <h2>Dark skies, the right <em>hour</em>, the right <em>season</em></h2>
+      <p class="lead">You need three things at once: darkness, clear sky, and activity. Pick a date to see what the Sun and Moon are doing over Iceland — calculated for that exact night.</p>
+    </div>
+    <figure class="instrument" style="margin:0">
+      <div class="bar" style="border-top:0">
+        <label class="lbl" for="p-date">Night of</label>
+        <input type="date" id="p-date" value="2026-09-27">
+        <label class="lbl" for="p-place">From</label>
+        <select id="p-place">
+          <option value="rvk">Reykjavík</option>
+          <option value="aku">Akureyri</option>
+          <option value="egs">Egilsstaðir</option>
+          <option value="isa">Ísafjörður</option>
+        </select>
+        <span class="note" id="p-note"></span>
+      </div>
+      <div class="chart" id="night-chart" style="padding:6px 12px 10px"></div>
+      <div class="checks" id="checks"></div>
+    </figure>
+    <div class="grid2" style="margin-top:40px">
+      <div class="prose">
+        <h3>The best hours</h3>
+        <p>Activity peaks around <strong>magnetic midnight</strong>, when you are on the part of the oval that faces straight away from the Sun, where substorms usually erupt. Iceland keeps UTC all year with no daylight saving, and its magnetic midnight falls at roughly <strong>00:30</strong> on the clock. So <strong>22:00–02:00</strong> is the classic window, though strong storms can light up the sky as soon as it gets dark.</p>
+        <h3>The best season</h3>
+        <p>From about <strong>late April to mid-August</strong> the Sun never sinks 12° below Reykjavík's horizon, so the sky stays too bright. From late August to mid-April the nights are dark enough. The weeks around the <strong>equinoxes</strong> (March and September) are extra good: geomagnetic storms are statistically more common, largely because of how Earth's tilted magnetic field lines up with the solar wind's field — the <strong>Russell–McPherron effect</strong> (1973).</p>
+      </div>
+      <figure class="instrument" style="margin:0">
+        <div class="cap" style="position:static;padding:14px 16px 0">Hours of darkness per night · sun below −12°</div>
+        <div class="chart" id="year-chart" style="padding:6px 12px 12px"></div>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ICELAND ============ -->
+<section class="chapter" id="iceland">
+  <div class="wrap">
+    <div class="ch-head">
+      <div class="kicker">Chapter 7 · Iceland</div>
+      <h2>Why Iceland is <em>built</em> for aurora</h2>
+      <p class="lead">The whole country sits between about 63° (Vík, on the south coast) and 67° (the northern Westfjords) magnetic latitude — right under the edge of the quiet-time oval. By the NOAA rule that means aurora can reach overhead at a Kp of just <strong>0–2</strong>, depending on where you stand, so on most clear, dark nights there is something to see.</p>
+    </div>
+    <figure class="instrument" style="margin:0">
+      <div class="map-wrap">
+        <div class="map-stage" id="map-stage"></div>
+        <div class="spot-info" id="spot-info" aria-live="polite"></div>
+      </div>
+      <div class="legend">
+        <span><i style="width:18px;border-top:1px dashed var(--o557);display:block"></i>Magnetic latitude (AACGM-v2, 110 km)</span>
+        <span><i style="width:9px;height:9px;border-radius:50%;background:var(--frost);display:block"></i>Viewing spot — select one</span>
+      </div>
+    </figure>
+    <div class="tips">
+      <div class="tip">
+        <h3>Check two forecasts</h3>
+        <p>The <a href="https://en.vedur.is/weather/forecasts/aurora/" target="_blank" rel="noopener">Icelandic Met Office aurora forecast</a> shows activity and a cloud map. Clouds matter most: when the south is overcast, the north or east is often clear. For live solar wind and Bz, see <a href="https://www.swpc.noaa.gov/" target="_blank" rel="noopener">NOAA SWPC</a>.</p>
+      </div>
+      <div class="tip">
+        <h3>Get out of the light</h3>
+        <p>Even 15 minutes outside town makes a huge difference. Give your eyes about 20 minutes to adapt, and use a red light, not a white phone screen. A bright Moon washes out faint aurora but lights the landscape beautifully.</p>
+      </div>
+      <div class="tip">
+        <h3>Camera settings to start with</h3>
+        <p class="mono">Tripod · widest lens · f/1.8–2.8<br>ISO 1600–3200 · 2–10 s exposure<br>Manual focus on a bright star</p>
+        <p style="margin-top:6px">Use shorter exposures when the aurora is moving fast, or the rays blur. Phone night modes work surprisingly well.</p>
+      </div>
+      <div class="tip">
+        <h3>Stay safe</h3>
+        <p>Never stop on the road to watch — pull fully into a proper parking area. Check road and weather conditions before driving at night in winter, dress for wind, and tell someone where you're going.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ HISTORY ============ -->
+<section class="chapter" id="history">
+  <div class="wrap">
+    <div class="ch-head">
+      <div class="kicker">Chapter 8 · How we found out</div>
+      <h2>A thousand years of <em>looking up</em></h2>
+    </div>
+    <div class="grid2">
+      <ol class="timeline">
+        <li><span class="yr">c. 1250</span><p>The Norwegian <em>Konungs skuggsjá</em> ("The King's Mirror") describes the <em>norðrljós</em> seen from Greenland and weighs up theories about what causes them.</p></li>
+        <li><span class="yr">1619</span><p>Galileo Galilei is usually credited with the name <em>aurora borealis</em>: Aurora, Roman goddess of dawn, and Boreas, Greek god of the north wind.</p></li>
+        <li><span class="yr">1716</span><p>Edmond Halley suggests the aurora is linked to Earth's magnetism and follows its field lines.</p></li>
+        <li><span class="yr">1741</span><p>In Uppsala, Olof Hiorter and Anders Celsius notice compass needles twitching whenever the aurora is active — proof it is magnetic.</p></li>
+        <li><span class="yr">1859</span><p>Richard Carrington sees a white-light solar flare. About 17.6 hours later the biggest storm on record hits: aurora is seen from the Caribbean, and telegraph lines spark.</p></li>
+        <li><span class="yr">1896–1913</span><p>Kristian Birkeland fires electron beams at a magnetised sphere (his "terrella") and argues that particles from the Sun cause aurora and drive huge electric currents. Satellites confirmed his currents decades later.</p></li>
+        <li><span class="yr">1910s–40s</span><p>Carl Størmer photographs aurora from two places at once and triangulates the heights: most light comes from about 90–150 km, and some rays reach far higher.</p></li>
+        <li><span class="yr">1961</span><p>James Dungey proposes that magnetic reconnection lets the solar wind drive the magnetosphere — the Dungey cycle.</p></li>
+        <li><span class="yr">1964</span><p>Syun-Ichi Akasofu describes the auroral substorm from all-sky camera films.</p></li>
+        <li><span class="yr">1973</span><p>Christopher Russell and Robert McPherron explain why storms cluster around the equinoxes.</p></li>
+        <li><span class="yr">2018</span><p>STEVE is described in <em>Science Advances</em>, discovered with the help of citizen-science aurora photographers.</p></li>
+        <li><span class="yr">2024</span><p>On 10–11 May the strongest geomagnetic storm since 2003 (G5) sends aurora to unusually low latitudes worldwide. In October, NASA and NOAA announce that Solar Cycle 25 has reached its maximum.</p></li>
+      </ol>
+      <div class="prose">
+        <h3>Myths and facts</h3>
+        <p><strong>"The aurora is sunlight reflecting off polar ice."</strong> No — it's light emitted by gas atoms 100–400 km up, and it happens over the open ocean too.</p>
+        <p><strong>"Vikings thought the lights were Valkyries' armour."</strong> Popular online, but it doesn't appear in the medieval Norse sources. The oldest Norse description, in <em>Konungs skuggsjá</em>, is a sober discussion of possible natural causes.</p>
+        <p><strong>"You need extreme cold."</strong> Cold has nothing to do with it. Winter just brings long, dark nights, and clear winter nights happen to be cold.</p>
+        <p><strong>"It only happens in winter."</strong> The aurora happens all year round. In the Arctic summer the sky is simply too bright to see it.</p>
+        <p><strong>The southern lights.</strong> The aurora australis happens at the same time as the northern lights, around the south magnetic pole. From land, Tasmania, southern New Zealand and Antarctica are the best places to see it.</p>
+        <p><strong>In Icelandic</strong> it's <em>norðurljós</em>, "northern lights". Finns call it <em>revontulet</em>, "fox fires", after a folk tale about an arctic fox sweeping snow into the sky with its tail.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ QUIZ ============ -->
+<section class="chapter" id="quiz">
+  <div class="wrap">
+    <div class="ch-head">
+      <div class="kicker">Chapter 9 · Check yourself <span class="score" id="score"></span></div>
+      <h2>Could you explain it to a <em>friend</em>?</h2>
+    </div>
+    <div class="quiz" id="quiz-box"></div>
+  </div>
+</section>
+
+<!-- ============ SOURCES ============ -->
+<section class="chapter" id="sources">
+  <div class="wrap">
+    <div class="ch-head">
+      <div class="kicker">Sources &amp; methods</div>
+      <h2>Where the science <em>comes from</em></h2>
+    </div>
+    <ul class="sources">
+      <li>NOAA Space Weather Prediction Center — <a href="https://www.swpc.noaa.gov/content/aurora-tutorial" target="_blank" rel="noopener">Aurora Tutorial</a> and <a href="https://www.swpc.noaa.gov/content/tips-viewing-aurora" target="_blank" rel="noopener">Tips on Viewing the Aurora</a> (Kp–latitude rule, viewing hours, emission heights).</li>
+      <li>Icelandic Meteorological Office — <a href="https://en.vedur.is/weather/forecasts/aurora/" target="_blank" rel="noopener">Aurora forecast</a> and <a href="https://en.vedur.is/weather/articles/nr/2549" target="_blank" rel="noopener">Aurora and the Earth's magnetic field</a>.</li>
+      <li>"The altitude of green OI 557.7 nm and blue N₂⁺ 427.8 nm aurora", <a href="https://angeo.copernicus.org/articles/41/1/2023/" target="_blank" rel="noopener"><em>Annales Geophysicae</em> 41, 1–12 (2023)</a> — mean peak heights of ~115 km.</li>
+      <li>Gillies et al. (2017), "Identifying the 630 nm auroral arc emission height", <a href="https://agupubs.onlinelibrary.wiley.com/doi/full/10.1002/2016JA023758" target="_blank" rel="noopener"><em>JGR Space Physics</em></a>.</li>
+      <li>Dungey, J. W. (1961), "Interplanetary magnetic field and the auroral zones", <em>Physical Review Letters</em> 6, 47.</li>
+      <li>Akasofu, S.-I. (1964), "The development of the auroral substorm", <em>Planetary and Space Science</em> 12, 273.</li>
+      <li>Russell, C. T. &amp; McPherron, R. L. (1973), "Semiannual variation of geomagnetic activity", <em>JGR</em> 78, 92.</li>
+      <li>MacDonald, E. A. et al. (2018), "New science in plain sight: citizen scientists lead to the discovery of optical structure in the upper atmosphere", <a href="https://www.science.org/doi/10.1126/sciadv.aaq0030" target="_blank" rel="noopener"><em>Science Advances</em> 4, eaaq0030</a>.</li>
+      <li>SIDC (Royal Observatory of Belgium), <a href="https://www.sidc.be/article/solar-cycle-25-reached-its-maximum-october-2024" target="_blank" rel="noopener">Solar Cycle 25 reached its maximum in October 2024</a>.</li>
+      <li>Shepherd, S. G. (2014), "Altitude-adjusted corrected geomagnetic coordinates: definition and functional approximations", <em>JGR Space Physics</em> 119 — computed with the <code>aacgmv2</code> package for the globe and map.</li>
+      <li>Leirvogur Magnetic Observatory (University of Iceland) — Reykjavík-area corrected geomagnetic latitude ≈ 64.5°.</li>
+      <li>Sun and Moon positions use standard low-precision astronomical formulas (accurate to a fraction of a degree), computed in your browser.</li>
+    </ul>
+    <p class="note" style="max-width:70ch;margin-top:24px">The sky simulations are physically proportioned — real altitudes, Earth's curvature, field-line tilt and emission heights — but they are artistic renderings, not photographs. Electron stopping heights in Chapter 3 are approximate values from standard energy-deposition models.</p>
+  </div>
+</section>
+
+</main>
+<footer>Made as an interactive learning project about Iceland's norðurljós. Physics first, pretty second — but we tried hard at both.</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+<script src="data/cgm.js"></script>
+<script src="data/land.js"></script>
+<script src="data/iceland.js"></script>
+<script src="js/gl.js"></script>
+<script src="js/astro.js"></script>
+<script src="js/sky.js"></script>
+<script src="js/sun.js"></script>
+<script src="js/magneto.js"></script>
+<script src="js/atmos.js"></script>
+<script src="js/globe.js"></script>
+<script src="js/iceland.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
