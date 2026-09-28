@@ -1,0 +1,9 @@
+{
+  "embeddedNavigation": true,
+  "backLink": true,
+  "existingNavigation": true,
+  "navyBackground": true,
+  "goldAccent": true,
+  "mobileOverflow": false,
+  "errors": []
+}

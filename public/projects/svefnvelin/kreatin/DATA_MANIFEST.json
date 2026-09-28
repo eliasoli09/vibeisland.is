@@ -1,0 +1,37 @@
+{
+  "description": "All runtime anatomy buffers, research notes and reference data used by the creatine simulator. Original Blender authoring package is an upstream reference, not a runtime dependency.",
+  "anatomy_source": "BodyParts3D 4.0 / Human Atlas 1c38bf35c254a891200d3cedecfd57abebe83d8d",
+  "license": "CC BY 4.0",
+  "files": [
+    {
+      "path": "assets/ATTRIBUTION.md",
+      "bytes": 2985,
+      "sha256": "40e5a3d5ce2a9bc942972daafa2da63c9ee8135216858dccf358d3dd85bde501"
+    },
+    {
+      "path": "assets/anatomy.json",
+      "bytes": 159872,
+      "sha256": "ff33a6a6b8a5a12bdfec6f003e464258afc55304c83ab089bb92a8c4e9a04911"
+    },
+    {
+      "path": "assets/body-fallback.png",
+      "bytes": 1458192,
+      "sha256": "e510b37c2a1b5ad2b12d8ac7100d45f4a57a380061b6668343cce68af14b452e"
+    },
+    {
+      "path": "assets/brain.dat",
+      "bytes": 2949726,
+      "sha256": "d6f1d59347c77de04bcd55577f8c41688bc2b48da43c67553a395fb82d0c0e87"
+    },
+    {
+      "path": "assets/muscular.dat",
+      "bytes": 12768158,
+      "sha256": "0bf731be8a0162580871bec7a725475ce6cfe3d224d200d8c0f339ad246b16af"
+    },
+    {
+      "path": "assets/skeletal.dat",
+      "bytes": 5455376,
+      "sha256": "185f094837fa99892ca0c7b5812266cf2d5e37a73f305010a442ba13eae31f2e"
+    }
+  ]
+}

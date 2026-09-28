@@ -1,0 +1,19 @@
+import {chromium} from '@playwright/test';
+import assert from 'node:assert/strict';
+import {writeFileSync,mkdirSync} from 'node:fs';
+mkdirSync('artifacts',{recursive:true});
+const browser=await chromium.launch({headless:true,channel:'chrome'});
+const page=await browser.newPage({viewport:{width:1440,height:1000}});const errors=[];
+page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text())});
+await page.goto(process.env.CREATINE_TEST_URL || 'http://127.0.0.1:4173');await page.waitForFunction(()=>window.__anatomyReady,null,{timeout:60000});await page.waitForLoadState('networkidle');
+for(const dose of [5,10,20])for(const days of [7,14,30,90,180,365]){await page.locator(`[data-dose="${dose}"]`).click();await page.locator(`[data-days="${days}"]`).click();const s=await page.evaluate(()=>window.__atlasState);assert.equal(s.dose,dose);assert.equal(s.days,days);assert.equal(s.cognitiveGain,null);}
+await page.locator('[data-view="brain"]').click();await page.waitForTimeout(1200);await page.screenshot({path:'artifacts/brain.png'});assert.match(await page.locator('#insight-content').innerText(),/sex vikur/);await page.locator('[data-context="sleep"]').click();assert.match(await page.locator('#insight-content').innerText(),/0,35/);
+for(const step of ['transport','energy','signals','cognition']){await page.locator(`[data-brain-step="${step}"]`).click();assert.equal(await page.evaluate(()=>window.__atlasState.brainStep),step);}await page.locator('[data-view="cell"]').click();for(const m of ['energy','hydration','growth','recovery']){await page.locator(`[data-mechanism="${m}"]`).click();assert.equal(await page.locator('#cell-diagram svg').count(),1);}await page.locator('[data-mechanism="hydration"]').click();await page.screenshot({path:'artifacts/cell.png'});
+await page.locator('#sources-open').click();assert.equal(await page.locator('#evidence-dialog').evaluate(d=>d.open),true);assert.equal(await page.locator('#evidence-dialog .source-card').count(),21);await page.keyboard.press('Escape');assert.equal(await page.locator('#evidence-dialog').evaluate(d=>d.open),false);
+await page.locator('#pause').click();assert.equal(await page.locator('#energy-svg').evaluate(s=>s.animationsPaused()),true);assert.equal(await page.evaluate(()=>document.body.classList.contains('paused')),true);
+await page.locator('#reset').click();await page.locator('#play-timeline').click();await page.waitForTimeout(4500);assert.equal(await page.evaluate(()=>window.__atlasState.days),14);await page.locator('#play-timeline').click();
+await page.locator('#compare').click();assert.equal(await page.locator('#compare').getAttribute('aria-pressed'),'true');await page.locator('#compare').click();
+await page.locator('#reset').click();await page.screenshot({path:'artifacts/desktop.png',fullPage:true});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+await page.setViewportSize({width:390,height:844});await page.screenshot({path:'artifacts/mobile.png',fullPage:true});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.locator('[data-dose="20"]').click();await page.locator('[data-days="365"]').click();assert.match(await page.locator('#dose-note').innerText(),/há samfelld/);
+await page.emulateMedia({reducedMotion:'reduce'});await page.waitForFunction(()=>document.body.classList.contains('paused'));assert.equal(await page.evaluate(()=>document.body.classList.contains('paused')),true);await page.locator('[data-view="brain"]').click();await page.screenshot({path:'artifacts/mobile-brain.png',fullPage:true});
+const result={scenarios:18,views:3,mechanisms:4,dialog:true,timeline:true,comparison:true,mobileOverflow:false,reducedMotion:true,errors};writeFileSync('artifacts/browser-results.json',JSON.stringify(result,null,2));console.log(result);assert.deepEqual(errors,[]);await browser.close();

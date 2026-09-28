@@ -59,7 +59,7 @@ export const projects: readonly Project[] = [
     slug: "svefnvelin",
     title: "Svefnvélin",
     description:
-      "Gagnvirkur íslenskur vefur um svefn og líkamann, byggður á 300 þáttum af Huberman Lab. Skoðaðu kafla, samanburð, þrívíða líffærafræði og leitaðu í uppskriftum þáttanna.",
+      "Gagnvirkur íslenskur vefur um svefn og líkamann, byggður á 300 þáttum af Huberman Lab. Skoðaðu þrívíða líffærafræði, prófaðu kreatínhermi með skammta- og tímavali, eða leitaðu í uppskriftum þáttanna.",
     href: "/verkefni/svefnvelin",
     viewerPath: "/projects/svefnvelin/index.html",
     preview: "/projects/svefnvelin/preview.png",

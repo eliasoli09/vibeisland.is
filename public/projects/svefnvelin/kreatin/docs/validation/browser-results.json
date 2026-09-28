@@ -1,0 +1,11 @@
+{
+  "scenarios": 18,
+  "views": 3,
+  "mechanisms": 4,
+  "dialog": true,
+  "timeline": true,
+  "comparison": true,
+  "mobileOverflow": false,
+  "reducedMotion": true,
+  "errors": []
+}

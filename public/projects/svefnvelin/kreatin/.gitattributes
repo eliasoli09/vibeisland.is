@@ -1,0 +1,2 @@
+vendor/** linguist-vendored=true -whitespace
+*.dat binary
