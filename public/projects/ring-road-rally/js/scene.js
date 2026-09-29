@@ -898,11 +898,280 @@ export async function createWorld(renderer, { lite = false } = {}) {
     return m;
   });
 
+  // ── flora: Hallormsstaður forest in the east fjords, birch clumps elsewhere, grass on the verges ──
+  {
+    const birch = [[], []];
+    const spruce = [];
+    const grass = [];
+    const fj = [];
+    for (let i = 0; i < T.N; i++) if (T.ZONE_LIST[T.ZONE[i]].key === "fjords") fj.push(i);
+    for (let k = 0; k < (lite ? 500 : 1400); k++) {
+      const i = fj[Math.floor(rng() * fj.length)];
+      const side = rng() < 0.5 ? -1 : 1;
+      const [x0, z0] = T.beside(i, side, 4 + Math.pow(rng(), 0.7) * 75);
+      const x = x0 + (rng() - 0.5) * 6;
+      const z = z0 + (rng() - 0.5) * 6;
+      const y = groundY(x, z);
+      if (y < 1 || y > 40 || distToRoad(x, z).d < 3.5) continue;
+      const s = 0.8 + rng() * 0.7;
+      if (rng() < 0.38) spruce.push({ x, y: y - 0.2, z, rot: rng() * 6.28, s });
+      else birch[rng() < 0.5 ? 0 : 1].push({ x, y: y - 0.1, z, rot: rng() * 6.28, s });
+    }
+    for (let k = 0; k < (lite ? 220 : 600); k++) {
+      const x = Wd.X0 + rng() * Wd.NXC * Wd.CELL;
+      const z = Wd.Z0 + rng() * Wd.NZC * Wd.CELL;
+      const y = groundY(x, z);
+      if (y < 2 || y > 26) continue;
+      const { d, i } = distToRoad(x, z);
+      const zk = T.ZONE_LIST[T.ZONE[i]].key;
+      if (d < 6 || d > 150 || zk === "sand" || zk === "ice" || zk === "lava") continue;
+      for (let c = 0; c < 3; c++) {
+        const bx = x + (rng() - 0.5) * 9;
+        const bz = z + (rng() - 0.5) * 9;
+        birch[c % 2].push({ x: bx, y: groundY(bx, bz) - 0.1, z: bz, rot: rng() * 6.28, s: 0.6 + rng() * 0.6 });
+      }
+    }
+    const perSample = lite ? 2 : 5;
+    for (let i = 0; i < T.N; i++) {
+      const zk = T.ZONE_LIST[T.ZONE[i]].key;
+      if (zk === "sand" || zk === "ice" || zk === "rift" || zk === "lava") continue;
+      for (let c = 0; c < perSample; c++) {
+        const side = rng() < 0.5 ? -1 : 1;
+        const [x0, z0] = T.beside(i, side, Wd.SHOULDER + 0.9 + Math.pow(rng(), 1.6) * 16);
+        const x = x0 + T.TX[i] * (rng() - 0.5) * 4;
+        const z = z0 + T.TZ[i] * (rng() - 0.5) * 4;
+        grass.push({ x, y: groundY(x, z) - 0.04, z, rot: rng() * 6.28, s: 0.7 + rng() * 0.9 });
+      }
+    }
+    scene.add(instanced(gltf, "Birch1", birch[0]));
+    scene.add(instanced(gltf, "Birch2", birch[1]));
+    scene.add(instanced(gltf, "Spruce", spruce));
+    scene.add(instanced(gltf, "Grass", grass, { shadow: false }));
+  }
+
+  // ── rumble curbs on the inside of real corners ──
+  {
+    const curbTex = canvasTex(
+      64,
+      256,
+      (g, w, h) => {
+        for (let k = 0; k < 8; k++) {
+          g.fillStyle = k % 2 ? "#f4f4f2" : "#d8262b";
+          g.fillRect(0, (k * h) / 8, w, h / 8);
+        }
+      },
+      { repeat: true },
+    );
+    const curbMat = new THREE.MeshStandardMaterial({ map: curbTex, roughness: 0.55, polygonOffset: true, polygonOffsetFactor: -3 });
+    const turn = new Float32Array(T.N);
+    for (let i = 0; i < T.N; i++) {
+      const a = Math.atan2(T.TZ[T.wrap(i - 3)], T.TX[T.wrap(i - 3)]);
+      const b = Math.atan2(T.TZ[T.wrap(i + 3)], T.TX[T.wrap(i + 3)]);
+      turn[i] = Math.atan2(Math.sin(b - a), Math.cos(b - a));
+    }
+    let i = 0;
+    while (i < T.N) {
+      if (Math.abs(turn[i]) < 0.12 || T.ZONE_LIST[T.ZONE[i]].key === "rift") {
+        i++;
+        continue;
+      }
+      const inner = Math.sign(turn[i]); // right turn → curb on the right (+1)
+      let j = i;
+      while (j < T.N && Math.sign(turn[j]) === inner && Math.abs(turn[j]) > 0.08) j++;
+      if (j - i >= 3) {
+        const pos = [];
+        const uv = [];
+        const idx = [];
+        let v = 0;
+        for (let k = i - 1; k <= j; k++) {
+          const s = T.wrap(k);
+          if (k > i - 1) v += Math.hypot(T.X[s] - T.X[T.wrap(k - 1)], T.Z[s] - T.Z[T.wrap(k - 1)]) / 4;
+          const y = Wd.ROADH[s] + 0.1;
+          for (const off of [T.W[s] - 0.2, T.W[s] + 1.2]) {
+            pos.push(T.X[s] + T.NX[s] * inner * off, y, T.Z[s] + T.NZ[s] * inner * off);
+            uv.push(off > T.W[s] ? 1 : 0, v);
+          }
+          if (k > i - 1) {
+            const o = (k - i) * 2;
+            if (inner > 0) idx.push(o, o + 2, o + 1, o + 1, o + 2, o + 3);
+            else idx.push(o, o + 1, o + 2, o + 1, o + 3, o + 2);
+          }
+        }
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+        geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+        geo.setIndex(idx);
+        geo.computeVertexNormals();
+        const m = new THREE.Mesh(geo, curbMat);
+        m.receiveShadow = true;
+        scene.add(m);
+      }
+      i = j + 1;
+    }
+  }
+
+  // ── night dressing: neon road edges, street lamps with light pools ──
+  const nightGroup = new THREE.Group();
+  nightGroup.visible = false;
+  scene.add(nightGroup);
+  {
+    const ribbon = (side, color) => {
+      const pos = [];
+      const idx = [];
+      for (let k = 0; k <= T.N; k++) {
+        const s = T.wrap(k);
+        const off = side * (T.W[s] + Wd.SHOULDER + 0.35);
+        const x = T.X[s] + T.NX[s] * off;
+        const z = T.Z[s] + T.NZ[s] * off;
+        const y = Wd.ROADH[s];
+        pos.push(x, y + 0.08, z, x, y + 0.24, z);
+        if (k < T.N) {
+          const o = k * 2;
+          idx.push(o, o + 2, o + 1, o + 1, o + 2, o + 3);
+        }
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+      geo.setIndex(idx);
+      const mat = new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, toneMapped: false, fog: true });
+      nightGroup.add(new THREE.Mesh(geo, mat));
+    };
+    ribbon(-1, new THREE.Color(0.15, 1.35, 2.0)); // cyan on the left
+    ribbon(1, new THREE.Color(2.0, 0.22, 1.2)); // pink on the right
+  }
+  const lampList = [];
+  for (let i = 0; i < T.N; i += 8) {
+    const zk = T.ZONE_LIST[T.ZONE[i]].key;
+    if (zk !== "city" && zk !== "west" && zk !== "gullfoss") continue;
+    const side = (i / 8) % 2 ? 1 : -1;
+    const [x, z] = T.beside(i, side, Wd.SHOULDER + 2.4);
+    const toRoad = Math.atan2(-T.NZ[i] * side, -T.NX[i] * side);
+    lampList.push({ x, y: groundY(x, z) - 0.1, z, rot: yaw(toRoad), i, side });
+  }
+  scene.add(instanced(gltf, "StreetLamp", lampList));
+  {
+    const poolTex = softDot("255,214,150");
+    const poolMat = new THREE.MeshBasicMaterial({ map: poolTex, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending, polygonOffset: true, polygonOffsetFactor: -4 });
+    for (const l of lampList) {
+      const px = l.x - T.NX[l.i] * l.side * 2.1;
+      const pz = l.z - T.NZ[l.i] * l.side * 2.1;
+      const pool = new THREE.Mesh(new THREE.CircleGeometry(7, 20), poolMat);
+      pool.rotation.x = -Math.PI / 2;
+      pool.position.set(px, Wd.ROADH[l.i] + 0.12, pz);
+      nightGroup.add(pool);
+    }
+  }
+
+  // ── night sky: stars, aurora curtains and a low moon ──
+  const nightSky = new THREE.Mesh(
+    new THREE.SphereGeometry(4200, 48, 24),
+    new THREE.ShaderMaterial({
+      side: THREE.BackSide,
+      depthWrite: false,
+      fog: false,
+      uniforms: { uTime: { value: 0 }, uMoon: { value: sunDir.clone() } },
+      vertexShader: /* glsl */ `
+        varying vec3 vDir;
+        void main() { vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
+      `,
+      fragmentShader: /* glsl */ `
+        uniform float uTime; uniform vec3 uMoon; varying vec3 vDir;
+        float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+        float noise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+          return mix(mix(hash(i), hash(i + vec2(1, 0)), f.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), f.x), f.y); }
+        void main() {
+          vec3 d = normalize(vDir);
+          float h = clamp(d.y, -0.2, 1.0);
+          vec3 zenith = vec3(0.02, 0.02, 0.07);
+          vec3 horizon = vec3(0.22, 0.07, 0.30);
+          vec3 col = mix(horizon, zenith, pow(max(h, 0.0), 0.45));
+          col += vec3(0.35, 0.1, 0.25) * pow(1.0 - abs(h), 12.0) * 0.6;
+          // stars
+          vec2 sp = vec2(atan(d.z, d.x) * 180.0, d.y * 180.0);
+          float st = step(0.9965, hash(floor(sp))) * smoothstep(0.02, 0.2, h);
+          col += st * (0.6 + 0.4 * sin(uTime * 3.0 + hash(floor(sp)) * 40.0));
+          // aurora: bands sheared over the sky, rippling
+          float az = atan(d.z, d.x);
+          float band = 0.0;
+          for (int k = 0; k < 3; k++) {
+            float fk = float(k);
+            float y0 = 0.28 + 0.12 * fk + 0.06 * sin(az * (2.0 + fk) + uTime * (0.12 + 0.05 * fk));
+            float n = noise(vec2(az * 9.0 + fk * 3.0, uTime * 0.25 + fk));
+            float curtain = smoothstep(0.0, 0.05, h - y0 + 0.05) * (1.0 - smoothstep(0.0, 0.28 + n * 0.15, h - y0));
+            band += curtain * (0.35 + 0.65 * n) * (0.6 + 0.4 * sin(az * 30.0 + n * 6.0 + uTime));
+          }
+          vec3 aur = mix(vec3(0.1, 1.0, 0.55), vec3(0.75, 0.25, 1.0), smoothstep(0.35, 0.75, h));
+          col += aur * band * 0.55;
+          // moon, low and big, glowing
+          float m = max(dot(d, normalize(uMoon)), 0.0);
+          col += vec3(1.0, 0.85, 0.95) * smoothstep(0.9993, 0.9996, m) * 2.5;
+          col += vec3(0.9, 0.5, 0.8) * pow(m, 60.0) * 0.5;
+          gl_FragColor = vec4(col, 1.0);
+        }
+      `,
+    }),
+  );
+  nightSky.visible = false;
+  nightSky.renderOrder = -1;
+  scene.add(nightSky);
+  const envDay = scene.environment;
+  let envNight = null;
+  {
+    const es = new THREE.Scene();
+    const ns = nightSky.clone();
+    ns.visible = true;
+    es.add(ns);
+    envNight = pmrem.fromScene(es, 0, 1, 5000).texture;
+  }
+  const glowMats = {};
+  gltf.scene.traverse((o) => {
+    if (!o.isMesh) return;
+    for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+      if (["ChurchWindow", "LampBulb", "Lamp", "Reflector", "HeadLight", "Banner"].includes(m.name)) glowMats[m.name] = m;
+    }
+  });
+  scene.traverse((o) => {
+    if (!o.isMesh || !o.material) return;
+    for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+      if (m.name === "ChurchWindow") (glowMats.windows ||= new Set()).add(m);
+    }
+  });
+  let isNight = false;
+  function setNight(n) {
+    isNight = n;
+    sky.visible = !n;
+    nightSky.visible = n;
+    nightGroup.visible = n;
+    scene.environment = n ? envNight : envDay;
+    scene.environmentIntensity = n ? 0.9 : 0.6;
+    sun.color.setHex(n ? 0x8fa6ff : 0xffdcae);
+    sun.intensity = n ? 0.7 : 2.3;
+    hemi.color.setHex(n ? 0x5a4a9a : 0xd6e8ff);
+    hemi.groundColor.setHex(n ? 0x14101c : 0x3d4a33);
+    hemi.intensity = n ? 0.55 : 0.35;
+    scene.fog.color.setHex(n ? 0x1d1236 : 0xc9d6de);
+    scene.fog.near = n ? 120 : 260;
+    scene.fog.far = n ? 900 : lite ? 1100 : 1700;
+    ocean.mesh.material.color.setHex(n ? 0x0d1f33 : 0x1d5871);
+    for (const m of glowMats.windows || []) {
+      m.emissive = new THREE.Color(0xffc46b);
+      m.emissiveIntensity = n ? 2.2 : 0;
+    }
+    if (glowMats.LampBulb) glowMats.LampBulb.emissiveIntensity = n ? 8 : 0.5;
+    if (glowMats.Lamp) glowMats.Lamp.emissiveIntensity = n ? 12 : 4;
+    if (glowMats.Reflector) glowMats.Reflector.emissiveIntensity = n ? 3 : 1.2;
+  }
+
   return {
     scene,
     gltf,
     sun,
     sunDir,
+    setNight,
+    nightSky,
+    get night() {
+      return isNight;
+    },
     terrain,
     ocean,
     checkpoints,
@@ -921,6 +1190,7 @@ export async function createWorld(renderer, { lite = false } = {}) {
 
 /** Per-frame animation of the living world. `hz` gives hazard phases. */
 export function animateWorld(w, t, dt, hz, sheepPos) {
+  if (w.nightSky.visible) w.nightSky.material.uniforms.uTime.value = t;
   // ocean ripple
   w.ocean.normal.offset.x = t * 0.004;
   w.ocean.normal.offset.y = t * 0.0025;

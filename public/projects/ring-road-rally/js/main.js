@@ -1,45 +1,62 @@
 /**
  * Ring Road Rally 3D — the browser half.
  *
- * The room (server logic.js) only relays positions and keeps the leaderboard;
- * the race is simulated here with a fixed 120 Hz step. Sections:
+ * The room (server logic.js) relays human players and keeps the leaderboard;
+ * the race — you, five AI rivals, physics, hazards — runs here at a fixed
+ * 120 Hz. Sections:
  *   strings · net · input · tuning · physics · hazards · skills · race ·
- *   render (cars, camera) · HUD · audio · loop
+ *   render (cars, camera, post) · HUD · audio · loop
  */
 
 import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import * as T from "./track.js";
 import * as Wd from "./world.js";
 import { createWorld, animateWorld } from "./scene.js";
+import { createPost } from "./post.js";
+import { createFx } from "./fx.js";
+import { makeCar, paint, dress } from "./cars.js";
+import { RIVALS, makeBrain, drive } from "./ai.js";
+import { nextNote } from "./notes.js";
 
 // ── strings ─────────────────────────────────────────────────────────────────
 
 const STR = {
-  tagline: "Rallý um Hringveginn: frá hátíðinni í Reykjavík, gegnum Almannagjá, framhjá Strokki og Gullfossi, yfir hraunið, eftir svörtum sandi og glerhálum jökulís, yfir hálendið og heim.",
+  tagline: "Rallý um Hringveginn við fimm aðra ökumenn: frá hátíðinni í Reykjavík, gegnum Almannagjá, framhjá Strokki og Gullfossi, yfir hraunið, eftir svörtum sandi og glerhálum jökulís, gegnum Hallormsstaðaskóg og heim.",
   driver: "Ökumaður",
   start: "Keyra af stað",
-  controls: "<kbd>W</kbd>/<kbd>↑</kbd> bensín · <kbd>S</kbd>/<kbd>↓</kbd> bremsa · <kbd>A</kbd><kbd>D</kbd> stýra · <kbd>Bil</kbd> handbremsa · <kbd>C</kbd> myndavél · <kbd>R</kbd> á veginn · <kbd>M</kbd> hljóð · <kbd>Esc</kbd> valmynd",
+  controls:
+    "<kbd>W</kbd>/<kbd>↑</kbd> bensín · <kbd>S</kbd>/<kbd>↓</kbd> bremsa · <kbd>A</kbd><kbd>D</kbd> stýra · <kbd>Shift</kbd> nítró · <kbd>Bil</kbd> handbremsa · <kbd>C</kbd> myndavél · <kbd>R</kbd> á veginn · <kbd>M</kbd> hljóð · <kbd>Esc</kbd> valmynd",
   sound: "Hljóð",
   shake: "Hristingur",
+  notesOpt: "Leiðarnótur",
   board: "Stigatafla",
   route: "Á leiðinni",
   finished: "Í mark!",
   newPb: "Persónulegt met!",
   again: "Keyra aftur",
   menu: "Valmynd",
-  lap: "hringur",
+  lap: "HRINGUR",
   time: "TÍMI",
-  bestLap: "BESTI HRINGUR",
+  last: "SÍÐASTI",
+  best: "BESTI",
+  bestLap: "Besti hringur",
   skillScore: "Stig",
   topSpeed: "Hámarkshraði",
-  online: (n) => `${n} á brautinni`,
+  nitro: "NÍTRÓ",
+  paceNotes: "LEIÐARNÓTUR",
+  timeOfDay: "Tími dags",
+  day: "Sólsetur",
+  night: "Norðurljós",
+  rivalsOpt: "Andstæðingar",
+  online: (n) => `${n} á netinu`,
   noTimes: "Enginn tími kominn — vertu fyrst(ur)!",
   offline: "Ótengt — tímar vistast ekki í töflu",
   record: (name, t) => `Brautarmet í hring: ${t} — ${name}`,
   roomMeta: (room, n) => `Herbergi „${room}“ · ${n} tengd(ir). Deildu ?room=nafn til að keppa við vini.`,
   lapsLine: (laps) => `Hringir: ${laps.join(" · ")}`,
-  loadingTerrain: "Mótum landslagið…",
-  loadingKit: "Sæki Blender-módelin…",
+  placeLine: (p, n) => `${p}. sæti af ${n}`,
+  loadingKit: "Sæki Blender-módelin og rallýbílinn…",
   loadingWorld: "Kveikjum á eldfjallinu…",
   go: "AF STAÐ!",
   lastLap: "LOKAHRINGUR",
@@ -49,9 +66,11 @@ const STR = {
   geyser: "STROKKUR GAUS!",
   sheep: "MEEE!",
   crash: "ÁREKSTUR — KEÐJAN TÝNDIST",
+  nitroReady: "NÍTRÓ TILBÚIÐ",
+  overtake: (n) => `FRAMÚR ${n.toUpperCase()}`,
   speedTrap: (k) => `HRAÐAGILDRA · ${k} KM/KLST`,
   defaultName: "Ökuþór",
-  skills: { drift: "SKRIÐ", air: "STÖKK", speed: "HRAÐI", near: "RÉTT SLOPPIÐ", boost: "JARÐHITI", trap: "HRAÐAGILDRA" },
+  skills: { drift: "SKRIÐ", air: "STÖKK", speed: "HRAÐI", near: "RÉTT SLOPPIÐ", boost: "JARÐHITI", trap: "HRAÐAGILDRA", pass: "FRAMÚRAKSTUR" },
   zones: {
     city: ["Reykjavík", "Hringvegur-hátíðin — nýttu beinu kaflana"],
     rift: ["Þingvellir · Almannagjá", "Þröngt gil milli flekanna — varist veggina"],
@@ -60,16 +79,16 @@ const STR = {
     lava: ["Eyjafjallajökull", "Hraunstraumar renna yfir veginn — farðu þegar þeir kólna"],
     sand: ["Reynisfjara", "Laus svartur sandur og hraunsteinar á veginum"],
     ice: ["Jökulsárlón", "Glerhált! Stýrðu mjúkt og varastu ísjakana"],
-    fjords: ["Austfirðir", "Krappar beygjur — bremsaðu fyrir beygju"],
+    fjords: ["Austfirðir · Hallormsstaðaskógur", "Krappar beygjur gegnum skóginn"],
     high: ["Hálendið", "Kindur á veginum — og stökkpallur framundan!"],
     west: ["Vesturland", "Hraðagildra og stökk — lokaspretturinn heim"],
   },
 };
 const COLORS = [
-  { name: "Rauður", hex: 0xc8160f },
-  { name: "Gulur", hex: 0xf0b416 },
-  { name: "Blár", hex: 0x1f5fc4 },
-  { name: "Bleikur", hex: 0xf01f78 },
+  { name: "Hvítur", hex: 0xffffff },
+  { name: "Rauður", hex: 0xd4201a },
+  { name: "Blár", hex: 0x2a62d8 },
+  { name: "Bleikur", hex: 0xff2d87 },
 ];
 
 // ── net ─────────────────────────────────────────────────────────────────────
@@ -78,7 +97,6 @@ const QS = new URLSearchParams(location.search);
 const room = QS.get("room") || "hringvegur";
 const DEBUG = QS.has("debug");
 const AUTOPILOT = DEBUG && QS.has("autopilot");
-/** Debug only: run the simulation faster than real time (slow test machines). */
 const SIM = DEBUG ? Math.max(1, Math.min(8, Number(QS.get("sim")) || 1)) : 1;
 const LITE = QS.has("lite") || (matchMedia("(pointer: coarse)").matches && Math.min(screen.width, screen.height) < 500);
 
@@ -135,7 +153,9 @@ function connect() {
     setTimeout(connect, 1000 * 2 ** (retry - 1));
   });
 }
-const send = (m) => socket?.readyState === WebSocket.OPEN && socket.send(JSON.stringify(m));
+function send(m) {
+  if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(m));
+}
 const act = (action) => send({ type: "action", action });
 setInterval(() => {
   if (socket?.readyState === WebSocket.OPEN) socket.send("__ping");
@@ -145,11 +165,11 @@ setInterval(() => {
 
 const keys = new Set();
 const touchKeys = new Set();
-const input = { gas: 0, brake: 0, steer: 0, hand: false };
+const input = { gas: 0, brake: 0, steer: 0, hand: false, nitro: false };
 let steerSmooth = 0;
 
 addEventListener("keydown", (e) => {
-  if (e.target instanceof HTMLInputElement) {
+  if (e.target instanceof HTMLInputElement && e.target.type === "text") {
     if (e.code === "Enter") startRace();
     return;
   }
@@ -187,10 +207,14 @@ for (const btn of touchEl.querySelectorAll(".tbtn")) {
   btn.addEventListener("contextmenu", (e) => e.preventDefault());
 }
 let usedTouch = matchMedia("(pointer: coarse)").matches;
-addEventListener("touchstart", () => {
-  usedTouch = true;
-  document.body.classList.add("touch");
-}, { passive: true });
+addEventListener(
+  "touchstart",
+  () => {
+    usedTouch = true;
+    document.body.classList.add("touch");
+  },
+  { passive: true },
+);
 if (usedTouch) document.body.classList.add("touch");
 
 const pad = { start: false, y: false, cam: false };
@@ -201,6 +225,7 @@ function readInput(dt) {
   // Both held cancel out: predictable, never "last one wins".
   let steer = (k("ArrowRight", "KeyD") || touchKeys.has("right") ? 1 : 0) - (k("ArrowLeft", "KeyA") || touchKeys.has("left") ? 1 : 0);
   let hand = k("Space") || touchKeys.has("hand");
+  let nitro = k("ShiftLeft", "ShiftRight", "KeyN") || touchKeys.has("nitro");
   const gp = navigator.getGamepads?.().find((g) => g && g.connected);
   let analog = false;
   if (gp) {
@@ -212,6 +237,7 @@ function readInput(dt) {
     gas = Math.max(gas, gp.buttons[7]?.value ?? 0, gp.buttons[0]?.pressed ? 1 : 0);
     brake = Math.max(brake, gp.buttons[6]?.value ?? 0, gp.buttons[1]?.pressed ? 1 : 0);
     hand ||= Boolean(gp.buttons[2]?.pressed);
+    nitro ||= Boolean(gp.buttons[4]?.pressed);
     const st = Boolean(gp.buttons[9]?.pressed);
     if (st && !pad.start && race.state !== "racing" && race.state !== "countdown") startRace();
     pad.start = st;
@@ -228,21 +254,7 @@ function readInput(dt) {
   input.brake = brake;
   input.steer = steerSmooth;
   input.hand = hand;
-}
-
-function autopilot() {
-  const speed = Math.hypot(car.vx, car.vz);
-  const j = T.wrap(car.i + 5 + Math.round(speed / 5));
-  let d = Math.atan2(T.Z[j] - car.z, T.X[j] - car.x) - car.a;
-  d = Math.atan2(Math.sin(d), Math.cos(d));
-  input.steer = Math.max(-1, Math.min(1, d * 3 - car.lat * 0.06));
-  const k = T.wrap(car.i + 14);
-  let bend = Math.atan2(T.TZ[k], T.TX[k]) - Math.atan2(T.TZ[car.i], T.TX[car.i]);
-  bend = Math.abs(Math.atan2(Math.sin(bend), Math.cos(bend)));
-  const limit = CFG.maxSpeed * (car.zone.key === "ice" ? 0.55 : 1) * (1 - Math.min(0.6, bend * 0.9));
-  input.gas = speed < limit ? 1 : 0;
-  input.brake = speed > limit * 1.15 ? 1 : 0;
-  input.hand = false;
+  input.nitro = nitro;
 }
 
 // ── tuning (data, not code) ───────────────────────────────────────────────
@@ -250,10 +262,10 @@ function autopilot() {
 const CFG = {
   dt: 1 / 120,
   laps: 3,
-  accel: 11,
+  accel: 12,
   brake: 26,
   reverse: 7,
-  maxSpeed: 58,
+  maxSpeed: 60,
   maxReverse: 10,
   rolling: 1.4,
   drag: 0.11,
@@ -262,10 +274,13 @@ const CFG = {
   highSpeedSteer: 0.42,
   grip: 7,
   handGrip: 0.14,
-  boostSpeed: 74,
+  boostSpeed: 76,
   boostTime: 1.3,
-  carR: 1.05,
-  wheelR: 0.34,
+  nitroSpeed: 16,
+  nitroDrain: 0.3,
+  carR: 1.0,
+  carHalf: 1.15,
+  wheelR: 0.46,
   fence: 45,
   kmh: 3.6,
   lavaTop: 0.33,
@@ -276,10 +291,14 @@ const CFG = {
 
 // ── physics ─────────────────────────────────────────────────────────────────
 
-function makeCar() {
-  return { x: 0, z: 0, y: 0, a: 0, vx: 0, vz: 0, vy: 0, spin: 0, i: 0, lat: 0, boost: 0, falling: 0, air: false, airT: 0, zone: T.ZONE_LIST[0], inLava: false, slip: 0, vf: 0, latAcc: 0, lonAcc: 0, pitch: 0, roll: 0, wheelSpin: 0 };
+function makeState() {
+  return {
+    x: 0, z: 0, y: 0, a: 0, vx: 0, vz: 0, vy: 0, spin: 0, i: 0, lat: 0, boost: 0, nitro: 0.35, nitroOn: false,
+    falling: 0, fallIdx: 0, air: false, airT: 0, zone: T.ZONE_LIST[0], inLava: false, slip: 0, vf: 0,
+    latAcc: 0, lonAcc: 0, pitch: 0, roll: 0, geyserCycle: -1, braking: false, steerVis: 0,
+    lap: 1, cpNext: 1, lapStart: 0, laps: [], finished: false, finishT: 0,
+  };
 }
-const car = makeCar();
 
 function locate(c) {
   let best = c.i;
@@ -328,11 +347,9 @@ function placeAt(c, i, lat = 0) {
   c.y = groundAt(c.i, c.lat, c.x, c.z);
 }
 
-let shake = 0;
-const bump = (a) => (shake = Math.min(1.4, shake + a));
+const NOEV = { toast() {}, skill() {}, crash() {}, sfx() {}, bump() {} };
 
-let crashedAt = -10;
-function collideCircle(c, ox, oz, r, bounce = 0.35) {
+function collideCircle(c, ox, oz, r, ev, bounce = 0.35) {
   const dx = c.x - ox;
   const dz = c.z - oz;
   const min = r + CFG.carR;
@@ -349,13 +366,13 @@ function collideCircle(c, ox, oz, r, bounce = 0.35) {
     c.vz -= (1 + bounce) * vn * nz;
     c.vx *= 0.7;
     c.vz *= 0.7;
-    bump(Math.min(1, -vn / 20));
-    if (-vn > 7) crash();
+    ev.bump(Math.min(1, -vn / 20));
+    if (-vn > 7) ev.crash();
   }
   return true;
 }
 
-function wall(c, limit) {
+function wall(c, limit, ev) {
   if (Math.abs(c.lat) <= limit) return false;
   const i = c.i;
   const side = Math.sign(c.lat);
@@ -368,8 +385,9 @@ function wall(c, limit) {
     c.vz -= 1.3 * vn * T.NZ[i];
     c.vx *= 0.96;
     c.vz *= 0.96;
-    bump(Math.min(0.8, Math.abs(vn) / 20));
-    if (Math.abs(vn) > 9) crash();
+    ev.bump(Math.min(0.8, Math.abs(vn) / 20));
+    if (Math.abs(vn) > 9) ev.crash();
+    if (Math.abs(vn) > 5) sparksAt(c.x + T.NX[i] * side, c.y + 0.5, c.z + T.NZ[i] * side, 6);
   }
   c.lat = side * limit;
   return true;
@@ -397,27 +415,22 @@ function sheepPos(s, now) {
   return sheepOut;
 }
 
-let lastGeyserCycle = -1;
-let sheepCooldown = 0;
-let fallIdx = 0;
-const nearMissAt = new Map();
-
-function startFall(c, msg) {
+function startFall(c, msg, ev) {
   if (c.falling > 0) return;
   c.falling = 1.3;
-  fallIdx = c.i;
-  toast(msg, "warn");
-  crash(true);
+  c.fallIdx = c.i;
+  ev.toast(msg, "warn");
+  ev.crash(true);
 }
 
-function step(c, dt, now, ctl) {
+function step(c, dt, now, ctl, ev) {
   if (c.falling > 0) {
     c.falling -= dt;
     c.vy -= CFG.gravity * dt;
     c.x += c.vx * dt * 0.5;
     c.z += c.vz * dt * 0.5;
     c.y += c.vy * dt;
-    if (c.falling <= 0) placeAt(c, T.wrap(fallIdx - 8));
+    if (c.falling <= 0) placeAt(c, T.wrap(c.fallIdx - 8));
     return;
   }
   locate(c);
@@ -434,6 +447,11 @@ function step(c, dt, now, ctl) {
     if (Math.abs(da) < L.half + 1 && Math.abs(c.lat) < halfW + 6 && lavaState(L, now) === "flow" && !c.air) c.inLava = true;
   }
   if (c.inLava) top *= CFG.lavaTop;
+  c.nitroOn = Boolean(ctl.nitro) && c.nitro > 0.02 && !c.inLava;
+  if (c.nitroOn) {
+    top += CFG.nitroSpeed;
+    c.nitro = Math.max(0, c.nitro - CFG.nitroDrain * dt);
+  }
   if (c.boost > 0) {
     top = Math.max(top, CFG.boostSpeed);
     c.boost -= dt;
@@ -449,16 +467,16 @@ function step(c, dt, now, ctl) {
   const vr0 = vr;
 
   if (!c.air) {
-    if (ctl.gas > 0 && vf < top) vf += CFG.accel * ctl.gas * dt * (vf < 0 ? 2.5 : 1) * (c.boost > 0 ? 1.8 : 1) * (1 - 0.45 * Math.max(0, vf / CFG.maxSpeed));
+    const gasK = c.nitroOn ? 1 : ctl.gas;
+    if (gasK > 0 && vf < top) vf += CFG.accel * gasK * dt * (vf < 0 ? 2.5 : 1) * (c.boost > 0 || c.nitroOn ? 1.8 : 1) * (1 - 0.45 * Math.max(0, vf / CFG.maxSpeed));
     if (ctl.brake > 0) {
       if (vf > 0.6) vf -= CFG.brake * ctl.brake * dt;
       else if (vf > -CFG.maxReverse) vf -= CFG.reverse * ctl.brake * dt;
     }
-    if (!ctl.gas && !ctl.brake) vf -= Math.sign(vf) * Math.min(Math.abs(vf), CFG.rolling * dt);
+    if (!gasK && !ctl.brake) vf -= Math.sign(vf) * Math.min(Math.abs(vf), CFG.rolling * dt);
     vf -= vf * CFG.drag * dt;
     if (vf > top) vf += (top - vf) * Math.min(1, 2.4 * dt);
     if (ctl.hand) vf -= Math.sign(vf) * Math.min(Math.abs(vf), 6 * dt);
-    // gravity along the slope: hills slow you down, descents push you on
     const ahead = groundAt(c.i, c.lat, c.x + fx * 1.8, c.z + fz * 1.8);
     const behind = groundAt(c.i, c.lat, c.x - fx * 1.8, c.z - fz * 1.8);
     const slope = (ahead - behind) / 3.6;
@@ -470,6 +488,7 @@ function step(c, dt, now, ctl) {
   } else {
     vf -= vf * 0.02 * dt;
   }
+  c.steerVis += (ctl.steer - c.steerVis) * Math.min(1, dt * 8);
   c.vx = fx * vf + rx * vr;
   c.vz = fz * vf + rz * vr;
   c.a += c.spin * dt;
@@ -478,6 +497,7 @@ function step(c, dt, now, ctl) {
   c.latAcc += ((vr - vr0) / dt + vf * (ctl.steer * 0.3) - c.latAcc) * Math.min(1, dt * 8);
   c.vf = vf;
   c.slip = Math.atan2(Math.abs(vr), Math.max(1, Math.abs(vf)));
+  c.braking = ctl.brake > 0 && vf > 1;
 
   const px = c.x;
   const pz = c.z;
@@ -485,28 +505,22 @@ function step(c, dt, now, ctl) {
   c.z += c.vz * dt;
   locate(c);
 
-  // ── contacts in the plane ──
   const w = T.W[c.i];
   const here = T.ZONE_LIST[T.ZONE[c.i]];
-  if (here.walls && c.y < Wd.ROADH[c.i] + 6) wall(c, w + 0.2);
-  else wall(c, w + CFG.fence);
+  if (here.walls && c.y < Wd.ROADH[c.i] + 6) wall(c, w + 0.2, ev);
+  else wall(c, w + CFG.fence, ev);
   for (const o of T.OBSTACLES) {
     const di = Math.abs(o.i - c.i);
     if (di > 12 && di < T.N - 12) continue;
     if (c.y > Wd.ROADH[o.i] + 2.5) continue;
-    if (!collideCircle(c, o.x, o.z, o.r)) nearMiss(`o${o.i}`, o.x, o.z, o.r);
+    if (!collideCircle(c, o.x, o.z, o.r, ev)) ev.near?.(`o${o.i}`, o.x, o.z, o.r);
   }
-  if (sheepCooldown > 0) sheepCooldown -= dt;
   for (const s of T.SHEEP) {
     const di = Math.abs(s.i - c.i);
     if (di > 8 && di < T.N - 8) continue;
     const p = sheepPos(s, now);
-    if (collideCircle(c, p.x, p.z, 0.8, 0.2)) {
-      if (sheepCooldown <= 0) {
-        toast(STR.sheep);
-        sheepCooldown = 1.5;
-      }
-    } else nearMiss(`s${s.i}`, p.x, p.z, 0.8);
+    if (collideCircle(c, p.x, p.z, 0.8, ev, 0.2)) ev.sheep?.();
+    else ev.near?.(`s${s.i}`, p.x, p.z, 0.8);
   }
 
   // ── vertical: follow the ground, or fly ──
@@ -522,8 +536,8 @@ function step(c, dt, now, ctl) {
     locate(c);
     c.vx *= -0.3;
     c.vz *= -0.3;
-    bump(Math.min(1, sp / 25));
-    if (sp > 12) crash();
+    ev.bump(Math.min(1, sp / 25));
+    if (sp > 12) ev.crash();
     g = groundAt(c.i, c.lat, c.x, c.z);
   }
   if (c.air) {
@@ -534,9 +548,10 @@ function step(c, dt, now, ctl) {
       c.y = g;
       c.air = false;
       if (c.airT > CFG.airtimeSkill) {
-        addSkill("air", Math.round(c.airT * 420));
-        bump(Math.min(1, c.airT * 0.8));
-        sfx.land(c.airT);
+        ev.skill("air", Math.round(c.airT * 420));
+        ev.bump(Math.min(1, c.airT * 0.8));
+        ev.sfx("land", c.airT);
+        dustAt(c, 16);
       }
       c.vy = 0;
       c.airT = 0;
@@ -555,21 +570,19 @@ function step(c, dt, now, ctl) {
       c.vy = Math.max(-40, Math.min(12, followVy));
     }
   }
-
-  // off the edge into the gorge, or into the sea
-  if (c.y < Wd.ROADH[c.i] - 4.5 && Math.abs(c.lat) > w + 2) startFall(c, STR.fell);
-  if (g < -0.1 && c.y < 0.3) startFall(c, STR.splash);
+  if (c.y < Wd.ROADH[c.i] - 4.5 && Math.abs(c.lat) > w + 2) startFall(c, STR.fell, ev);
+  if (g < -0.1 && c.y < 0.3) startFall(c, STR.splash, ev);
 
   // ── the geyser ──
   const G = T.GEYSER;
   const gp = geyserPhase(now);
   const cycle = Math.floor(now / G.period);
-  if (gp.state === "blow" && cycle !== lastGeyserCycle) {
+  if (gp.state === "blow" && cycle !== c.geyserCycle) {
     const dx = c.x - G.x;
     const dz = c.z - G.z;
     const d = Math.hypot(dx, dz);
     if (d < G.radius && c.y < Wd.ROADH[G.i] + 3) {
-      lastGeyserCycle = cycle;
+      c.geyserCycle = cycle;
       const k = CFG.geyserKick * (1 - d / G.radius / 2);
       c.vx += (dx / (d || 1)) * k;
       c.vz += (dz / (d || 1)) * k;
@@ -577,52 +590,103 @@ function step(c, dt, now, ctl) {
       c.air = true;
       c.airT = 0;
       c.spin = (Math.random() < 0.5 ? -1 : 1) * 4.5;
-      toast(STR.geyser, "warn");
-      bump(1);
+      ev.toast(STR.geyser, "warn");
+      ev.bump(1);
     }
   }
-
   // ── boost pads ──
   for (const b of T.BOOSTS) {
     const da = (c.x - T.X[b.i]) * T.TX[b.i] + (c.z - T.Z[b.i]) * T.TZ[b.i];
     const dl = (c.x - T.X[b.i]) * T.NX[b.i] + (c.z - T.Z[b.i]) * T.NZ[b.i];
     if (Math.abs(da) < b.len && Math.abs(dl) < T.W[b.i] * 0.7 && !c.air) {
       if (c.boost < CFG.boostTime - 0.3) {
-        addSkill("boost", 100);
-        sfx.boost();
+        ev.skill("boost", 100);
+        ev.sfx("boost");
       }
       c.boost = CFG.boostTime;
     }
   }
-
   // ── speed trap ──
   {
     const i = T.SPEEDTRAP.i;
     const before = (px - T.X[i]) * T.TX[i] + (pz - T.Z[i]) * T.TZ[i];
     const after = (c.x - T.X[i]) * T.TX[i] + (c.z - T.Z[i]) * T.TZ[i];
-    if (before < 0 && after >= 0 && Math.abs(c.lat) < w + 4) {
-      const kmh = Math.round(Math.hypot(c.vx, c.vz) * CFG.kmh);
-      toast(STR.speedTrap(kmh), "good");
-      addSkill("trap", kmh * 2);
-      if (kmh > (Number(store("rrr3:trap")) || 0)) store("rrr3:trap", String(kmh));
+    if (before < 0 && after >= 0 && Math.abs(c.lat) < w + 4) ev.trap?.(Math.round(Math.hypot(c.vx, c.vz) * CFG.kmh));
+  }
+}
+
+/** Two cars bump: each is a pair of circles along its length. */
+function collideCars(a, b, evA, evB) {
+  if (Math.abs(a.y - b.y) > 2 || a.falling > 0 || b.falling > 0) return;
+  const dx0 = a.x - b.x;
+  const dz0 = a.z - b.z;
+  if (dx0 * dx0 + dz0 * dz0 > 36) return;
+  for (const sa of [-CFG.carHalf, CFG.carHalf]) {
+    for (const sb of [-CFG.carHalf, CFG.carHalf]) {
+      const ax = a.x + Math.cos(a.a) * sa;
+      const az = a.z + Math.sin(a.a) * sa;
+      const bx = b.x + Math.cos(b.a) * sb;
+      const bz = b.z + Math.sin(b.a) * sb;
+      const dx = ax - bx;
+      const dz = az - bz;
+      const min = CFG.carR * 2;
+      const d2 = dx * dx + dz * dz;
+      if (d2 >= min * min) continue;
+      const d = Math.sqrt(d2) || 1;
+      const nx = dx / d;
+      const nz = dz / d;
+      const push = (min - d) / 2;
+      a.x += nx * push;
+      a.z += nz * push;
+      b.x -= nx * push;
+      b.z -= nz * push;
+      const rv = (a.vx - b.vx) * nx + (a.vz - b.vz) * nz;
+      if (rv < 0) {
+        const j = -rv * 0.65;
+        a.vx += nx * j;
+        a.vz += nz * j;
+        b.vx -= nx * j;
+        b.vz -= nz * j;
+        evA.bump(Math.min(0.8, -rv / 18));
+        evB.bump(Math.min(0.8, -rv / 18));
+        if (-rv > 8) {
+          evA.crash();
+          evB.crash();
+          sparksAt((ax + bx) / 2, (a.y + b.y) / 2 + 0.6, (az + bz) / 2, 10);
+        }
+      }
     }
   }
 }
 
-function nearMiss(key, x, z, r) {
-  const speed = Math.hypot(car.vx, car.vz);
-  if (speed < 18 || car.air) return;
-  const d = Math.hypot(car.x - x, car.z - z) - r - CFG.carR;
-  if (d > 1.6) return;
-  const t = performance.now();
-  if (t - (nearMissAt.get(key) || 0) < 3000 || t - crashedAt < 1500) return;
-  nearMissAt.set(key, t);
-  addSkill("near", 250);
-}
-
-// ── skills (a Forza-style chain) ──────────────────────────────────────────
+// ── skills (a Forza-style chain) + nitro ──────────────────────────────────
 
 const skill = { pts: 0, mult: 1, list: [], idle: 0, total: 0, drift: 0, driftCalm: 0, fast: 0, state: "idle", flash: 0 };
+const nearMissAt = new Map();
+let crashedAt = -10;
+let shake = 0;
+let sheepCooldown = 0;
+
+const playerEv = {
+  toast: (t, k) => toast(t, k),
+  skill: (kind, pts) => addSkill(kind, pts),
+  crash: (silent) => crash(silent),
+  bump: (a) => (shake = Math.min(1.4, shake + a)),
+  sfx: (k, a) => (k === "boost" ? audio.boost() : k === "land" ? audio.land(a) : null),
+  sheep: () => {
+    if (sheepCooldown <= 0) {
+      toast(STR.sheep);
+      sheepCooldown = 1.5;
+    }
+  },
+  near: (key, x, z, r) => nearMiss(key, x, z, r),
+  trap: (kmh) => {
+    toast(STR.speedTrap(kmh), "good");
+    addSkill("trap", kmh * 2);
+    if (kmh > (Number(store("rrr3:trap")) || 0)) store("rrr3:trap", String(kmh));
+  },
+};
+
 function addSkill(kind, pts) {
   if (race.state !== "racing") return;
   skill.pts += pts;
@@ -631,6 +695,12 @@ function addSkill(kind, pts) {
   skill.list.length = Math.min(skill.list.length, 4);
   skill.idle = 0;
   skill.state = "active";
+  gainNitro(pts / 2600);
+}
+function gainNitro(x) {
+  const before = player.c.nitro;
+  player.c.nitro = Math.min(1, player.c.nitro + x);
+  if (before < 1 && player.c.nitro >= 1) toast(STR.nitroReady, "good");
 }
 function crash(silent = false) {
   crashedAt = performance.now();
@@ -644,14 +714,27 @@ function crash(silent = false) {
     skill.drift = 0;
   }
 }
+function nearMiss(key, x, z, r) {
+  const c = player.c;
+  const speed = Math.hypot(c.vx, c.vz);
+  if (speed < 18 || c.air) return;
+  const d = Math.hypot(c.x - x, c.z - z) - r - CFG.carR;
+  if (d > 1.6) return;
+  const t = performance.now();
+  if (t - (nearMissAt.get(key) || 0) < 3000 || t - crashedAt < 1500) return;
+  nearMissAt.set(key, t);
+  addSkill("near", 250);
+}
 function skillTick(dt) {
-  const speed = Math.hypot(car.vx, car.vz);
-  const drifting = !car.air && car.slip > 0.2 && speed > 11 && Math.abs(car.lat) <= T.W[car.i] + 1;
+  const c = player.c;
+  const speed = Math.hypot(c.vx, c.vz);
+  const drifting = !c.air && c.slip > 0.2 && speed > 11 && Math.abs(c.lat) <= T.W[c.i] + 1;
   if (drifting) {
-    skill.drift += speed * car.slip * dt * 14;
+    skill.drift += speed * c.slip * dt * 14;
     skill.driftCalm = 0;
     skill.idle = 0;
     if (skill.state !== "active") skill.state = "active";
+    gainNitro(dt * 0.05);
   } else if (skill.drift > 0) {
     skill.driftCalm += dt;
     if (skill.driftCalm > 0.35) {
@@ -659,7 +742,7 @@ function skillTick(dt) {
       skill.drift = 0;
     }
   }
-  skill.fast = speed > 47 ? skill.fast + dt : 0;
+  skill.fast = speed > 50 ? skill.fast + dt : 0;
   if (skill.fast > 2.5) {
     addSkill("speed", 150);
     skill.fast = 0;
@@ -681,11 +764,12 @@ function skillTick(dt) {
       skill.list = [];
     }
   }
+  gainNitro(dt * 0.012);
 }
 
 // ── race ────────────────────────────────────────────────────────────────────
 
-const race = { state: "boot", t: 0, count: 0, lap: 1, lapStart: 0, cpNext: 1, laps: [], wrongT: 0, sendT: 0, rec: [], recT: 0, lastZone: null, top: 0 };
+const race = { state: "boot", t: 0, count: 0, sendT: 0, rec: [], recT: 0, lastZone: null, top: 0, lastLap: null, place: 0, noteKey: -1, wrongT: 0 };
 let ghost = null;
 try {
   ghost = JSON.parse(store("rrr3:ghost") || "null");
@@ -695,10 +779,14 @@ try {
 let bestLocalLap = Number(store("rrr3:bestLap")) || null;
 let bestLocalRace = Number(store("rrr3:bestRace")) || null;
 const settings = {
-  color: Math.min(COLORS.length - 1, Math.max(0, Number(store("rrr3:color")) || 0)),
+  color: Math.min(COLORS.length - 1, Math.max(0, Number(store("rrr4:color")) || 0)),
   shake: store("rrr3:shake") !== "0",
   sound: store("rrr3:sound") !== "0",
+  notes: store("rrr4:notes") !== "0",
+  night: store("rrr4:night") === "1" || QS.get("time") === "night",
+  rivals: store("rrr4:rivals") === "0" ? 0 : 5,
 };
+if (QS.get("time") === "day") settings.night = false;
 
 function playerName() {
   return $("#name").value.replace(/[\u0000-\u001f<>]/g, "").trim().slice(0, 16) || STR.defaultName;
@@ -707,15 +795,44 @@ function sendHello() {
   act({ t: "hello", name: playerName(), color: settings.color });
 }
 
+/** Distance raced, for positions: laps × length + distance into the lap. */
+function progressOf(c) {
+  let d = T.D[c.i];
+  if (c.cpNext === 1 && c.i > T.N * 0.75) d -= T.LENGTH; // still behind the start line
+  return (c.lap - 1) * T.LENGTH + d;
+}
+
+/** Two-wide staggered grid behind the line; slot 0 is pole. */
+function gridSlot(k) {
+  const row = Math.floor(k / 2);
+  return { i: T.wrap(-4 - row * 3 - (k % 2)), lat: (k % 2 ? 1 : -1) * 3.4 };
+}
+
+const activeCars = () => [player, ...rivals.filter((r) => r.active)];
+
+function setField() {
+  rivals.forEach((r, k) => {
+    r.active = k < settings.rivals;
+    r.v.root.visible = r.active;
+  });
+  [...rivals.filter((r) => r.active), player].forEach((car, k) => {
+    const s = gridSlot(k);
+    Object.assign(car.c, makeState());
+    placeAt(car.c, s.i, s.lat);
+    if (car.brain) Object.assign(car.brain, makeBrain(k), { lane: s.lat / T.W[s.i] });
+    car.prevW = null;
+  });
+}
+
 function startRace() {
   if (race.state === "boot") return;
   store("rrr3:name", playerName());
   sendHello();
   audio.start();
-  placeAt(car, T.wrap(-5));
-  Object.assign(race, { state: "countdown", count: 3.4, t: 0, lap: 1, lapStart: 0, cpNext: 1, laps: [], rec: [], recT: 0, wrongT: 0, lastZone: null, top: 0 });
+  setField();
+  Object.assign(race, { state: "countdown", count: 3.4, t: 0, rec: [], recT: 0, lastZone: null, top: 0, lastLap: null, place: activeCars().length, noteKey: -1, wrongT: 0 });
   Object.assign(skill, { pts: 0, mult: 1, list: [], idle: 0, total: 0, drift: 0, fast: 0, state: "idle" });
-  paintCar(player, settings.color);
+  paint(player.v, COLORS[settings.color].hex);
   $("#menu").classList.add("hidden");
   $("#result").classList.add("hidden");
   $("#hud").classList.remove("hidden");
@@ -726,7 +843,7 @@ function startRace() {
 function showMenu() {
   race.state = "menu";
   act({ t: "leave" });
-  placeAt(car, T.wrap(-5));
+  setField();
   $("#menu").classList.remove("hidden");
   $("#result").classList.add("hidden");
   $("#hud").classList.add("hidden");
@@ -735,13 +852,21 @@ function showMenu() {
 }
 
 function respawn() {
-  placeAt(car, car.i, 0);
+  placeAt(player.c, player.c.i, 0);
   crash(true);
 }
 
-function lapDone() {
-  const ms = Math.round((race.t - race.lapStart) * 1000);
-  race.laps.push(ms);
+function lapDone(car) {
+  const c = car.c;
+  const ms = Math.round((race.t - c.lapStart) * 1000);
+  c.laps.push(ms);
+  c.lapStart = race.t;
+  if (c.lap >= CFG.laps) {
+    c.finished = true;
+    c.finishT = race.t;
+  } else c.lap++;
+  if (car !== player) return;
+  race.lastLap = ms;
   if (!AUTOPILOT) act({ t: "lap", ms });
   if (!bestLocalLap || ms < bestLocalLap) {
     bestLocalLap = ms;
@@ -753,80 +878,145 @@ function lapDone() {
   }
   race.rec = [];
   race.recT = 0;
-  race.lapStart = race.t;
-  if (race.lap >= CFG.laps) finish();
-  else {
-    race.lap++;
-    toast(race.lap === CFG.laps ? STR.lastLap : `${STR.lap.toUpperCase()} ${race.lap}/${CFG.laps}`, "good");
+  if (c.finished) finish();
+  else toast(c.lap === CFG.laps ? STR.lastLap : `${STR.lap} ${c.lap}/${CFG.laps}`, "good");
+}
+
+function checkpointTick(car) {
+  const c = car.c;
+  if (c.finished || c.falling > 0) return;
+  const cp = T.CHECKPOINTS[c.cpNext % T.CHECKPOINTS.length];
+  if (T.wrap(c.i - cp) < 30) {
+    if (c.cpNext === T.CHECKPOINTS.length) {
+      c.cpNext = 1;
+      lapDone(car);
+    } else c.cpNext++;
   }
 }
 
 function finish() {
   race.state = "finished";
   if (skill.state === "active") skill.total += Math.round(skill.pts * skill.mult);
-  const total = race.laps.reduce((a, b) => a + b, 0);
+  const c = player.c;
+  const total = c.laps.reduce((a, b) => a + b, 0);
   if (!AUTOPILOT) act({ t: "finish", ms: total });
   const pb = !bestLocalRace || total < bestLocalRace;
   if (pb && !AUTOPILOT) {
     bestLocalRace = total;
     store("rrr3:bestRace", String(total));
   }
+  const field = activeCars();
+  const place = 1 + field.filter((o) => o !== player && o.c.finished && o.c.finishT < c.finishT).length;
+  $("#res-place").textContent = STR.placeLine(place, field.length);
   $("#res-time").textContent = fmt(total);
   $("#res-pb").classList.toggle("hidden", !pb);
-  $("#res-best").textContent = fmt(Math.min(...race.laps));
+  $("#res-best").textContent = fmt(Math.min(...c.laps));
   $("#res-skill").textContent = skill.total.toLocaleString("is-IS");
   $("#res-top").textContent = `${Math.round(race.top * CFG.kmh)}`;
-  $("#res-laps").textContent = STR.lapsLine(race.laps.map(fmt));
+  $("#res-laps").textContent = STR.lapsLine(c.laps.map(fmt));
   setTimeout(() => {
     if (race.state !== "finished") return;
     $("#result").classList.remove("hidden");
     $("#hud").classList.add("hidden");
     touchEl.classList.add("hidden");
     renderBoards(true);
-  }, 1800);
+  }, 2200);
 }
 
-const IDLE = { gas: 0, brake: 0, steer: 0, hand: false };
+function autopilotCtl(c) {
+  const speed = Math.hypot(c.vx, c.vz);
+  const j = T.wrap(c.i + 5 + Math.round(speed / 5));
+  let d = Math.atan2(T.Z[j] - c.z, T.X[j] - c.x) - c.a;
+  d = Math.atan2(Math.sin(d), Math.cos(d));
+  const k = T.wrap(c.i + 14);
+  let bend = Math.atan2(T.TZ[k], T.TX[k]) - Math.atan2(T.TZ[c.i], T.TX[c.i]);
+  bend = Math.abs(Math.atan2(Math.sin(bend), Math.cos(bend)));
+  const limit = CFG.maxSpeed * (c.zone.key === "ice" ? 0.55 : 1) * (1 - Math.min(0.6, bend * 0.9));
+  return { gas: speed < limit ? 1 : 0, brake: speed > limit * 1.15 ? 1 : 0, steer: Math.max(-1, Math.min(1, d * 3 - c.lat * 0.06)), hand: false, nitro: bend < 0.05 && c.nitro > 0.5 };
+}
+
+const hazardView = {
+  now: 0,
+  lavaAhead(c) {
+    const speed = Math.hypot(c.vx, c.vz);
+    for (const L of T.LAVA) {
+      const ahead = T.D[L.i] - T.D[c.i];
+      if (ahead > -4 && ahead < speed * 1.3 + 12 && lavaState(L, hazardView.now + 900) !== "cool") return true;
+    }
+    return false;
+  },
+};
+
+const IDLE = { gas: 0, brake: 0, steer: 0, hand: false, nitro: false };
 function tick(dt, now) {
+  hazardView.now = now;
   if (race.state === "countdown") {
     race.count -= dt;
     if (race.count <= 0.2) {
       race.state = "racing";
       toast(STR.go, "good");
+      audio.go();
     }
     return;
   }
   if (race.state === "menu" || race.state === "boot") return;
   const racing = race.state === "racing";
-  if (AUTOPILOT && racing) autopilot();
-  step(car, dt, now, racing ? input : { ...IDLE, brake: 0.4 });
-  if (!racing) return;
-  skillTick(dt);
-  race.t += dt;
-  race.top = Math.max(race.top, Math.hypot(car.vx, car.vz));
-  const cp = T.CHECKPOINTS[race.cpNext % T.CHECKPOINTS.length];
-  const ahead = T.wrap(car.i - cp);
-  if (ahead < 30 && car.falling <= 0) {
-    if (race.cpNext === T.CHECKPOINTS.length) {
-      race.cpNext = 1;
-      lapDone();
-    } else race.cpNext++;
+  if (sheepCooldown > 0) sheepCooldown -= dt;
+
+  const pc = player.c;
+  const pctl = racing && !pc.finished ? (AUTOPILOT ? autopilotCtl(pc) : input) : { ...IDLE, brake: 0.4 };
+  step(pc, dt, now, pctl, playerEv);
+  const pProg = progressOf(pc);
+  for (const r of rivals) {
+    if (!r.active) continue;
+    const ctl = r.c.finished ? { ...IDLE, brake: 0.3 } : drive(r.c, r.brain, r.profile, CFG, dt, race.t, pProg - progressOf(r.c), hazardView);
+    step(r.c, dt, now, ctl, NOEV);
+    r.c.nitro = Math.min(1, r.c.nitro + dt * 0.03);
   }
-  const along = car.vx * T.TX[car.i] + car.vz * T.TZ[car.i];
+  const field = activeCars();
+  for (let a = 0; a < field.length; a++) {
+    for (let b = a + 1; b < field.length; b++) collideCars(field[a].c, field[b].c, field[a] === player ? playerEv : NOEV, field[b] === player ? playerEv : NOEV);
+  }
+  race.t += dt;
+  for (const car of field) checkpointTick(car);
+  if (!racing) return;
+
+  skillTick(dt);
+  race.top = Math.max(race.top, Math.hypot(pc.vx, pc.vz));
+  const order = field.slice().sort((a, b) => b.c.finished - a.c.finished || (a.c.finished ? a.c.finishT - b.c.finishT : progressOf(b.c) - progressOf(a.c)));
+  const place = order.indexOf(player) + 1;
+  if (place < race.place && race.t > 3) {
+    const passed = order[place];
+    if (passed && passed !== player) {
+      toast(STR.overtake(passed.name), "good");
+      addSkill("pass", 300);
+    }
+  }
+  race.place = place;
+  // drafting: tucked in behind a rival at speed fills the nitro
+  for (const r of rivals) {
+    if (!r.active) continue;
+    const dx = r.c.x - pc.x;
+    const dz = r.c.z - pc.z;
+    const along = dx * Math.cos(pc.a) + dz * Math.sin(pc.a);
+    const side = Math.abs(-dx * Math.sin(pc.a) + dz * Math.cos(pc.a));
+    if (along > 3 && along < 14 && side < 1.6 && Math.hypot(pc.vx, pc.vz) > 30) gainNitro(dt * 0.08);
+  }
+  const along = pc.vx * T.TX[pc.i] + pc.vz * T.TZ[pc.i];
   race.wrongT = along < -4 ? race.wrongT + dt : 0;
   race.recT += dt;
   if (race.recT >= 0.1) {
     race.recT -= 0.1;
-    race.rec.push([Math.round(car.x * 10) / 10, Math.round(car.y * 10) / 10, Math.round(car.z * 10) / 10, Math.round(car.a * 100) / 100]);
+    race.rec.push([Math.round(pc.x * 10) / 10, Math.round(pc.y * 10) / 10, Math.round(pc.z * 10) / 10, Math.round(pc.a * 100) / 100]);
   }
   race.sendT += dt;
   if (race.sendT >= 0.2) {
     race.sendT = 0;
-    act({ t: "pos", x: Math.round(car.x * 10) / 10, y: Math.round(car.z * 10) / 10, a: Math.round(Math.atan2(Math.sin(car.a), Math.cos(car.a)) * 1000) / 1000, lap: race.lap });
+    act({ t: "pos", x: Math.round(pc.x * 10) / 10, y: Math.round(pc.z * 10) / 10, a: Math.round(Math.atan2(Math.sin(pc.a), Math.cos(pc.a)) * 1000) / 1000, lap: Math.min(pc.lap, CFG.laps) });
   }
-  if (car.zone !== race.lastZone) {
-    race.lastZone = car.zone;
-    showBanner(car.zone.key);
+  if (pc.zone !== race.lastZone) {
+    race.lastZone = pc.zone;
+    showBanner(pc.zone.key);
   }
 }
 
@@ -836,86 +1026,86 @@ const $ = (s) => document.querySelector(s);
 const canvas = $("#game");
 let renderer;
 try {
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: !LITE, powerPreference: "high-performance" });
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: "high-performance" });
 } catch {
   $("#nogl").classList.remove("hidden");
   $("#loading").classList.add("hidden");
   throw new Error("WebGL unavailable");
 }
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, LITE ? 1 : 1.6));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, LITE ? 1 : 1.5));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.8;
+renderer.toneMappingExposure = 0.85;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
-const camera = new THREE.PerspectiveCamera(62, 1, 0.3, 3200);
-function resize() {
-  renderer.setSize(innerWidth, innerHeight, false);
-  camera.aspect = innerWidth / innerHeight;
-  camera.updateProjectionMatrix();
-}
-addEventListener("resize", resize);
-resize();
+const camera = new THREE.PerspectiveCamera(62, 1, 0.3, 4600);
 
 const loadingText = $("#loading-text");
 const loadingBar = $("#loading-bar");
 loadingText.textContent = STR.loadingKit;
-loadingBar.style.width = "40%";
-const world = await createWorld(renderer, { lite: LITE });
+loadingBar.style.width = "30%";
+// The textured rally car: bundled copy first, then the CDN copy (CORS-open,
+// immutable), else null and the Blender kit car stands in.
+const CAR_CDN = "https://d2ol7oe51mr4n9.cloudfront.net/user_3Bd2ySVG9o4EIwZ87VdhxlurjR9/6d04f254-5cb1-4f4b-8665-7d5bb2cfca63.glb";
+async function loadRallyCar() {
+  const loader = new GLTFLoader();
+  for (const url of [new URL("../models/car.glb", import.meta.url).href, CAR_CDN]) {
+    try {
+      const g = await loader.loadAsync(url);
+      if (g.scene.getObjectByName("KIT_Rally")) return g;
+    } catch {
+      // try the next source
+    }
+  }
+  return null;
+}
+const [world, rallyGltf] = await Promise.all([
+  createWorld(renderer, { lite: LITE }),
+  loadRallyCar(),
+]);
 loadingText.textContent = STR.loadingWorld;
 loadingBar.style.width = "85%";
 const { scene } = world;
-
-function makeCarVisual(color, ghostly = false) {
-  const root = world.clone("Car");
-  root.rotation.order = "YZX";
-  const chassis = new THREE.Group();
-  const wheels = {};
-  const parts = [];
-  root.children.slice().forEach((o) => {
-    if (o.name.startsWith("Car_Wheel")) {
-      o.rotation.order = "YZX";
-      wheels[o.name.slice(10)] = o;
-    } else parts.push(o);
-  });
-  for (const p of parts) chassis.add(p);
-  root.add(chassis);
-  const v = { root, chassis, wheels, paint: [], tail: [] };
-  root.traverse((o) => {
-    if (!o.isMesh) return;
-    const mats = Array.isArray(o.material) ? o.material : [o.material];
-    const cloned = mats.map((m) => {
-      // Car paint gets a clear coat: the glossy showroom look.
-      const c = m.name === "CarPaint"
-        ? new THREE.MeshPhysicalMaterial({ name: "CarPaint", color: m.color, metalness: 0.1, roughness: 0.5, clearcoat: 0.7, clearcoatRoughness: 0.12, envMapIntensity: 0.7 })
-        : m.clone();
-      if (ghostly) {
-        c.transparent = true;
-        c.opacity = 0.32;
-        c.depthWrite = false;
-      }
-      if (m.name === "CarPaint") v.paint.push(c);
-      if (m.name === "TailLight") v.tail.push(c);
-      return c;
-    });
-    o.material = Array.isArray(o.material) ? cloned : cloned[0];
-    o.castShadow = !ghostly;
-  });
-  paintCar(v, color);
-  scene.add(root);
-  return v;
+const post = createPost(renderer, scene, camera, { lite: LITE });
+const fx = createFx(scene, { lite: LITE });
+function resize() {
+  renderer.setSize(innerWidth, innerHeight, false);
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  post.setSize(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio());
 }
-function paintCar(v, color) {
-  for (const m of v.paint) m.color.setHex(COLORS[color]?.hex ?? COLORS[0].hex);
-}
+addEventListener("resize", resize);
+resize();
 
-const player = makeCarVisual(settings.color);
-const ghostCar = makeCarVisual(settings.color, true);
+const player = { name: "", c: makeState(), v: makeCar(scene, rallyGltf, world.gltf, COLORS[settings.color].hex) };
+const rivals = RIVALS.map((p, k) => ({
+  name: p.name,
+  profile: p,
+  brain: makeBrain(k),
+  c: makeState(),
+  active: true,
+  v: makeCar(scene, rallyGltf, world.gltf, p.color, { name: p.name, accent: `#${p.color.toString(16).padStart(6, "0")}` }),
+}));
+const ghostCar = makeCar(scene, rallyGltf, world.gltf, COLORS[settings.color].hex, { ghost: true });
 ghostCar.root.visible = false;
 
-function poseCar(v, c, dt, braking) {
+// the player's headlights: one real spotlight, only at night
+const headlight = new THREE.SpotLight(0xfff0d8, 0, 90, 0.45, 0.7, 1.0);
+scene.add(headlight, headlight.target);
+
+function applyMood() {
+  world.setNight(settings.night);
+  post.setMood(settings.night);
+  renderer.toneMappingExposure = settings.night ? 1.0 : 0.85;
+  headlight.intensity = settings.night ? 280 : 0;
+  document.body.classList.toggle("night", settings.night);
+}
+applyMood();
+
+function poseCar(car, dt) {
+  const c = car.c;
+  const v = car.v;
   v.root.position.set(c.x, c.y, c.z);
-  // tilt with the ground (sampled under the wheels), lean with the load
   const fx = Math.cos(c.a);
   const fz = Math.sin(c.a);
   if (!c.air && c.falling <= 0) {
@@ -923,10 +1113,8 @@ function poseCar(v, c, dt, braking) {
     const hb = groundAt(c.i, c.lat, c.x - fx * 1.4, c.z - fz * 1.4);
     const hl = groundAt(c.i, c.lat - 0.85, c.x + fz * 0.85, c.z - fx * 0.85);
     const hr = groundAt(c.i, c.lat + 0.85, c.x - fz * 0.85, c.z + fx * 0.85);
-    const tp = Math.atan2(hf - hb, 2.8);
-    const tr = Math.atan2(hl - hr, 1.7);
-    c.pitch += (tp - c.pitch) * Math.min(1, dt * 12);
-    c.roll += (tr - c.roll) * Math.min(1, dt * 12);
+    c.pitch += (Math.atan2(hf - hb, 2.8) - c.pitch) * Math.min(1, dt * 12);
+    c.roll += (Math.atan2(hl - hr, 1.7) - c.roll) * Math.min(1, dt * 12);
   } else {
     c.pitch += (Math.max(-0.35, Math.min(0.35, c.vy * 0.03)) - c.pitch) * Math.min(1, dt * 2);
     c.roll *= 1 - Math.min(1, dt * 2);
@@ -934,39 +1122,65 @@ function poseCar(v, c, dt, braking) {
   v.root.rotation.set(c.roll, -c.a, c.pitch);
   v.chassis.rotation.x = THREE.MathUtils.clamp(-c.latAcc * 0.004, -0.07, 0.07);
   v.chassis.rotation.z = THREE.MathUtils.clamp(-c.lonAcc * 0.003, -0.05, 0.05);
-  const speed = c.vf ?? 0;
-  c.wheelSpin -= (speed / CFG.wheelR) * dt;
-  for (const [k, w] of Object.entries(v.wheels)) {
-    w.rotation.z = c.wheelSpin;
-    w.rotation.y = k.startsWith("F") ? -input.steer * 0.42 * (race.state === "racing" ? 1 : 0) : 0;
-  }
-  for (const m of v.tail) m.emissiveIntensity = braking ? 4 : 0.6;
+  dress(v, { braking: c.braking || (car === player && race.state === "finished"), nitro: c.nitroOn || c.boost > 0, night: settings.night, speed: c.vf ?? 0, steer: c.steerVis, dt, wheelR: CFG.wheelR });
 }
 
-// remote players
-const remote = new Map();
-function labelSprite(text) {
-  const c = document.createElement("canvas");
-  c.width = 256;
-  c.height = 64;
-  const g = c.getContext("2d");
-  g.fillStyle = "rgba(12,16,22,0.7)";
-  g.beginPath();
-  g.roundRect(8, 10, 240, 44, 12);
-  g.fill();
-  g.fillStyle = "#fff";
-  g.font = "700 28px 'Barlow Condensed', sans-serif";
-  g.textAlign = "center";
-  g.textBaseline = "middle";
-  g.fillText(text, 128, 33);
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
-  s.scale.set(4, 1, 1);
-  s.position.set(0, 2.6, 0);
-  s.renderOrder = 10;
-  return s;
+// wheel dust, smoke and skids for any car
+const DUST = { gravel: new THREE.Color(0.72, 0.62, 0.46), sand: new THREE.Color(0.16, 0.16, 0.18), ice: new THREE.Color(0.9, 0.96, 1), asphalt: new THREE.Color(0.85, 0.85, 0.85), grass: new THREE.Color(0.45, 0.5, 0.32) };
+const SKID = { asphalt: new THREE.Color(0.06, 0.06, 0.06), gravel: new THREE.Color(0.35, 0.28, 0.2), sand: new THREE.Color(0.05, 0.05, 0.06), ice: new THREE.Color(0.55, 0.7, 0.8), grass: new THREE.Color(0.2, 0.26, 0.14) };
+const SPARK = new THREE.Color(1, 0.75, 0.3);
+const FLAMEC = new THREE.Color(0.45, 0.6, 1);
+const LAVAC = new THREE.Color(1, 0.45, 0.1);
+function dustAt(c, n) {
+  const style = Math.abs(c.lat) > T.W[c.i] + 0.5 ? "grass" : c.zone.style;
+  for (let k = 0; k < n; k++) fx.soft.emit(c.x + (Math.random() - 0.5) * 3, c.y + 0.3, c.z + (Math.random() - 0.5) * 3, (Math.random() - 0.5) * 6, 1 + Math.random() * 2, (Math.random() - 0.5) * 6, 1.2, 1.4, 2.5, 0.55, DUST[style] || DUST.gravel, 1.2, 0.4);
 }
+function sparksAt(x, y, z, n) {
+  for (let k = 0; k < n; k++) fx.glow.emit(x, y, z, (Math.random() - 0.5) * 14, Math.random() * 6, (Math.random() - 0.5) * 14, 0.4, 0.25, -0.2, 1, SPARK, 1, -12);
+}
+function wheelFx(car, dt) {
+  const c = car.c;
+  if (c.air || c.falling > 0) {
+    car.prevW = null;
+    return;
+  }
+  const speed = Math.hypot(c.vx, c.vz);
+  const off = Math.abs(c.lat) > T.W[c.i] + 0.5;
+  const style = off ? "grass" : c.zone.style;
+  const fx0 = Math.cos(c.a);
+  const fz0 = Math.sin(c.a);
+  const pos = [
+    [c.x - fx0 * 1.4 + fz0 * 0.82, c.z - fz0 * 1.4 - fx0 * 0.82],
+    [c.x - fx0 * 1.4 - fz0 * 0.82, c.z - fz0 * 1.4 + fx0 * 0.82],
+  ];
+  const sliding = c.slip > 0.16 && speed > 7;
+  const loose = style === "gravel" || style === "sand" || style === "grass" || style === "ice";
+  // dust: loose surfaces always kick some up; drifting kicks up a lot
+  car.dustAcc = (car.dustAcc || 0) + dt * (loose ? speed * 0.9 + (sliding ? 40 : 0) : sliding ? 30 : 0) * (LITE ? 0.5 : 1);
+  while (car.dustAcc > 1) {
+    car.dustAcc -= 1;
+    const [px, pz] = pos[Math.random() < 0.5 ? 0 : 1];
+    const back = -Math.min(8, speed * 0.12);
+    const col = style === "asphalt" ? DUST.asphalt : DUST[style] || DUST.gravel;
+    fx.soft.emit(px, c.y + 0.25, pz, fx0 * back + (Math.random() - 0.5) * 2.5, 0.6 + Math.random() * 1.4, fz0 * back + (Math.random() - 0.5) * 2.5, loose ? 1.6 : 1.1, loose ? 1.1 : 0.9, loose ? 3.2 : 2.6, style === "asphalt" ? 0.4 : 0.5, col, 1.0, 0.35);
+  }
+  if (c.inLava && Math.random() < 0.5) fx.glow.emit(c.x, c.y + 0.3, c.z, (Math.random() - 0.5) * 4, 2 + Math.random() * 3, (Math.random() - 0.5) * 4, 0.7, 0.3, 0, 1, LAVAC, 1, -4);
+  const marking = sliding || (c.braking && speed > 18) || (loose && speed > 10);
+  if (marking && car.prevW) {
+    const col = SKID[style] || SKID.asphalt;
+    const alpha = loose && !sliding ? 0.18 : 0.42;
+    for (let k = 0; k < 2; k++) fx.skid(car.prevW[k][0], c.y + 0.1, car.prevW[k][1], pos[k][0], c.y + 0.1, pos[k][1], 0.32, col, alpha);
+  }
+  car.prevW = marking ? pos : null;
+  if (c.nitroOn || c.boost > 0) {
+    for (const b of [-0.32, 0.32]) {
+      fx.glow.emit(c.x - fx0 * 2.3 - fz0 * b, c.y + 0.35, c.z - fz0 * 2.3 + fx0 * b, -fx0 * 8, 0.2, -fz0 * 8, 0.18, 0.5, 1.2, 0.8, FLAMEC, 3, 0);
+    }
+  }
+}
+
+// remote human players
+const remote = new Map();
 function onRoomState(msg) {
   lastRoomMsg = msg;
   const seen = new Set();
@@ -974,10 +1188,8 @@ function onRoomState(msg) {
     seen.add(rc.id);
     let r = remote.get(rc.id);
     if (!r) {
-      const v = makeCarVisual(rc.color ?? 0);
-      const label = labelSprite(rc.name);
-      v.root.add(label);
-      r = { v, c: makeCar(), tx: rc.x, tz: rc.y, ta: rc.a, name: rc.name, label };
+      const color = COLORS[rc.color ?? 0]?.hex ?? 0xffffff;
+      r = { name: rc.name, c: makeState(), v: makeCar(scene, rallyGltf, world.gltf, color, { name: rc.name, accent: "#4fe3d0" }), tx: rc.x, tz: rc.y, ta: rc.a };
       r.c.x = rc.x;
       r.c.z = rc.y;
       r.c.a = rc.a;
@@ -986,10 +1198,6 @@ function onRoomState(msg) {
     r.tx = rc.x;
     r.tz = rc.y;
     r.ta = rc.a;
-    if (r.v.paintColor !== rc.color) {
-      paintCar(r.v, rc.color ?? 0);
-      r.v.paintColor = rc.color;
-    }
   }
   for (const [id, r] of remote) {
     if (!seen.has(id)) {
@@ -1003,9 +1211,9 @@ function onRoomState(msg) {
 // ── camera ──────────────────────────────────────────────────────────────────
 
 const CAMS = [
-  { dist: 7.4, height: 2.5, look: 1.3, fov: 62 },
-  { dist: 11.5, height: 3.8, look: 1.6, fov: 58 },
-  { hood: true, fov: 74 },
+  { dist: 6.3, height: 2.0, look: 1.15, fov: 64 },
+  { dist: 10.5, height: 3.4, look: 1.5, fov: 58 },
+  { hood: true, fov: 76 },
 ];
 let camMode = Number(store("rrr3:cam")) || 0;
 function cycleCamera() {
@@ -1016,60 +1224,66 @@ const camPos = new THREE.Vector3(T.X[0], 30, T.Z[0]);
 const camLook = new THREE.Vector3();
 const tmp = new THREE.Vector3();
 let camDir = 0;
+let camRoll = 0;
 
 function updateCamera(dt, t) {
-  const speed = Math.hypot(car.vx, car.vz);
+  const c = player.c;
+  const speed = Math.hypot(c.vx, c.vz);
   const cfg = CAMS[camMode];
+  const nitro = c.nitroOn || c.boost > 0 ? 1 : 0;
+  let targetRoll = 0;
   if (race.state === "menu" || race.state === "boot" || race.state === "finished") {
-    const ang = t * 0.12 + 0.8;
-    const r = 10.5;
-    tmp.set(car.x + Math.cos(ang) * r, car.y + 2.6 + Math.sin(t * 0.2) * 0.6, car.z + Math.sin(ang) * r);
+    const ang = t * 0.1 + 2.2;
+    tmp.set(c.x + Math.cos(ang) * 9.5, c.y + 2.1 + Math.sin(t * 0.2) * 0.5, c.z + Math.sin(ang) * 9.5);
     camPos.lerp(tmp, 1 - Math.exp(-dt * 3));
-    camLook.set(car.x, car.y + 1.0, car.z);
-    camera.fov += (50 - camera.fov) * Math.min(1, dt * 2);
+    camLook.set(c.x, c.y + 0.9, c.z);
+    camera.fov += (46 - camera.fov) * Math.min(1, dt * 2);
   } else if (cfg.hood) {
-    const fx = Math.cos(car.a);
-    const fz = Math.sin(car.a);
-    camPos.set(car.x + fx * 0.2, car.y + 1.35, car.z + fz * 0.2);
-    camLook.set(car.x + fx * 20, car.y + 1.0 + car.pitch * 20, car.z + fz * 20);
-    camera.fov += (cfg.fov + 10 * Math.min(1, speed / CFG.maxSpeed) - camera.fov) * Math.min(1, dt * 3);
+    const fx = Math.cos(c.a);
+    const fz = Math.sin(c.a);
+    camPos.set(c.x + fx * 0.3, c.y + 1.45, c.z + fz * 0.3);
+    camLook.set(c.x + fx * 20, c.y + 1.1 + c.pitch * 20, c.z + fz * 20);
+    camera.fov += (cfg.fov + 10 * Math.min(1, speed / CFG.maxSpeed) + nitro * 8 - camera.fov) * Math.min(1, dt * 3);
   } else {
     // follow a blend of where the car points and where it's going (drift cam)
-    let target = car.a;
+    let target = c.a;
     if (speed > 6) {
-      const vel = Math.atan2(car.vz, car.vx);
-      let d = vel - car.a;
+      let d = Math.atan2(c.vz, c.vx) - c.a;
       d = Math.atan2(Math.sin(d), Math.cos(d));
-      if (Math.abs(d) < 1.6) target = car.a + d * 0.45;
+      if (Math.abs(d) < 1.6) target = c.a + d * 0.45;
     }
     let dd = target - camDir;
     dd = Math.atan2(Math.sin(dd), Math.cos(dd));
     camDir += dd * Math.min(1, dt * 5);
     const fx = Math.cos(camDir);
     const fz = Math.sin(camDir);
-    const dist = cfg.dist + Math.min(1, speed / CFG.maxSpeed) * 1.4;
-    tmp.set(car.x - fx * dist, car.y + cfg.height, car.z - fz * dist);
-    camPos.lerp(tmp, 1 - Math.exp(-dt * 9));
-    const floor = Wd.terrainAt(camPos.x, camPos.z) + 1.2;
+    const dist = cfg.dist + Math.min(1, speed / CFG.maxSpeed) * 1.2 - nitro * 0.6;
+    tmp.set(c.x - fx * dist, c.y + cfg.height, c.z - fz * dist);
+    camPos.lerp(tmp, 1 - Math.exp(-dt * 10));
+    const floor = Wd.terrainAt(camPos.x, camPos.z) + 1.0;
     if (camPos.y < floor) camPos.y = floor;
-    camLook.set(car.x + Math.cos(car.a) * 4, car.y + cfg.look, car.z + Math.sin(car.a) * 4);
-    const boost = car.boost > 0 ? 8 : 0;
-    camera.fov += (cfg.fov + 14 * Math.min(1, speed / CFG.maxSpeed) + boost - camera.fov) * Math.min(1, dt * 3);
+    camLook.set(c.x + Math.cos(c.a) * 5, c.y + cfg.look, c.z + Math.sin(c.a) * 5);
+    camera.fov += (cfg.fov + 14 * Math.min(1, speed / CFG.maxSpeed) + nitro * 10 - camera.fov) * Math.min(1, dt * 3);
+    targetRoll = -input.steer * Math.min(1, speed / 40) * 0.035;
   }
+  camRoll += (targetRoll - camRoll) * Math.min(1, dt * 4);
   shake *= Math.exp(-5 * dt);
-  const sp = speed > 44 ? (speed - 44) * 0.0015 : 0;
+  const sp = speed > 46 ? (speed - 46) * 0.0016 + nitro * 0.02 : 0;
   const sh = settings.shake ? shake * 0.35 + sp : 0;
   camera.position.set(camPos.x + (Math.random() - 0.5) * sh, camPos.y + (Math.random() - 0.5) * sh, camPos.z + (Math.random() - 0.5) * sh);
   camera.lookAt(camLook);
+  camera.rotateZ(camRoll);
   camera.updateProjectionMatrix();
 
   // keep the sun's shadow box on the car, snapped to texels to avoid shimmer
   const s = world.sun;
   const snap = 140 / s.shadow.mapSize.x;
-  const cx = Math.round(car.x / snap) * snap;
-  const cz = Math.round(car.z / snap) * snap;
-  s.target.position.set(cx, car.y, cz);
-  s.position.set(cx + world.sunDir.x * 320, car.y + world.sunDir.y * 320, cz + world.sunDir.z * 320);
+  const cx = Math.round(c.x / snap) * snap;
+  const cz = Math.round(c.z / snap) * snap;
+  s.target.position.set(cx, c.y, cz);
+  s.position.set(cx + world.sunDir.x * 320, c.y + world.sunDir.y * 320, cz + world.sunDir.z * 320);
+  headlight.position.set(c.x + Math.cos(c.a) * 2.2, c.y + 0.9, c.z + Math.sin(c.a) * 2.2);
+  headlight.target.position.set(c.x + Math.cos(c.a) * 30, c.y - 1, c.z + Math.sin(c.a) * 30);
 }
 
 // ── HUD ─────────────────────────────────────────────────────────────────────
@@ -1091,13 +1305,55 @@ $("#swatches").replaceChildren(
     b.setAttribute("aria-pressed", String(k === settings.color));
     b.addEventListener("click", () => {
       settings.color = k;
-      store("rrr3:color", String(k));
-      paintCar(player, k);
+      store("rrr4:color", String(k));
+      paint(player.v, c.hex);
+      paint(ghostCar, c.hex);
       for (const o of $("#swatches").children) o.setAttribute("aria-pressed", String(o === b));
       sendHello();
     });
     return b;
   }),
+);
+function segmented(id, options, get, set) {
+  const el = $(id);
+  el.replaceChildren(
+    ...options.map(([label, value]) => {
+      const b = document.createElement("button");
+      b.textContent = label;
+      b.setAttribute("aria-pressed", String(get() === value));
+      b.addEventListener("click", () => {
+        set(value);
+        for (const o of el.children) o.setAttribute("aria-pressed", String(o === b));
+      });
+      return b;
+    }),
+  );
+}
+segmented(
+  "#opt-time",
+  [
+    [STR.day, false],
+    [STR.night, true],
+  ],
+  () => settings.night,
+  (v) => {
+    settings.night = v;
+    store("rrr4:night", v ? "1" : "0");
+    applyMood();
+  },
+);
+segmented(
+  "#opt-rivals",
+  [
+    ["0", 0],
+    ["5", 5],
+  ],
+  () => settings.rivals,
+  (v) => {
+    settings.rivals = v;
+    store("rrr4:rivals", String(v));
+    setField();
+  },
 );
 
 function fmt(ms) {
@@ -1160,8 +1416,8 @@ function renderBoards(force) {
   $("#room-meta").textContent = STR.roomMeta(room, lastRoomMsg?.connected ?? 0);
 }
 
-// speedometer arc
-const ARC = { cx: 100, cy: 100, r: 80, a0: (135 * Math.PI) / 180, sweep: (270 * Math.PI) / 180 };
+// speedometer arc (bottom-centre gauge)
+const ARC = { cx: 110, cy: 110, r: 92, a0: (150 * Math.PI) / 180, sweep: (240 * Math.PI) / 180 };
 function arcPath(frac) {
   const a1 = ARC.a0 + ARC.sweep * Math.max(0.001, Math.min(1, frac));
   const x0 = ARC.cx + Math.cos(ARC.a0) * ARC.r;
@@ -1172,82 +1428,62 @@ function arcPath(frac) {
   return `M ${x0.toFixed(1)} ${y0.toFixed(1)} A ${ARC.r} ${ARC.r} 0 ${large} 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`;
 }
 $("#rpm-track").setAttribute("d", arcPath(1));
-const GEARS = [0, 13, 22, 31, 40, 49, 62];
+const GEARS = [0, 13, 23, 33, 43, 53, 66];
 function gearAndRpm() {
-  const v = Math.abs(car.vf);
-  if (race.state === "countdown" || v < 0.5) return { gear: car.vf < -0.5 ? "R" : "N", rpm: 0.18 + input.gas * 0.62 + Math.random() * 0.02 * input.gas };
-  if (car.vf < -0.5) return { gear: "R", rpm: 0.3 + (v / CFG.maxReverse) * 0.5 };
+  const c = player.c;
+  const v = Math.abs(c.vf);
+  if (race.state === "countdown" || v < 0.5) return { gear: c.vf < -0.5 ? "R" : "N", rpm: 0.15 + input.gas * 0.65 + Math.random() * 0.02 * input.gas };
+  if (c.vf < -0.5) return { gear: "R", rpm: 0.3 + (v / CFG.maxReverse) * 0.5 };
   let g = 1;
   while (g < GEARS.length - 1 && v > GEARS[g]) g++;
-  const lo = GEARS[g - 1];
-  const hi = GEARS[g];
-  return { gear: String(g), rpm: 0.3 + 0.7 * Math.min(1, (v - lo) / (hi - lo)) };
+  return { gear: String(g), rpm: 0.3 + 0.7 * Math.min(1, (v - GEARS[g - 1]) / (GEARS[g] - GEARS[g - 1])) };
 }
 
-// minimap: a pre-rendered island, rotated so "up" is where you're driving
+// minimap: the loop as a neon outline, cars as dots
 const mm = $("#minimap");
 const mctx = mm.getContext("2d");
-const MMS = 1.5; // px per metre
-const mmBase = (() => {
-  const c = document.createElement("canvas");
-  c.width = Math.ceil(Wd.NXC * Wd.CELL * MMS);
-  c.height = Math.ceil(Wd.NZC * Wd.CELL * MMS);
-  const g = c.getContext("2d");
-  g.setTransform(MMS, 0, 0, MMS, -Wd.X0 * MMS, -Wd.Z0 * MMS);
-  g.fillStyle = "rgba(90,120,80,0.55)";
-  g.beginPath();
-  T.COAST.forEach(([x, z], k) => (k ? g.lineTo(x, z) : g.moveTo(x, z)));
-  g.closePath();
-  g.fill();
-  g.lineJoin = g.lineCap = "round";
-  g.lineWidth = 16;
-  g.strokeStyle = "rgba(0,0,0,0.5)";
-  g.beginPath();
-  g.moveTo(T.X[0], T.Z[0]);
-  for (let i = 1; i <= T.N; i++) g.lineTo(T.X[i % T.N], T.Z[i % T.N]);
-  g.stroke();
-  g.lineWidth = 9;
+const MMB = (() => {
+  let x0 = Infinity;
+  let x1 = -Infinity;
+  let z0 = Infinity;
+  let z1 = -Infinity;
   for (let i = 0; i < T.N; i++) {
-    const k = T.ZONE_LIST[T.ZONE[i]].key;
-    g.strokeStyle = k === "lava" ? "#ff8a1e" : k === "ice" ? "#bfe6f5" : "#f3f6f8";
-    g.beginPath();
-    g.moveTo(T.X[i], T.Z[i]);
-    g.lineTo(T.X[(i + 1) % T.N], T.Z[(i + 1) % T.N]);
-    g.stroke();
+    x0 = Math.min(x0, T.X[i]);
+    x1 = Math.max(x1, T.X[i]);
+    z0 = Math.min(z0, T.Z[i]);
+    z1 = Math.max(z1, T.Z[i]);
   }
-  return c;
+  const s = Math.min((mm.width - 36) / (x1 - x0), (mm.height - 36) / (z1 - z0));
+  return { s, ox: (mm.width - (x1 - x0) * s) / 2 - x0 * s, oz: (mm.height - (z1 - z0) * s) / 2 - z0 * s };
 })();
 function drawMinimap() {
-  const w = mm.width;
-  mctx.clearRect(0, 0, w, w);
-  mctx.save();
-  mctx.beginPath();
-  mctx.arc(w / 2, w / 2, w / 2 - 2, 0, Math.PI * 2);
-  mctx.clip();
-  mctx.translate(w / 2, w / 2);
-  mctx.rotate(-Math.PI / 2 - car.a);
-  mctx.drawImage(mmBase, -(car.x - Wd.X0) * MMS, -(car.z - Wd.Z0) * MMS);
-  const dot = (x, z, color, r) => {
-    mctx.fillStyle = color;
-    mctx.beginPath();
-    mctx.arc((x - car.x) * MMS, (z - car.z) * MMS, r, 0, Math.PI * 2);
-    mctx.fill();
-  };
-  if (race.state === "racing") {
-    const cp = T.CHECKPOINTS[race.cpNext % T.CHECKPOINTS.length];
-    dot(T.X[cp], T.Z[cp], "#ff2d87", 9);
+  const g = mctx;
+  g.clearRect(0, 0, mm.width, mm.height);
+  g.lineJoin = g.lineCap = "round";
+  g.beginPath();
+  for (let i = 0; i <= T.N; i += 2) {
+    const k = i % T.N;
+    const x = T.X[k] * MMB.s + MMB.ox;
+    const y = T.Z[k] * MMB.s + MMB.oz;
+    if (i) g.lineTo(x, y);
+    else g.moveTo(x, y);
   }
-  for (const r of remote.values()) dot(r.c.x, r.c.z, "#ff8a1e", 7);
-  mctx.restore();
-  // you: an arrow pointing up
-  mctx.fillStyle = "#fff";
-  mctx.beginPath();
-  mctx.moveTo(w / 2, w / 2 - 14);
-  mctx.lineTo(w / 2 + 10, w / 2 + 10);
-  mctx.lineTo(w / 2, w / 2 + 4);
-  mctx.lineTo(w / 2 - 10, w / 2 + 10);
-  mctx.closePath();
-  mctx.fill();
+  g.closePath();
+  g.strokeStyle = "rgba(255,45,135,0.35)";
+  g.lineWidth = 12;
+  g.stroke();
+  g.strokeStyle = "#ff5aa8";
+  g.lineWidth = 4;
+  g.stroke();
+  const dot = (c, color, r) => {
+    g.fillStyle = color;
+    g.beginPath();
+    g.arc(c.x * MMB.s + MMB.ox, c.z * MMB.s + MMB.oz, r, 0, Math.PI * 2);
+    g.fill();
+  };
+  for (const r of rivals) if (r.active) dot(r.c, `#${r.profile.color.toString(16).padStart(6, "0")}`, 6);
+  for (const r of remote.values()) dot(r.c, "#4fe3d0", 6);
+  dot(player.c, "#ffffff", 9);
 }
 
 let hudT = 0;
@@ -1262,19 +1498,26 @@ function hud(dt) {
   } else $("#count").classList.add("hidden");
   const { gear, rpm } = gearAndRpm();
   $("#rpm-arc").setAttribute("d", arcPath(rpm));
-  audio.update(rpm, input.gas, car);
+  audio.update(rpm, input.gas, player.c);
   hudT += dt;
   if (hudT < 0.066) return;
   hudT = 0;
   if (race.state === "menu" || race.state === "boot") return;
-  const cur = race.state === "racing" ? race.t : race.laps.reduce((a, b) => a + b, 0) / 1000;
-  $("#hud-lap").textContent = String(Math.min(race.lap, CFG.laps));
-  $("#hud-total").textContent = fmt(cur * 1000);
+  const c = player.c;
+  const n = activeCars().length;
+  $("#hud-lap").textContent = `${Math.min(c.lap, CFG.laps)}/${CFG.laps}`;
+  $("#hud-total").textContent = fmt(race.state === "racing" ? (race.t - c.lapStart) * 1000 : c.laps.reduce((a, b) => a + b, 0));
+  $("#hud-last").textContent = fmt(race.lastLap);
   $("#hud-best").textContent = fmt(bestLocalLap);
-  $("#hud-speed").textContent = String(Math.round(Math.hypot(car.vx, car.vz) * CFG.kmh));
+  $("#hud-pos").textContent = String(race.place || n);
+  $("#hud-posn").textContent = `/${n}`;
+  $("#hud-speed").textContent = String(Math.round(Math.hypot(c.vx, c.vz) * CFG.kmh));
   $("#hud-gear").textContent = gear;
+  $("#hud-nitro").style.width = `${Math.round(c.nitro * 100)}%`;
+  $("#nitro-bar").classList.toggle("full", c.nitro >= 0.99);
+  $("#nitro-bar").classList.toggle("on", c.nitroOn);
   $("#hud-score").textContent = skill.total.toLocaleString("is-IS");
-  $("#hud-online").textContent = online ? STR.online(remote.size + 1) : "";
+  $("#hud-online").textContent = online && remote.size ? STR.online(remote.size + 1) : "";
   if (race.wrongT > 1) toast(STR.wrongWay, "warn");
   const sk = $("#skills");
   const live = skill.state !== "idle" || skill.drift > 0;
@@ -1283,17 +1526,33 @@ function hud(dt) {
   $("#sk-mult").textContent = `x${skill.mult}`;
   const running = skill.pts + (skill.drift > 0 ? skill.drift : 0);
   $("#sk-pts").textContent = skill.state === "banked" ? `+${Math.round(skill.pts * skill.mult).toLocaleString("is-IS")}` : Math.round(running).toLocaleString("is-IS");
-  $("#sk-list").textContent = (skill.drift > 0 ? [STR.skills.drift, ...skill.list] : skill.list).slice(0, 4).join(" · ");
+  const counts = new Map();
+  for (const s of skill.drift > 0 ? [STR.skills.drift, ...skill.list] : skill.list) counts.set(s, (counts.get(s) || 0) + 1);
+  $("#sk-list").textContent = [...counts].slice(0, 4).map(([s, n]) => (n > 1 ? `${s} ×${n}` : s)).join(" · ");
+  // pace notes
+  const note = settings.notes && race.state === "racing" ? nextNote(c.i, 30) : null;
+  const pn = $("#pace");
+  if (note) {
+    pn.classList.add("show");
+    pn.classList.toggle("hazard", note.kind !== "corner");
+    $("#pace-text").textContent = note.text;
+    $("#pace-grade").textContent = note.grade ? String(note.grade) : "!";
+    $("#pace-arrow").dataset.dir = note.text.startsWith("Hægri") ? "r" : note.text.startsWith("Vinstri") ? "l" : "";
+    if (note.i !== race.noteKey) {
+      race.noteKey = note.i;
+      audio.note();
+    }
+  } else pn.classList.remove("show");
   drawMinimap();
   if (DEBUG) {
     $("#debug").classList.remove("hidden");
-    $("#debug").textContent = `fps ${Math.round(fpsN / fpsT)} · i ${car.i} · lat ${car.lat.toFixed(1)} · y ${car.y.toFixed(1)} · ${car.zone.key}${car.air ? " · AIR" : ""} · cp ${race.cpNext} · lap ${race.lap} · calls ${renderer.info.render.calls} · tris ${Math.round(renderer.info.render.triangles / 1000)}k`;
+    $("#debug").textContent = `fps ${Math.round(fpsN / fpsT)} · i ${c.i} · lat ${c.lat.toFixed(1)} · y ${c.y.toFixed(1)} · ${c.zone.key}${c.air ? " · AIR" : ""} · cp ${c.cpNext} · lap ${c.lap} · P${race.place} · calls ${renderer.info.render.calls} · tris ${Math.round(renderer.info.render.triangles / 1000)}k`;
     fpsN = 0;
     fpsT = 0;
   }
 }
 
-// ── audio: a small synth engine, tyre squeal and a few effects ────────────
+// ── audio: synth engine, tyre squeal, wind, a few effects ──────────────────
 
 const audio = (() => {
   let ctx = null;
@@ -1302,7 +1561,9 @@ const audio = (() => {
   let filt;
   let gain;
   let skidGain;
+  let windGain;
   let master;
+  let noiseBuf;
   const init = () => {
     if (ctx) return;
     try {
@@ -1330,26 +1591,30 @@ const audio = (() => {
     eng.start();
     eng2.start();
     const len = ctx.sampleRate;
-    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
-    const d = buf.getChannelData(0);
+    noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const d = noiseBuf.getChannelData(0);
     for (let k = 0; k < len; k++) d[k] = Math.random() * 2 - 1;
-    const noise = ctx.createBufferSource();
-    noise.buffer = buf;
-    noise.loop = true;
-    const bp = ctx.createBiquadFilter();
-    bp.type = "bandpass";
-    bp.frequency.value = 1800;
-    bp.Q.value = 3;
-    skidGain = ctx.createGain();
-    skidGain.gain.value = 0;
-    noise.connect(bp).connect(skidGain).connect(master);
-    noise.start();
-    audio.noiseBuf = buf;
+    const mk = (freq, q, type) => {
+      const n = ctx.createBufferSource();
+      n.buffer = noiseBuf;
+      n.loop = true;
+      const f = ctx.createBiquadFilter();
+      f.type = type;
+      f.frequency.value = freq;
+      f.Q.value = q;
+      const g = ctx.createGain();
+      g.gain.value = 0;
+      n.connect(f).connect(g).connect(master);
+      n.start();
+      return g;
+    };
+    skidGain = mk(1800, 3, "bandpass");
+    windGain = mk(500, 0.6, "lowpass");
   };
   const burst = (freq, dur, vol, type = "highpass") => {
     if (!ctx || !settings.sound) return;
     const src = ctx.createBufferSource();
-    src.buffer = audio.noiseBuf;
+    src.buffer = noiseBuf;
     const f = ctx.createBiquadFilter();
     f.type = type;
     f.frequency.value = freq;
@@ -1360,8 +1625,18 @@ const audio = (() => {
     src.start();
     src.stop(ctx.currentTime + dur);
   };
+  const beep = (freq, dur, vol) => {
+    if (!ctx || !settings.sound) return;
+    const o = ctx.createOscillator();
+    o.frequency.value = freq;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(vol, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+    o.connect(g).connect(master);
+    o.start();
+    o.stop(ctx.currentTime + dur);
+  };
   return {
-    noiseBuf: null,
     start() {
       init();
       ctx?.resume?.();
@@ -1376,17 +1651,19 @@ const audio = (() => {
       const f = 38 + rpm * 150;
       eng.frequency.setTargetAtTime(f, t, 0.03);
       eng2.frequency.setTargetAtTime(f / 2, t, 0.03);
-      filt.frequency.setTargetAtTime(350 + throttle * 1500 + rpm * 900, t, 0.05);
+      filt.frequency.setTargetAtTime(350 + throttle * 1500 + rpm * 900 + (c.nitroOn ? 900 : 0), t, 0.05);
       gain.gain.setTargetAtTime(racing || race.state === "finished" ? 0.05 + throttle * 0.09 : 0.02, t, 0.08);
       const sp = Math.hypot(c.vx, c.vz);
-      const squeal = !c.air && c.slip > 0.18 && sp > 8 ? Math.min(1, (c.slip - 0.18) * 3) : 0;
+      const squeal = !c.air && c.slip > 0.18 && sp > 8 && c.zone.style === "asphalt" ? Math.min(1, (c.slip - 0.18) * 3) : 0;
       skidGain.gain.setTargetAtTime(squeal * 0.1, t, 0.05);
+      windGain.gain.setTargetAtTime(racing ? Math.min(0.12, (sp / CFG.maxSpeed) ** 2 * 0.1 + (c.nitroOn ? 0.05 : 0)) : 0, t, 0.1);
     },
     boost: () => burst(900, 0.7, 0.35),
     land: (air) => burst(160, 0.35, Math.min(0.6, 0.2 + air * 0.2), "lowpass"),
+    note: () => beep(1320, 0.08, 0.05),
+    go: () => beep(880, 0.35, 0.12),
   };
 })();
-const sfx = { boost: () => audio.boost(), land: (a) => audio.land(a) };
 function setSound(on) {
   settings.sound = on;
   store("rrr3:sound", on ? "1" : "0");
@@ -1404,6 +1681,11 @@ $("#opt-shake").addEventListener("change", (e) => {
 });
 $("#opt-sound").checked = settings.sound;
 $("#opt-sound").addEventListener("change", (e) => setSound(e.target.checked));
+$("#opt-notes").checked = settings.notes;
+$("#opt-notes").addEventListener("change", (e) => {
+  settings.notes = e.target.checked;
+  store("rrr4:notes", settings.notes ? "1" : "0");
+});
 $("#start").addEventListener("click", startRace);
 $("#again").addEventListener("click", startRace);
 $("#to-menu").addEventListener("click", showMenu);
@@ -1430,21 +1712,20 @@ function frame(tNow) {
   hz.lava = (L) => lavaState(L, now);
   animateWorld(world, t, dt, hz, (s) => sheepPos(s, now));
 
-  const braking = race.state === "racing" && input.brake > 0 && car.vf > 1;
-  poseCar(player, car, dt, braking || race.state === "finished");
-  player.root.visible = race.state !== "boot";
+  for (const car of activeCars()) {
+    poseCar(car, dt);
+    if (race.state === "racing" || race.state === "finished") wheelFx(car, dt);
+  }
 
-  // checkpoints: the next one glows
   world.checkpoints.forEach((cp, k) => {
-    const next = race.state === "racing" && k + 1 === race.cpNext % T.CHECKPOINTS.length;
+    const next = race.state === "racing" && k + 1 === player.c.cpNext % T.CHECKPOINTS.length;
     cp.traverse((o) => {
-      if (o.isMesh) o.material.emissiveIntensity = next ? 0.8 + 0.6 * Math.abs(Math.sin(t * 5)) : 0.1;
+      if (o.isMesh) o.material.emissiveIntensity = next ? 1.2 + 0.8 * Math.abs(Math.sin(t * 5)) : settings.night ? 0.8 : 0.1;
     });
   });
 
-  // ghost of your best lap
   if (ghost && race.state === "racing" && ghost.f.length > 2) {
-    const f = (race.t - race.lapStart) / 0.1;
+    const f = (race.t - player.c.lapStart) / 0.1;
     const a = Math.floor(f);
     if (a + 1 < ghost.f.length) {
       const p = ghost.f[a];
@@ -1456,7 +1737,6 @@ function frame(tNow) {
     } else ghostCar.root.visible = false;
   } else ghostCar.root.visible = false;
 
-  // other players, smoothed toward their last report
   const kk = 1 - Math.exp(-8 * dt);
   for (const r of remote.values()) {
     const c = r.c;
@@ -1467,16 +1747,18 @@ function frame(tNow) {
     c.a += da * kk;
     locate(c);
     c.y = groundAt(c.i, c.lat, c.x, c.z);
-    poseCar(r.v, c, dt, false);
+    poseCar(r, dt);
   }
 
   updateCamera(dt, t);
-  renderer.render(scene, camera);
+  fx.update(dt, camera, innerHeight * renderer.getPixelRatio());
+  const speed01 = Math.min(1, Math.hypot(player.c.vx, player.c.vz) / CFG.maxSpeed);
+  post.render(t, race.state === "racing" ? speed01 : 0, race.state === "racing" && (player.c.nitroOn || player.c.boost > 0) ? 1 : 0);
   hud(dt);
   requestAnimationFrame(frame);
 }
 
-placeAt(car, T.wrap(-5));
+setField();
 loadingBar.style.width = "100%";
 race.state = "menu";
 $("#loading").classList.add("done");
@@ -1485,4 +1767,4 @@ $("#menu").classList.remove("hidden");
 renderBoards(true);
 requestAnimationFrame(frame);
 connect();
-window.__rrr = { car, race, skill, T, Wd, camera, renderer, world };
+window.__rrr = { car: player.c, player, rivals, race, skill, T, Wd, camera, renderer, world, settings, applyMood };

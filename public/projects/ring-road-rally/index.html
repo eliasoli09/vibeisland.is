@@ -48,47 +48,86 @@
       .bar i { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, var(--pink), var(--orange)); transition: width 200ms; }
 
       /* HUD */
-      #hud { position: fixed; inset: 0; pointer-events: none; }
-      .tl { position: absolute; top: max(14px, env(safe-area-inset-top)); left: 18px; display: grid; gap: 6px; text-shadow: 0 2px 8px rgba(0,0,0,0.55); }
-      .tl .big { margin-bottom: 4px; }
-      .tl .big { font: italic 800 2.2rem/1 var(--display); }
-      .tl .big small { font-size: 1.1rem; color: var(--dim); }
-      .tl .row { font: 700 1rem/1.2 var(--display); letter-spacing: 0.06em; color: var(--dim); font-variant-numeric: tabular-nums; }
-      .tl .row b { color: var(--snow); font-size: 1.3rem; margin-left: 6px; }
-      .tr { position: absolute; top: max(14px, env(safe-area-inset-top)); right: 18px; text-align: right; text-shadow: 0 2px 8px rgba(0,0,0,0.55); }
-      .tr .score { font: italic 800 2rem/1 var(--display); font-variant-numeric: tabular-nums; }
-      .tr small { display: block; font: 700 0.75rem/1 var(--display); letter-spacing: 0.2em; color: var(--dim); text-transform: uppercase; }
-      .tr .online { margin-top: 8px; font: 700 0.9rem/1 var(--display); letter-spacing: 0.08em; color: var(--dim); }
+      #hud { position: fixed; inset: 0; pointer-events: none; --acc: var(--orange); --acc2: var(--pink); --glow: rgba(255,120,60,0.55); }
+      body.night #hud { --acc: #37e8ff; --acc2: #ff2d9b; --glow: rgba(55,232,255,0.6); }
+      .hpanel { background: linear-gradient(100deg, rgba(10,12,20,0.78), rgba(10,12,20,0.5)); border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; box-shadow: 0 6px 24px rgba(0,0,0,0.35); backdrop-filter: blur(6px); }
+      body.night .hpanel { border-color: rgba(55,232,255,0.45); box-shadow: 0 0 18px rgba(55,232,255,0.25), inset 0 0 14px rgba(255,45,155,0.12); }
+      .lbl2 { font: 700 0.72rem/1 var(--display); letter-spacing: 0.2em; color: var(--dim); text-transform: uppercase; }
+      .tl { position: absolute; top: max(14px, env(safe-area-inset-top)); left: 16px; padding: 10px 16px 10px 18px; min-width: 190px; transform: skewX(-8deg); border-left: 4px solid var(--acc); }
+      .tl > * { transform: skewX(8deg); }
+      .tl .big { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+      .tl .big b { font: italic 800 2.3rem/1 var(--display); font-variant-numeric: tabular-nums; color: var(--snow); text-shadow: 0 0 14px var(--glow); }
+      .tl .row { display: flex; justify-content: space-between; gap: 18px; font: 700 0.8rem/1.5 var(--display); letter-spacing: 0.16em; color: var(--dim); }
+      .tl .row b { color: var(--snow); font: 700 1.15rem/1.3 var(--display); letter-spacing: 0.02em; font-variant-numeric: tabular-nums; }
+      .tl .row.last b { color: var(--acc); }
+      .tr { position: absolute; top: max(14px, env(safe-area-inset-top)); right: 16px; display: grid; justify-items: end; gap: 8px; }
+      .pos { display: flex; align-items: flex-end; gap: 10px; text-shadow: 0 3px 14px rgba(0,0,0,0.6); }
+      .pos .lbl2 { margin-bottom: 10px; }
+      .pos b { font: italic 800 4.6rem/0.8 var(--display); color: #ffd23a; font-variant-numeric: tabular-nums; text-shadow: 0 0 22px rgba(255,190,40,0.55), 0 4px 0 rgba(120,60,0,0.6); }
+      .pos small { font: italic 800 2rem/1 var(--display); color: #ffe89a; }
+      #minimap { width: 196px; height: 150px; padding: 6px; }
+      .score { text-align: right; text-shadow: 0 2px 8px rgba(0,0,0,0.55); }
+      .score b { display: block; font: italic 800 1.5rem/1 var(--display); font-variant-numeric: tabular-nums; }
+      .score .online { font: 700 0.8rem/1.4 var(--display); letter-spacing: 0.08em; color: var(--dim); }
 
-      /* speedometer */
-      #speedo { position: absolute; right: 18px; bottom: max(14px, env(safe-area-inset-bottom)); width: 190px; height: 190px; }
-      #speedo svg { position: absolute; inset: 0; }
-      #speedo .num { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
-      #speedo .num b { font: italic 800 3.6rem/0.85 var(--display); font-variant-numeric: tabular-nums; }
-      #speedo .num small { font: 700 0.8rem/1 var(--display); letter-spacing: 0.18em; color: var(--dim); }
-      #speedo .gear { position: absolute; left: 50%; bottom: 20px; transform: translateX(-50%); font: 800 1.4rem/1 var(--display); color: var(--orange); }
+      /* speedometer: bottom centre, segmented arc like a digital dash */
+      #speedo { position: absolute; left: 50%; bottom: max(6px, env(safe-area-inset-bottom)); width: 220px; height: 220px; transform: translateX(-50%); }
+      #speedo svg { position: absolute; inset: 0; overflow: visible; }
+      #speedo .disc { fill: url(#discgrad); }
+      #rpm-track, #rpm-arc { fill: none; stroke-width: 14; stroke-dasharray: 5 3; }
+      #rpm-track { stroke: rgba(255,255,255,0.1); }
+      #rpm-arc { stroke: url(#rpmgrad); filter: drop-shadow(0 0 6px var(--glow)); }
+      #speedo .num { position: absolute; inset: 0 0 18px; display: grid; place-content: center; text-align: center; text-shadow: 0 0 18px var(--glow), 0 3px 10px rgba(0,0,0,0.6); }
+      #speedo .num b { font: italic 800 4.4rem/0.82 var(--display); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+      #speedo .num small { font: 700 0.78rem/1.4 var(--display); letter-spacing: 0.22em; color: var(--dim); }
+      #speedo .gear { position: absolute; left: 50%; top: 40px; transform: translateX(-50%); width: 34px; height: 34px; display: grid; place-items: center; border-radius: 6px; border: 2px solid var(--acc); color: var(--acc); font: 800 1.35rem/1 var(--display); background: rgba(10,12,20,0.55); box-shadow: 0 0 12px var(--glow); }
+      #nitro-bar { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); width: 150px; height: 12px; border-radius: 3px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.18); overflow: hidden; }
+      #hud-nitro { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, #2f7fff, #37e8ff 60%, #fff); box-shadow: 0 0 10px #37e8ff; transition: width 120ms linear; }
+      #nitro-bar .lbl2 { position: absolute; inset: 0; display: grid; place-items: center; font-size: 0.6rem; color: #fff; text-shadow: 0 1px 3px #000; letter-spacing: 0.3em; }
+      #nitro-bar.full { border-color: #37e8ff; box-shadow: 0 0 14px rgba(55,232,255,0.8); animation: nitroPulse 0.9s ease-in-out infinite alternate; }
+      #nitro-bar.on #hud-nitro { background: linear-gradient(90deg, #8a4dff, #ff2d9b 50%, #fff); box-shadow: 0 0 16px #ff2d9b; }
+      #nitro-bar.on { border-color: #ff2d9b; box-shadow: 0 0 20px rgba(255,45,155,0.9); }
+      @keyframes nitroPulse { from { box-shadow: 0 0 6px rgba(55,232,255,0.5); } to { box-shadow: 0 0 18px rgba(55,232,255,1); } }
 
-      /* minimap */
-      #minimap { position: absolute; left: 18px; bottom: max(14px, env(safe-area-inset-bottom)); width: 170px; height: 170px; border-radius: 50%; background: rgba(12,16,22,0.55); border: 2px solid var(--line); }
+      /* pace notes (co-driver) */
+      #pace { position: absolute; left: 16px; bottom: max(16px, env(safe-area-inset-bottom)); width: 310px; padding: 10px 14px 12px; border-left: 4px solid var(--acc); opacity: 0; transform: translateX(-12px); transition: opacity 180ms, transform 180ms; }
+      #pace.show { opacity: 1; transform: none; }
+      #pace.hazard { border-left-color: #ff4b3a; }
+      #pace .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+      #pace .body { display: flex; align-items: center; gap: 12px; }
+      #pace-arrow { width: 46px; height: 46px; flex: none; display: grid; place-items: center; }
+      #pace-arrow svg { width: 100%; height: 100%; stroke: var(--snow); fill: none; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 6px var(--glow)); }
+      #pace-arrow[data-dir="l"] svg { transform: scaleX(-1); }
+      #pace-arrow[data-dir=""] { display: none; }
+      #pace-grade { font: italic 800 2.6rem/1 var(--display); color: var(--acc); min-width: 26px; text-align: center; }
+      #pace.hazard #pace-grade { color: #ff6a3a; }
+      #pace-text { font: italic 800 1.2rem/1.05 var(--display); text-wrap: balance; text-transform: uppercase; letter-spacing: 0.02em; }
 
       /* skill chain */
-      #skills { position: absolute; left: 50%; bottom: 120px; transform: translateX(-50%); text-align: center; transition: opacity 250ms; }
-      #skills .mult { font: italic 800 2.6rem/1 var(--display); background: linear-gradient(90deg, var(--pink), var(--orange)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-      #skills .pts { font: italic 800 1.6rem/1 var(--display); font-variant-numeric: tabular-nums; }
-      #skills .list { font: 700 0.95rem/1.35 var(--display); letter-spacing: 0.12em; color: var(--snow); text-transform: uppercase; }
+      #skills { position: absolute; left: 50%; bottom: 236px; transform: translateX(-50%); text-align: center; transition: opacity 250ms; white-space: nowrap; }
+      #skills .mult { font: italic 800 2.6rem/1 var(--display); background: linear-gradient(90deg, var(--acc2), var(--acc)); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 8px var(--glow)); }
+      #skills .pts { font: italic 800 1.6rem/1 var(--display); font-variant-numeric: tabular-nums; text-shadow: 0 2px 8px rgba(0,0,0,0.6); }
+      #skills .list { font: 700 0.95rem/1.35 var(--display); letter-spacing: 0.12em; color: var(--snow); text-transform: uppercase; text-shadow: 0 2px 8px rgba(0,0,0,0.6); }
       #skills.lost .mult, #skills.lost .pts { background: none; color: #ff4b4b; }
       #skills.banked .pts { color: var(--lagoon); }
 
       #banner { position: absolute; top: 16%; left: 50%; transform: translateX(-50%); text-align: center; opacity: 0; transition: opacity 400ms; max-width: min(92vw, 620px); }
       #banner.show { opacity: 1; }
-      #banner h2 { margin: 0; font: italic 800 clamp(2rem, 6vw, 3.4rem)/1 var(--display); text-shadow: 0 3px 12px rgba(0,0,0,0.5); }
+      #banner h2 { margin: 0; font: italic 800 clamp(2rem, 6vw, 3.4rem)/1 var(--display); text-shadow: 0 3px 12px rgba(0,0,0,0.5), 0 0 24px var(--glow); }
       #banner p { margin: 8px auto 0; font-weight: 600; background: var(--panel); border-radius: 8px; padding: 5px 14px; display: inline-block; }
-      #toast { position: absolute; top: 34%; left: 50%; transform: translate(-50%, -50%); font: italic 800 clamp(1.8rem, 6vw, 3rem)/1 var(--display); color: var(--orange); text-shadow: 0 3px 14px rgba(0,0,0,0.55); opacity: 0; transition: opacity 180ms; text-align: center; white-space: nowrap; }
+      #toast { position: absolute; top: 34%; left: 50%; transform: translate(-50%, -50%); font: italic 800 clamp(1.8rem, 6vw, 3rem)/1 var(--display); color: var(--acc); text-shadow: 0 3px 14px rgba(0,0,0,0.55), 0 0 20px var(--glow); opacity: 0; transition: opacity 180ms; text-align: center; white-space: nowrap; }
       #toast.show { opacity: 1; }
       #toast.warn { color: #ff4b4b; }
       #toast.good { color: var(--lagoon); }
-      #count { position: absolute; top: 32%; left: 50%; transform: translate(-50%, -50%); font: italic 800 clamp(6rem, 24vw, 13rem)/1 var(--display); text-shadow: 0 6px 20px rgba(0,0,0,0.5); }
+      #count { position: absolute; top: 32%; left: 50%; transform: translate(-50%, -50%); font: italic 800 clamp(6rem, 24vw, 13rem)/1 var(--display); text-shadow: 0 6px 20px rgba(0,0,0,0.5), 0 0 40px var(--glow); }
       #debug { position: absolute; top: 50%; left: 8px; font: 12px/1.3 ui-monospace, monospace; color: #cfe; background: rgba(0,0,0,0.5); padding: 4px 6px; border-radius: 4px; }
+      @media (max-width: 720px) {
+        .tl { min-width: 0; padding: 8px 12px 8px 14px; }
+        .tl .big b { font-size: 1.8rem; }
+        .pos b { font-size: 3.4rem; }
+        #minimap { width: 140px; height: 108px; }
+        #pace { width: 240px; }
+      }
 
       /* overlays */
       .overlay { position: fixed; inset: 0; display: grid; align-items: end; justify-items: start; padding: clamp(16px, 4vw, 48px); overflow-y: auto; background: linear-gradient(90deg, rgba(8,12,16,0.85), rgba(8,12,16,0.2) 60%, rgba(8,12,16,0)); }
@@ -129,6 +168,16 @@
       .stats b { display: block; font: italic 800 1.5rem/1 var(--display); font-variant-numeric: tabular-nums; }
       .stats small { font: 700 0.7rem/1 var(--display); letter-spacing: 0.14em; color: var(--dim); text-transform: uppercase; }
       .pb { color: var(--orange); font: italic 800 1.3rem/1 var(--display); letter-spacing: 0.1em; text-transform: uppercase; margin: 6px 0 0; }
+      .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+      .seg button { border: 0; background: rgba(255,255,255,0.05); padding: 8px 14px; font: 700 0.95rem/1 var(--display); letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
+      .seg button[aria-pressed="true"] { background: linear-gradient(90deg, var(--pink), var(--orange)); color: #fff; }
+      body.night .seg button[aria-pressed="true"] { background: linear-gradient(90deg, #ff2d9b, #8a4dff 60%, #37e8ff); }
+      .opts { display: flex; gap: 14px 20px; flex-wrap: wrap; margin-top: 14px; }
+      .opts > div { display: grid; gap: 6px; }
+      .res-place { font: italic 800 1.6rem/1 var(--display); color: #ffd23a; margin: 0 0 6px; text-shadow: 0 0 16px rgba(255,190,40,0.45); }
+      body.night .brand span, body.night #loading h1 span { background: linear-gradient(90deg, #ff2d9b, #37e8ff); -webkit-background-clip: text; background-clip: text; }
+      body.night .btn { background: linear-gradient(90deg, #ff2d9b, #8a4dff); box-shadow: 0 8px 30px rgba(255,45,155,0.45), 0 0 18px rgba(138,77,255,0.4); }
+      body.night .btn.ghost { background: rgba(255,255,255,0.1); box-shadow: none; }
       #nogl { position: fixed; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; background: #0c1116; z-index: 30; }
 
       /* touch */
@@ -140,12 +189,16 @@
       .tbtn.on { background: rgba(255,138,30,0.45); border-color: var(--orange); }
       .tbtn.gas { width: 98px; height: 98px; background: rgba(255,45,135,0.45); }
       .tbtn.small { width: 58px; height: 58px; font-size: 0.8rem; }
-      body.touch #speedo { bottom: 150px; transform: scale(0.72); transform-origin: bottom right; }
-      body.touch #minimap { left: 18px; bottom: calc(max(18px, env(safe-area-inset-bottom)) + 92px); width: 104px; height: 104px; }
-      body.touch .tl .big { font-size: 1.7rem; }
-      body.touch .tl .row { font-size: 0.85rem; }
-      body.touch .tl .row b { font-size: 1.05rem; }
-      body.touch #skills { bottom: 190px; }
+      .tbtn.nitro { background: rgba(55,232,255,0.3); border-color: #37e8ff; }
+      body.touch #speedo { transform: translateX(-50%) scale(0.72); transform-origin: bottom center; }
+      body.touch #skills { bottom: 170px; }
+      body.touch #pace { left: 50%; top: calc(max(14px, env(safe-area-inset-top)) + 4px); bottom: auto; width: 220px; transform: translateX(-50%); }
+      body.touch #pace:not(.show) { transform: translate(-50%, -8px); }
+      body.touch #minimap { width: 120px; height: 92px; }
+      body.touch .pos b { font-size: 3rem; }
+      body.touch .tl .big b { font-size: 1.6rem; }
+      body.touch .tl .row { font-size: 0.7rem; }
+      body.touch .tl .row b { font-size: 0.95rem; }
       @media (prefers-reduced-motion: reduce) { #banner, #toast, #skills { transition: none; } }
     </style>
   </head>
@@ -161,29 +214,39 @@
     </div>
 
     <div id="hud" class="hidden">
-      <div class="tl">
-        <div class="big"><span id="hud-lap">1</span><small>/3 <span data-s="lap"></span></small></div>
+      <div class="tl hpanel">
+        <div class="big"><span class="lbl2" data-s="lap"></span><b id="hud-lap">1/3</b></div>
         <div class="row"><span data-s="time"></span><b id="hud-total">0:00.00</b></div>
-        <div class="row"><span data-s="bestLap"></span><b id="hud-best">—</b></div>
+        <div class="row last"><span data-s="last"></span><b id="hud-last">—</b></div>
+        <div class="row"><span data-s="best"></span><b id="hud-best">—</b></div>
       </div>
       <div class="tr">
-        <small data-s="skillScore"></small>
-        <div class="score" id="hud-score">0</div>
-        <div class="online" id="hud-online"></div>
+        <div class="pos"><span class="lbl2">SÆTI</span><b id="hud-pos">1</b><small id="hud-posn">/6</small></div>
+        <canvas id="minimap" class="hpanel" width="392" height="300"></canvas>
+        <div class="score"><span class="lbl2" data-s="skillScore"></span><b id="hud-score">0</b><div class="online" id="hud-online"></div></div>
+      </div>
+      <div id="pace" class="hpanel">
+        <div class="top"><span class="lbl2" data-s="paceNotes"></span></div>
+        <div class="body">
+          <div id="pace-arrow" data-dir="r"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M14 56 V34 C14 20 22 14 36 14 H50" /><path d="M40 4 L52 14 L40 24" /></svg></div>
+          <div id="pace-grade">3</div>
+          <div id="pace-text"></div>
+        </div>
       </div>
       <div id="speedo">
-        <svg viewBox="0 0 200 200">
-          <circle cx="100" cy="100" r="92" fill="rgba(12,16,22,0.6)" stroke="rgba(255,255,255,0.12)" stroke-width="2" />
-          <path id="rpm-track" d="" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="10" stroke-linecap="round" />
-          <path id="rpm-arc" d="" fill="none" stroke="url(#rpmgrad)" stroke-width="10" stroke-linecap="round" />
+        <svg viewBox="0 0 220 220">
           <defs>
-            <linearGradient id="rpmgrad" x1="0" x2="1"><stop offset="0" stop-color="#ff8a1e" /><stop offset="1" stop-color="#ff2d87" /></linearGradient>
+            <radialGradient id="discgrad"><stop offset="0.55" stop-color="rgba(8,10,18,0.72)" /><stop offset="1" stop-color="rgba(8,10,18,0)" /></radialGradient>
+            <linearGradient id="rpmgrad" x1="0" x2="1"><stop offset="0" stop-color="#37e8ff" /><stop offset="0.55" stop-color="#8a4dff" /><stop offset="0.8" stop-color="#ff2d9b" /><stop offset="1" stop-color="#ff3a2a" /></linearGradient>
           </defs>
+          <circle class="disc" cx="110" cy="110" r="108" />
+          <path id="rpm-track" d="" />
+          <path id="rpm-arc" d="" />
         </svg>
-        <div class="num"><b id="hud-speed">0</b><small>KM/KLST</small></div>
         <div class="gear" id="hud-gear">N</div>
+        <div class="num"><b id="hud-speed">0</b><small>KM/KLST</small></div>
+        <div id="nitro-bar"><i id="hud-nitro"></i><span class="lbl2" data-s="nitro"></span></div>
       </div>
-      <canvas id="minimap" width="340" height="340"></canvas>
       <div id="skills" style="opacity: 0">
         <div class="mult" id="sk-mult">x1</div>
         <div class="pts" id="sk-pts">0</div>
@@ -203,6 +266,7 @@
       <div class="pad right">
         <button class="tbtn small" data-k="cam" aria-label="Myndavél">CAM</button>
         <button class="tbtn small" data-k="hand" aria-label="Handbremsa">HAND</button>
+        <button class="tbtn nitro" data-k="nitro" aria-label="Nítró">NÍTRÓ</button>
         <button class="tbtn" data-k="brake" aria-label="Bremsa">BREMSA</button>
         <button class="tbtn gas" data-k="gas" aria-label="Bensín">BENSÍN</button>
       </div>
@@ -218,9 +282,14 @@
           <div class="swatches" id="swatches" role="group" aria-label="Litur"></div>
           <button id="start" class="btn wide" data-s="start"></button>
           <p class="help" data-s="controls"></p>
+          <div class="opts">
+            <div><span class="lbl2" data-s="timeOfDay"></span><div class="seg" id="opt-time" role="group"></div></div>
+            <div><span class="lbl2" data-s="rivalsOpt"></span><div class="seg" id="opt-rivals" role="group"></div></div>
+          </div>
           <div class="toggles">
             <label><input id="opt-sound" type="checkbox" checked /> <span data-s="sound"></span></label>
             <label><input id="opt-shake" type="checkbox" checked /> <span data-s="shake"></span></label>
+            <label><input id="opt-notes" type="checkbox" checked /> <span data-s="notesOpt"></span></label>
           </div>
         </div>
         <div class="cols">
@@ -241,6 +310,7 @@
     <div id="result" class="overlay hidden">
       <div class="card panel">
         <h3 data-s="finished"></h3>
+        <p class="res-place" id="res-place"></p>
         <div class="result-time" id="res-time"></div>
         <p class="pb hidden" id="res-pb" data-s="newPb"></p>
         <div class="stats">
