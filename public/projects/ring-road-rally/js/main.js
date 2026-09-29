@@ -1520,7 +1520,7 @@ function hud(dt) {
   $("#hud-online").textContent = online && remote.size ? STR.online(remote.size + 1) : "";
   if (race.wrongT > 1) toast(STR.wrongWay, "warn");
   const sk = $("#skills");
-  const live = skill.state !== "idle" || skill.drift > 0;
+  const live = (skill.state !== "idle" || skill.drift > 0) && (skill.state === "lost" || skill.state === "banked" || skill.pts + Math.max(0, skill.drift) >= 1);
   sk.style.opacity = live ? "1" : "0";
   sk.className = skill.state === "lost" ? "lost" : skill.state === "banked" ? "banked" : "";
   $("#sk-mult").textContent = `x${skill.mult}`;
