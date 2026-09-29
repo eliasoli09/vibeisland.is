@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="is">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <title>Ring Road Rally — kappakstur um Hringveginn</title>
+    <meta name="description" content="3D rally around an Iceland-inspired Ring Road: Þingvellir rift, Strokkur geyser, the Gullfoss gorge, lava from a live volcano, black sand, glacier-lagoon ice and sheep on the road." />
+    <meta property="og:title" content="Ring Road Rally" />
+    <meta property="og:description" content="3D rally around an Iceland-inspired Ring Road: dodge Strokkur, cross pulsing lava, slide on glacier ice, fly the highland crests and beat the room's leaderboard." />
+    <meta property="og:image" content="https://d2ol7oe51mr4n9.cloudfront.net/user_3Bd2ySVG9o4EIwZ87VdhxlurjR9/5fcfd148-2aea-4c32-81f3-2ad7b6531d3a.png" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f1417'/%3E%3Cpath d='M6 22c4-10 16-10 20 0' stroke='%23ff2d87' stroke-width='4' fill='none' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='12' r='3' fill='%23ff8a1e'/%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet" />
+    <script type="importmap">
+      { "imports": { "three": "./vendor/three.module.js", "three/addons/": "./vendor/addons/" } }
+    </script>
+    <style>
+      :root {
+        color-scheme: dark;
+        --panel: rgba(12, 16, 22, 0.72);
+        --line: rgba(255, 255, 255, 0.14);
+        --snow: #f3f6f8;
+        --dim: #a8b6be;
+        --pink: #ff2d87;
+        --orange: #ff8a1e;
+        --lagoon: #4fe3d0;
+        --lava: #ff6a1a;
+        --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+        --body: "Barlow", system-ui, -apple-system, sans-serif;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #0c1116; color: var(--snow); font: 16px/1.45 var(--body); }
+      body { touch-action: none; -webkit-user-select: none; user-select: none; }
+      canvas#game { position: fixed; inset: 0; width: 100vw; height: 100dvh; display: block; }
+      .hidden { display: none !important; }
+      button { font: inherit; color: inherit; cursor: pointer; }
+
+      /* loading */
+      #loading { position: fixed; inset: 0; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 30%, #1d3444, #0c1116 70%); z-index: 20; transition: opacity 500ms; }
+      #loading.done { opacity: 0; pointer-events: none; }
+      #loading h1 { margin: 0; font: italic 800 clamp(2.4rem, 9vw, 5rem)/0.9 var(--display); letter-spacing: 0.01em; text-align: center; }
+      #loading h1 span { background: linear-gradient(90deg, var(--pink), var(--orange)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+      #loading p { text-align: center; color: var(--dim); font: 600 0.9rem/1 var(--display); letter-spacing: 0.2em; text-transform: uppercase; margin: 18px 0 0; }
+      .bar { width: min(70vw, 320px); height: 4px; background: rgba(255,255,255,0.1); border-radius: 4px; margin: 14px auto 0; overflow: hidden; }
+      .bar i { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, var(--pink), var(--orange)); transition: width 200ms; }
+
+      /* HUD */
+      #hud { position: fixed; inset: 0; pointer-events: none; }
+      .tl { position: absolute; top: max(14px, env(safe-area-inset-top)); left: 18px; display: grid; gap: 6px; text-shadow: 0 2px 8px rgba(0,0,0,0.55); }
+      .tl .big { margin-bottom: 4px; }
+      .tl .big { font: italic 800 2.2rem/1 var(--display); }
+      .tl .big small { font-size: 1.1rem; color: var(--dim); }
+      .tl .row { font: 700 1rem/1.2 var(--display); letter-spacing: 0.06em; color: var(--dim); font-variant-numeric: tabular-nums; }
+      .tl .row b { color: var(--snow); font-size: 1.3rem; margin-left: 6px; }
+      .tr { position: absolute; top: max(14px, env(safe-area-inset-top)); right: 18px; text-align: right; text-shadow: 0 2px 8px rgba(0,0,0,0.55); }
+      .tr .score { font: italic 800 2rem/1 var(--display); font-variant-numeric: tabular-nums; }
+      .tr small { display: block; font: 700 0.75rem/1 var(--display); letter-spacing: 0.2em; color: var(--dim); text-transform: uppercase; }
+      .tr .online { margin-top: 8px; font: 700 0.9rem/1 var(--display); letter-spacing: 0.08em; color: var(--dim); }
+
+      /* speedometer */
+      #speedo { position: absolute; right: 18px; bottom: max(14px, env(safe-area-inset-bottom)); width: 190px; height: 190px; }
+      #speedo svg { position: absolute; inset: 0; }
+      #speedo .num { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+      #speedo .num b { font: italic 800 3.6rem/0.85 var(--display); font-variant-numeric: tabular-nums; }
+      #speedo .num small { font: 700 0.8rem/1 var(--display); letter-spacing: 0.18em; color: var(--dim); }
+      #speedo .gear { position: absolute; left: 50%; bottom: 20px; transform: translateX(-50%); font: 800 1.4rem/1 var(--display); color: var(--orange); }
+
+      /* minimap */
+      #minimap { position: absolute; left: 18px; bottom: max(14px, env(safe-area-inset-bottom)); width: 170px; height: 170px; border-radius: 50%; background: rgba(12,16,22,0.55); border: 2px solid var(--line); }
+
+      /* skill chain */
+      #skills { position: absolute; left: 50%; bottom: 120px; transform: translateX(-50%); text-align: center; transition: opacity 250ms; }
+      #skills .mult { font: italic 800 2.6rem/1 var(--display); background: linear-gradient(90deg, var(--pink), var(--orange)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+      #skills .pts { font: italic 800 1.6rem/1 var(--display); font-variant-numeric: tabular-nums; }
+      #skills .list { font: 700 0.95rem/1.35 var(--display); letter-spacing: 0.12em; color: var(--snow); text-transform: uppercase; }
+      #skills.lost .mult, #skills.lost .pts { background: none; color: #ff4b4b; }
+      #skills.banked .pts { color: var(--lagoon); }
+
+      #banner { position: absolute; top: 16%; left: 50%; transform: translateX(-50%); text-align: center; opacity: 0; transition: opacity 400ms; max-width: min(92vw, 620px); }
+      #banner.show { opacity: 1; }
+      #banner h2 { margin: 0; font: italic 800 clamp(2rem, 6vw, 3.4rem)/1 var(--display); text-shadow: 0 3px 12px rgba(0,0,0,0.5); }
+      #banner p { margin: 8px auto 0; font-weight: 600; background: var(--panel); border-radius: 8px; padding: 5px 14px; display: inline-block; }
+      #toast { position: absolute; top: 34%; left: 50%; transform: translate(-50%, -50%); font: italic 800 clamp(1.8rem, 6vw, 3rem)/1 var(--display); color: var(--orange); text-shadow: 0 3px 14px rgba(0,0,0,0.55); opacity: 0; transition: opacity 180ms; text-align: center; white-space: nowrap; }
+      #toast.show { opacity: 1; }
+      #toast.warn { color: #ff4b4b; }
+      #toast.good { color: var(--lagoon); }
+      #count { position: absolute; top: 32%; left: 50%; transform: translate(-50%, -50%); font: italic 800 clamp(6rem, 24vw, 13rem)/1 var(--display); text-shadow: 0 6px 20px rgba(0,0,0,0.5); }
+      #debug { position: absolute; top: 50%; left: 8px; font: 12px/1.3 ui-monospace, monospace; color: #cfe; background: rgba(0,0,0,0.5); padding: 4px 6px; border-radius: 4px; }
+
+      /* overlays */
+      .overlay { position: fixed; inset: 0; display: grid; align-items: end; justify-items: start; padding: clamp(16px, 4vw, 48px); overflow-y: auto; background: linear-gradient(90deg, rgba(8,12,16,0.85), rgba(8,12,16,0.2) 60%, rgba(8,12,16,0)); }
+      .card { width: min(100%, 560px); }
+      .brand { margin: 0; font: italic 800 clamp(3rem, 10vw, 6rem)/0.85 var(--display); letter-spacing: 0.01em; text-shadow: 0 4px 24px rgba(0,0,0,0.4); }
+      .brand span { background: linear-gradient(90deg, var(--pink), var(--orange)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+      .sub { margin: 10px 0 20px; color: #dfe7ec; font-weight: 500; max-width: 46ch; text-shadow: 0 2px 8px rgba(0,0,0,0.6); }
+      .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; backdrop-filter: blur(10px); }
+      label.lbl, h3 { display: block; font: 700 0.78rem/1 var(--display); letter-spacing: 0.18em; text-transform: uppercase; color: var(--dim); margin: 0 0 8px; }
+      input[type=text] { width: 100%; font: 600 1.1rem/1 var(--body); color: var(--snow); background: rgba(255,255,255,0.07); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; outline: none; -webkit-user-select: text; user-select: text; }
+      input[type=text]:focus { border-color: var(--orange); }
+      .swatches { display: flex; gap: 10px; margin: 14px 0 16px; }
+      .swatch { width: 42px; height: 42px; border-radius: 50%; border: 3px solid transparent; box-shadow: inset 0 0 0 2px rgba(255,255,255,0.25); }
+      .swatch[aria-pressed="true"] { border-color: #fff; }
+      .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 10px; padding: 15px 28px; font: italic 800 1.5rem/1 var(--display); letter-spacing: 0.06em; text-transform: uppercase; background: linear-gradient(90deg, var(--pink), var(--orange)); color: #fff; box-shadow: 0 8px 30px rgba(255,45,135,0.35); transition: transform 90ms; }
+      .btn:active { transform: scale(0.98); }
+      .btn.ghost { background: rgba(255,255,255,0.1); box-shadow: none; }
+      .btn.wide { width: 100%; }
+      .row { display: flex; gap: 10px; flex-wrap: wrap; }
+      .help { margin: 14px 0 0; color: var(--dim); font-size: 0.88rem; }
+      .help kbd { font: 600 0.78rem/1 ui-monospace, monospace; background: rgba(255,255,255,0.12); border-radius: 4px; padding: 2px 5px; color: var(--snow); }
+      .toggles { display: flex; gap: 16px; margin-top: 12px; color: var(--dim); font-size: 0.9rem; flex-wrap: wrap; }
+      .toggles label { display: flex; gap: 6px; align-items: center; }
+      .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+      @media (max-width: 640px) { .cols { grid-template-columns: 1fr; } }
+      ol.board { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; counter-reset: pos; }
+      ol.board li { counter-increment: pos; display: grid; grid-template-columns: 24px 1fr auto; gap: 8px; padding: 5px 10px; border-radius: 8px; background: rgba(255,255,255,0.05); font-variant-numeric: tabular-nums; }
+      ol.board li::before { content: counter(pos); font: 800 1rem/1.3 var(--display); color: var(--dim); }
+      ol.board li.me { background: rgba(255,45,135,0.22); outline: 1px solid rgba(255,45,135,0.6); }
+      ol.board li:first-child::before { color: var(--orange); }
+      .empty { color: var(--dim); font-size: 0.88rem; margin: 0; }
+      .places { display: flex; flex-wrap: wrap; gap: 6px; }
+      .places span { font: 600 0.76rem/1 var(--body); padding: 6px 9px; border-radius: 999px; background: rgba(255,255,255,0.07); border: 1px solid var(--line); }
+      .meta { margin: 10px 0 0; color: var(--dim); font-size: 0.8rem; }
+      .result-time { font: italic 800 clamp(3.4rem, 13vw, 6rem)/0.9 var(--display); font-variant-numeric: tabular-nums; }
+      .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }
+      .stats div { background: rgba(255,255,255,0.06); border-radius: 10px; padding: 8px 10px; }
+      .stats b { display: block; font: italic 800 1.5rem/1 var(--display); font-variant-numeric: tabular-nums; }
+      .stats small { font: 700 0.7rem/1 var(--display); letter-spacing: 0.14em; color: var(--dim); text-transform: uppercase; }
+      .pb { color: var(--orange); font: italic 800 1.3rem/1 var(--display); letter-spacing: 0.1em; text-transform: uppercase; margin: 6px 0 0; }
+      #nogl { position: fixed; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; background: #0c1116; z-index: 30; }
+
+      /* touch */
+      #touch { position: fixed; inset: auto 0 0 0; height: 45vh; pointer-events: none; }
+      #touch .pad { position: absolute; bottom: max(18px, env(safe-area-inset-bottom)); display: flex; gap: 12px; pointer-events: auto; align-items: flex-end; }
+      #touch .left { left: 14px; }
+      #touch .right { right: 14px; }
+      .tbtn { width: 78px; height: 78px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.35); background: rgba(12,16,22,0.45); color: #fff; font: 800 1rem/1 var(--display); display: grid; place-items: center; touch-action: none; }
+      .tbtn.on { background: rgba(255,138,30,0.45); border-color: var(--orange); }
+      .tbtn.gas { width: 98px; height: 98px; background: rgba(255,45,135,0.45); }
+      .tbtn.small { width: 58px; height: 58px; font-size: 0.8rem; }
+      body.touch #speedo { bottom: 150px; transform: scale(0.72); transform-origin: bottom right; }
+      body.touch #minimap { left: 18px; bottom: calc(max(18px, env(safe-area-inset-bottom)) + 92px); width: 104px; height: 104px; }
+      body.touch .tl .big { font-size: 1.7rem; }
+      body.touch .tl .row { font-size: 0.85rem; }
+      body.touch .tl .row b { font-size: 1.05rem; }
+      body.touch #skills { bottom: 190px; }
+      @media (prefers-reduced-motion: reduce) { #banner, #toast, #skills { transition: none; } }
+    </style>
+  </head>
+  <body>
+    <canvas id="game"></canvas>
+
+    <div id="loading">
+      <div>
+        <h1>RING ROAD <span>RALLY</span></h1>
+        <p id="loading-text">Hleð eyjunni…</p>
+        <div class="bar"><i id="loading-bar"></i></div>
+      </div>
+    </div>
+
+    <div id="hud" class="hidden">
+      <div class="tl">
+        <div class="big"><span id="hud-lap">1</span><small>/3 <span data-s="lap"></span></small></div>
+        <div class="row"><span data-s="time"></span><b id="hud-total">0:00.00</b></div>
+        <div class="row"><span data-s="bestLap"></span><b id="hud-best">—</b></div>
+      </div>
+      <div class="tr">
+        <small data-s="skillScore"></small>
+        <div class="score" id="hud-score">0</div>
+        <div class="online" id="hud-online"></div>
+      </div>
+      <div id="speedo">
+        <svg viewBox="0 0 200 200">
+          <circle cx="100" cy="100" r="92" fill="rgba(12,16,22,0.6)" stroke="rgba(255,255,255,0.12)" stroke-width="2" />
+          <path id="rpm-track" d="" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="10" stroke-linecap="round" />
+          <path id="rpm-arc" d="" fill="none" stroke="url(#rpmgrad)" stroke-width="10" stroke-linecap="round" />
+          <defs>
+            <linearGradient id="rpmgrad" x1="0" x2="1"><stop offset="0" stop-color="#ff8a1e" /><stop offset="1" stop-color="#ff2d87" /></linearGradient>
+          </defs>
+        </svg>
+        <div class="num"><b id="hud-speed">0</b><small>KM/KLST</small></div>
+        <div class="gear" id="hud-gear">N</div>
+      </div>
+      <canvas id="minimap" width="340" height="340"></canvas>
+      <div id="skills" style="opacity: 0">
+        <div class="mult" id="sk-mult">x1</div>
+        <div class="pts" id="sk-pts">0</div>
+        <div class="list" id="sk-list"></div>
+      </div>
+      <div id="banner"><h2 id="banner-title"></h2><p id="banner-tip"></p></div>
+      <div id="toast"></div>
+      <div id="count" class="hidden"></div>
+      <div id="debug" class="hidden"></div>
+    </div>
+
+    <div id="touch" class="hidden">
+      <div class="pad left">
+        <button class="tbtn" data-k="left" aria-label="Vinstri">◀</button>
+        <button class="tbtn" data-k="right" aria-label="Hægri">▶</button>
+      </div>
+      <div class="pad right">
+        <button class="tbtn small" data-k="cam" aria-label="Myndavél">CAM</button>
+        <button class="tbtn small" data-k="hand" aria-label="Handbremsa">HAND</button>
+        <button class="tbtn" data-k="brake" aria-label="Bremsa">BREMSA</button>
+        <button class="tbtn gas" data-k="gas" aria-label="Bensín">BENSÍN</button>
+      </div>
+    </div>
+
+    <div id="menu" class="overlay hidden">
+      <div class="card">
+        <h1 class="brand">RING ROAD<br /><span>RALLY</span></h1>
+        <p class="sub" data-s="tagline"></p>
+        <div class="panel">
+          <label class="lbl" for="name" data-s="driver"></label>
+          <input id="name" type="text" maxlength="16" autocomplete="nickname" spellcheck="false" />
+          <div class="swatches" id="swatches" role="group" aria-label="Litur"></div>
+          <button id="start" class="btn wide" data-s="start"></button>
+          <p class="help" data-s="controls"></p>
+          <div class="toggles">
+            <label><input id="opt-sound" type="checkbox" checked /> <span data-s="sound"></span></label>
+            <label><input id="opt-shake" type="checkbox" checked /> <span data-s="shake"></span></label>
+          </div>
+        </div>
+        <div class="cols">
+          <div class="panel">
+            <h3 data-s="board"></h3>
+            <ol class="board" id="board-menu"></ol>
+            <p class="meta" id="record-menu"></p>
+          </div>
+          <div class="panel">
+            <h3 data-s="route"></h3>
+            <div class="places" id="places"></div>
+            <p class="meta" id="room-meta"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="result" class="overlay hidden">
+      <div class="card panel">
+        <h3 data-s="finished"></h3>
+        <div class="result-time" id="res-time"></div>
+        <p class="pb hidden" id="res-pb" data-s="newPb"></p>
+        <div class="stats">
+          <div><small data-s="bestLap"></small><b id="res-best"></b></div>
+          <div><small data-s="skillScore"></small><b id="res-skill"></b></div>
+          <div><small data-s="topSpeed"></small><b id="res-top"></b></div>
+        </div>
+        <p class="meta" id="res-laps"></p>
+        <div class="row" style="margin: 14px 0">
+          <button id="again" class="btn" data-s="again"></button>
+          <button id="to-menu" class="btn ghost" data-s="menu"></button>
+        </div>
+        <h3 data-s="board"></h3>
+        <ol class="board" id="board-result"></ol>
+      </div>
+    </div>
+
+    <div id="nogl" class="hidden"><p>Vafrinn þinn styður ekki WebGL, sem þarf fyrir þrívíddina. Prófaðu nýlegan Chrome, Safari eða Firefox.</p></div>
+
+    <script type="module" src="./js/main.js"></script>
+  </body>
+</html>
