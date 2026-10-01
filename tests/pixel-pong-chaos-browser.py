@@ -77,6 +77,22 @@ def main():
         check(win["slimes"]["ai"] >= 1, "the AI gets slimed when you score")
         check(win["slimeColors"]["ai"] == win["youColor"], "the AI's slime is your colour")
 
+        # 6. Bucket slime: a bucket tips over the loser, the coat flows all the way down, then it all cleans up.
+        #    The timeline is stepped at a fixed 60 fps so the check doesn't depend on how fast this machine renders.
+        for who in ("you", "ai"):
+            page.evaluate(f"__pong.slime('{who}')")
+            seen = {"bucket": False, "pour": False}
+            for _ in range(12):  # first 1.2 s of the animation
+                info = page.evaluate(f"__pong.slimeStep('{who}', 0.1), __pong.slimeInfo('{who}')")
+                seen["bucket"] |= info["bucket"]
+                seen["pour"] |= info["stream"]
+            check(seen["bucket"] and seen["pour"], f"{who}: a bucket appears and pours a stream")
+            info = page.evaluate(f"__pong.slimeStep('{who}', 0.4), __pong.slimeInfo('{who}')")
+            check(info["maxCover"] >= 0.95, f"{who}: the slime flows down over the whole character (cover {info['maxCover']:.2f})")
+            check(info["segments"] >= 3000, f"{who}: the slime coat is high resolution ({info['segments']} vertices)")
+            info = page.evaluate(f"__pong.slimeStep('{who}', 0.6), __pong.slimeInfo('{who}')")
+            check(not info["active"] and not info["visible"], f"{who}: bucket and slime clean up afterwards")
+
         check(not ERRORS, f"no page errors ({ERRORS[:3]})")
         browser.close()
 
