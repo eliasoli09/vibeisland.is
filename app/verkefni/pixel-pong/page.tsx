@@ -34,7 +34,7 @@ export default function PixelPongPage() {
           <p className="flex max-w-2xl items-start gap-3 text-xs leading-5 text-white/52 sm:text-right">
             <Mouse className="mt-0.5 size-4 shrink-0 text-mint" />
             <span>
-              Hreyfðu músina til hliðar til að stýra spaðanum. Smelltu rétt þegar boltinn kemur að spaðanum til að gefa honum snúning. <kbd>Bil</kbd> setur leikinn á pásu og <kbd>M</kbd> slekkur á hljóði.
+              Hreyfðu músina til hliðar til að stýra spaðanum. Smelltu rétt þegar boltinn kemur að spaðanum til að gefa honum snúning, og þrír snúningar í röð gefa boost. <kbd>Bil</kbd> setur leikinn á pásu og <kbd>M</kbd> slekkur á hljóði.
             </span>
           </p>
         </div>

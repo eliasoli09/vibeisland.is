@@ -126,6 +126,20 @@ test("Pixel Pong has timed spin shots, streaks and power-ups", () => {
   assert.match(pongDetailSource, /snúning/);
 });
 
+test("Pixel Pong has five fighters, new boosts, table pins and slime", () => {
+  for (const name of ["CLAUDE", "CODEX", "MUSE", "GROK", "CLAWD"]) {
+    assert.match(staticPongSource, new RegExp(`name: '${name}'`));
+  }
+  assert.match(staticPongSource, /id="rosterYou"/);
+  assert.match(staticPongSource, /id="rosterAi"/);
+  assert.match(staticPongSource, /'TRIPLE BALL'/);
+  assert.match(staticPongSource, /'FIREBALL'/);
+  assert.match(staticPongSource, /function growPins\(\)/);
+  assert.match(staticPongSource, /function slimeOn\(/);
+  assert.match(staticPongSource, /id="slimeScreen"/);
+  assert.match(projectsSource, /Muse, Grok og Clawd/);
+});
+
 const auroraDetailSource = readIfPresent("./nordurljos/page.tsx");
 const staticAuroraUrl = fileUrl("../../public/projects/nordurljos/app.html");
 const staticAuroraSource = existsSync(staticAuroraUrl) ? readFileSync(staticAuroraUrl, "utf8") : "";
