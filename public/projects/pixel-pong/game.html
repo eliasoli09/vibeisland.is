@@ -177,7 +177,7 @@
 
   <div id="banner"></div>
   <div id="pop"></div>
-  <div id="slimeScreen" aria-hidden="true"><svg viewBox="0 0 100 60" preserveAspectRatio="none"><path fill="currentColor" d="M0 0H100V22C96 22 95 34 92 34C89 34 90 20 86 20C82 20 83 44 78 44C73 44 75 24 70 24C66 24 67 30 62 30C57 30 59 50 53 50C47 50 50 26 44 26C39 26 41 36 36 36C31 36 33 22 28 22C24 22 25 40 20 40C15 40 17 26 12 26C8 26 9 32 5 32C2 32 2 24 0 24Z"/></svg></div>
+  <div id="slimeScreen" aria-hidden="true"><svg viewBox="0 0 200 100" preserveAspectRatio="none"><defs><linearGradient id="slimeShade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.22"/><stop offset="0.35" stop-color="#fff" stop-opacity="0"/><stop offset="0.6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.32"/></linearGradient></defs><path id="slimePath" fill="currentColor" d="M0 0H200V30Q198.0 33.6 197.6 31.6C197.6 41.9 195.8 48.8 191.6 48.8C187.4 48.8 185.7 41.9 185.7 31.6Q183.7 29.4 180.6 27.4C180.6 43.9 178.5 55.0 173.7 55.0C168.9 55.0 166.8 43.9 166.8 27.4Q164.8 29.5 164.2 27.5C164.2 46.0 162.8 58.3 159.6 58.3C156.3 58.3 154.9 46.0 154.9 27.5Q152.9 29.9 151.6 27.9C151.6 57.7 149.6 77.6 145.2 77.6C140.7 77.6 138.7 57.7 138.7 27.9Q136.7 33.0 134.4 31.0C134.4 64.3 132.2 86.5 127.0 86.5C121.9 86.5 119.7 64.3 119.7 31.0Q117.7 35.0 116.0 33.0C116.0 40.4 113.3 45.2 107.1 45.2C100.9 45.2 98.2 40.4 98.2 33.0Q96.2 31.2 91.3 29.2C91.3 38.6 89.7 44.8 86.1 44.8C82.5 44.8 81.0 38.6 81.0 29.2Q79.0 33.5 76.8 31.5C76.8 54.2 75.2 69.4 71.4 69.4C67.7 69.4 66.1 54.2 66.1 31.5Q64.1 29.4 62.9 27.4C62.9 35.2 60.8 40.4 55.9 40.4C51.1 40.4 49.0 35.2 49.0 27.4Q47.0 31.2 43.5 29.2C43.5 47.5 41.2 59.7 35.9 59.7C30.6 59.7 28.3 47.5 28.3 29.2Q26.3 34.6 22.1 32.6C22.1 47.2 20.2 56.9 15.6 56.9C11.0 56.9 9.1 47.2 9.1 32.6Q2 32 0 30Z"/><use href="#slimePath" fill="url(#slimeShade)"/><path d="M6 8C40 13 72 5 112 10S170 6 194 11" fill="none" stroke="#fff" stroke-opacity="0.45" stroke-width="2.2" stroke-linecap="round"/><g fill="#fff" fill-opacity="0.35"><circle cx="142.2" cy="11.2" r="2.2"/><circle cx="29.7" cy="13.5" r="1.9"/><circle cx="36.0" cy="14.8" r="0.9"/><circle cx="131.0" cy="19.8" r="1.6"/><circle cx="169.1" cy="11.6" r="1.8"/><circle cx="117.4" cy="16.4" r="1.4"/><circle cx="162.6" cy="23.0" r="1.5"/><circle cx="130.2" cy="7.1" r="1.8"/><circle cx="127.1" cy="23.9" r="2.0"/><circle cx="60.4" cy="12.9" r="1.7"/><circle cx="12.2" cy="14.3" r="1.0"/><circle cx="29.5" cy="7.1" r="1.9"/><circle cx="31.8" cy="10.5" r="1.3"/><circle cx="168.3" cy="7.5" r="1.4"/><ellipse cx="190.4" cy="45.8" rx="1.1" ry="2"/><ellipse cx="172.5" cy="52.0" rx="1.1" ry="2"/><ellipse cx="158.4" cy="55.3" rx="1.1" ry="2"/><ellipse cx="144.0" cy="74.6" rx="1.1" ry="2"/><ellipse cx="125.8" cy="83.5" rx="1.1" ry="2"/><ellipse cx="70.2" cy="66.4" rx="1.1" ry="2"/><ellipse cx="34.7" cy="56.7" rx="1.1" ry="2"/><ellipse cx="14.4" cy="53.9" rx="1.1" ry="2"/></g></svg></div>
 
   <div id="menu" class="overlay">
     <div class="panel">
@@ -560,7 +560,8 @@
     poof() { this.tone(520, 0.12, 'triangle', 0.04, 0.4); },
     pin() { this.tone(880, 0.07, 'triangle', 0.06, 1.3); },
     pinUp() { [392, 523, 659].forEach((f, i) => this.tone(f, 0.09, 'triangle', 0.05, 1, i * 0.05)); },
-    splat() { this.tone(140, 0.25, 'sine', 0.12, 0.4); this.tone(90, 0.18, 'square', 0.03, 0.6, 0.03); },
+    splat() { this.tone(140, 0.25, 'sine', 0.12, 0.4); this.tone(90, 0.18, 'square', 0.03, 0.6, 0.03); [0.12, 0.22, 0.31].forEach((d, i) => this.tone(220 - i * 40, 0.09, 'sine', 0.07, 0.6, d)); },
+    bucket() { this.tone(620, 0.08, 'square', 0.03, 1.4); this.tone(930, 0.12, 'triangle', 0.03, 0.9, 0.05); },
     power() { [784, 988, 1175, 1568].forEach((f, i) => this.tone(f, 0.1, 'square', 0.05, 1, i * 0.06)); },
     bounce() { this.tone(170, 0.05, 'sine', 0.09, 0.8); },
     good() { [523, 659, 784].forEach((f, i) => this.tone(f, 0.12, 'square', 0.05, 1, i * 0.08)); },
@@ -977,28 +978,88 @@
     return false;
   }
 
-  // ---------------------------------------------------------------- slime
+  // ---------------------------------------------------------------- slime bucket
+  // The loser of a point gets a bucket of slime (in the winner's colour) tipped over them:
+  // the bucket drops in, tips toward the camera, a glossy stream pours onto their head and a
+  // high-resolution coat flows down over the whole character (revealed top-down by a moving
+  // clipping plane), then a puddle spreads, the bucket flies off and everything fades.
+  renderer.localClippingEnabled = true;
+  const SLIME_T = { drop: 0.3, tip: 0.55, pour: 0.42, splat: 0.5, flowEnd: 1.35, away: 0.95, fade: 1.4, end: 2.0 };
+  const slimeMat = (extra = {}) => new THREE.MeshPhysicalMaterial({
+    color: 0x4ade80, emissive: 0x4ade80, emissiveIntensity: 0.12, roughness: 0.12, metalness: 0,
+    clearcoat: 1, clearcoatRoughness: 0.08, transparent: true, opacity: 0.84, ...extra,
+  });
+  function makeCoatGeometry() {
+    // smooth, slightly lumpy ellipsoid shell (~4k vertices)
+    const g = new THREE.SphereGeometry(1, 72, 54);
+    const pos = g.attributes.position, v = new THREE.Vector3();
+    for (let i = 0; i < pos.count; i++) {
+      v.fromBufferAttribute(pos, i);
+      const k = 1 + 0.05 * Math.sin(5 * v.x + 1.3) * Math.cos(4 * v.y) + 0.03 * Math.sin(9 * v.z + 2 * v.y);
+      pos.setXYZ(i, v.x * k, v.y * k, v.z * k);
+    }
+    g.computeVertexNormals();
+    return g;
+  }
+  function makeBucket() {
+    // brushed steel; low metalness because the scene has no environment to reflect (high metalness renders black)
+    const metal = new THREE.MeshStandardMaterial({ color: 0xdfe5ee, metalness: 0.25, roughness: 0.35, emissive: 0x1a2233, side: THREE.DoubleSide });
+    const pivot = new THREE.Group(), body = new THREE.Group();
+    const profile = [[0, 0], [0.3, 0], [0.33, 0.2], [0.38, 0.58], [0.41, 0.62]].map(([x, y]) => new THREE.Vector2(x, y));
+    body.add(new THREE.Mesh(new THREE.LatheGeometry(profile, 48), metal));
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.405, 0.022, 10, 48), metal);
+    rim.rotation.x = Math.PI / 2; rim.position.y = 0.62;
+    const handle = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.014, 8, 32, Math.PI), metal);
+    handle.position.y = 0.62;
+    const goo = new THREE.Mesh(new THREE.CircleGeometry(0.37, 48), slimeMat({ opacity: 0.95 }));
+    goo.rotation.x = -Math.PI / 2; goo.position.y = 0.52;
+    body.add(rim, handle, goo);
+    body.position.y = -0.31; // pivot about the bucket's middle
+    pivot.add(body);
+    return { pivot, goo };
+  }
   function makeSlime(rig) {
-    const mat = new THREE.MeshStandardMaterial({ color: 0x4ade80, roughness: 0.15, metalness: 0, transparent: true, opacity: 0.92 });
+    const mat = slimeMat(), clip = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const coatMat = slimeMat({ clippingPlanes: [clip] });
     const group = new THREE.Group();
-    const blob = new THREE.Mesh(new THREE.SphereGeometry(0.5, 18, 14), mat);
-    const cap = new THREE.Mesh(new THREE.SphereGeometry(1, 22, 12, 0, Math.PI * 2, 0, Math.PI / 2), mat);
-    const drips = Array.from({ length: 9 }, () => new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 8), mat));
-    group.add(blob, cap, ...drips);
+    const coat = new THREE.Mesh(makeCoatGeometry(), coatMat);
+    const streamGeo = new THREE.CylinderGeometry(1, 1, 1, 32, 12, true); streamGeo.translate(0, -0.5, 0);
+    const stream = new THREE.Mesh(streamGeo, mat);
+    const dropGeo = new THREE.SphereGeometry(1, 24, 18);
+    const drips = Array.from({ length: 12 }, () => new THREE.Mesh(dropGeo, mat));
+    const splash = Array.from({ length: 8 }, () => new THREE.Mesh(dropGeo, mat));
+    const puddle = new THREE.Mesh(new THREE.CircleGeometry(1, 64), mat);
+    puddle.rotation.x = -Math.PI / 2; puddle.position.y = 0.015;
+    const bucket = makeBucket();
+    group.add(coat, stream, puddle, bucket.pivot, ...drips, ...splash);
     group.visible = false;
     rig.inner.add(group);
-    return { group, mat, blob, cap, drips, t: -1, h: 1, w: 1, d: 1, dd: [] };
+    return { rig, group, mat, coatMat, clip, coat, stream, drips, splash, puddle, bucket, t: -1, maxCover: 0, dims: null, dd: [], sp: [] };
   }
   const slimes = new Map([[nearRig, makeSlime(nearRig)], [farRig, makeSlime(farRig)]]);
+  function charDims(def) {
+    const rows = def.grid.length, cols = def.grid[0].length;
+    let depth = def.depth;
+    if (def.depthAt) for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) depth = Math.max(depth, def.depthAt(c, r));
+    return { h: rows * def.voxel, w: cols * def.voxel, d: depth * def.voxel };
+  }
   function slimeOn(rig, winnerDef, onScreen) {
     const sl = slimes.get(rig), def = CHARS[rig.key];
     if (!sl || !def) return;
-    sl.h = def.grid.length * def.voxel; sl.w = def.grid[0].length * def.voxel; sl.d = def.depth * def.voxel;
-    sl.mat.color.setHex(winnerDef.hex); sl.mat.opacity = 0.92;
-    sl.t = 0; sl.group.visible = true;
-    sl.blob.visible = true; sl.cap.visible = false;
-    sl.dd = sl.drips.map(() => ({ x: rand(-0.45, 0.45) * sl.w, delay: rand(0, 0.45), v: 0, y: 0 }));
+    const dims = (sl.dims = charDims(def));
+    for (const m of [sl.mat, sl.coatMat, sl.bucket.goo.material]) { m.color.setHex(winnerDef.hex); m.emissive.setHex(winnerDef.hex); }
+    sl.t = 0; sl.maxCover = 0; sl.group.visible = true;
+    sl.bscale = clamp(dims.w / 1.6, 0.8, 1.4);
+    sl.bucket.pivot.scale.setScalar(sl.bscale);
+    sl.bucket.pivot.visible = true; sl.bucket.goo.visible = true;
+    sl.coat.visible = sl.stream.visible = sl.puddle.visible = false;
+    sl.coat.scale.set(dims.w * 0.58, dims.h * 0.56, dims.d * 0.62);
+    sl.coat.position.set(0, dims.h * 0.5, 0);
+    sl.dd = sl.drips.map(() => ({ phi: rand(-1.3, 1.3), lead: rand(0.03, 0.14), v: 0, y: 0, size: rand(0.8, 1.3) }));
+    sl.sp = sl.splash.map(() => ({ x: 0, y: 0, z: 0, vx: rand(-1.6, 1.6), vy: rand(1, 2.6), vz: rand(-0.4, 1.4) }));
     sl.drips.forEach((m) => { m.visible = false; });
+    sl.splash.forEach((m) => { m.visible = false; });
+    Sfx.bucket();
     if (onScreen) {
       const el = $('#slimeScreen');
       el.style.setProperty('--slime', winnerDef.css);
@@ -1009,35 +1070,85 @@
       dbg.stats.slimes[who]++; dbg.stats.slimeColors[who] = winnerDef.css;
     }
   }
+  const easeOut = (k) => 1 - Math.pow(1 - k, 3);
+  const bounceOut = (k) => (k < 0.7 ? easeOut(k / 0.7) * 1.06 : 1.06 - 0.06 * Math.sin(((k - 0.7) / 0.3) * Math.PI / 2));
+  const tmpV = new THREE.Vector3();
   function updateSlime(sl, dt) {
     if (sl.t < 0) return;
     sl.t += dt;
-    const t = sl.t, h = sl.h;
-    if (t < 0.35) { // falling glob
-      const k = t / 0.35;
-      sl.blob.position.set(0, h + 3.5 * (1 - k * k), 0);
-      sl.blob.scale.set(0.8, 1.3, 0.8);
-      return;
+    const T = SLIME_T, t = sl.t, { h, w, d } = sl.dims, bs = sl.bscale;
+    const fade = clamp((t - T.fade) / (T.end - T.fade), 0, 1);
+    for (const m of [sl.mat, sl.coatMat]) m.opacity = 0.84 * (1 - fade);
+
+    // 1. bucket drops in, tips toward the camera, then flies away
+    const hangY = h + 0.75 * bs;
+    const pv = sl.bucket.pivot;
+    let by = hangY + 4 * (1 - bounceOut(clamp(t / T.drop, 0, 1)));
+    const tip = easeOut(clamp((t - T.drop) / (T.tip - T.drop), 0, 1)) * 2.0;
+    // exit sideways and shrink, never up over the table where it could pass for a ball
+    const away = clamp((t - T.away) / 0.4, 0, 1);
+    by += away * 0.8;
+    pv.position.set(away * away * 4.5, by, -0.05);
+    pv.rotation.set(tip * (1 - away * 0.6), 0, -away * 1.2);
+    pv.scale.setScalar(bs * (1 - away * 0.9));
+    pv.visible = away < 1;
+    sl.bucket.goo.visible = tip < 1.2; // the slime has left the bucket
+
+    // 2. a thick stream pours from the lip onto the head
+    const pourK = t < T.pour || t > T.away ? 0 : Math.min(1, (t - T.pour) / 0.08) * clamp((T.away - t) / 0.3, 0, 1);
+    sl.stream.visible = pourK > 0.02;
+    if (sl.stream.visible) {
+      const lipY = by + 0.18 * bs, lipZ = 0.38 * bs;
+      const len = Math.max(0.05, lipY - h * 0.98);
+      const r = 0.11 * bs * (0.45 + 0.55 * pourK) * (1 + Math.sin(t * 38) * 0.12);
+      sl.stream.position.set(Math.sin(t * 23) * 0.03, lipY, lipZ * (1 - 0.5 * Math.min(1, (t - T.pour) / 0.2)));
+      sl.stream.scale.set(r, len, r * 0.9);
     }
-    if (sl.blob.visible) { // splat!
-      sl.blob.visible = false; sl.cap.visible = true;
-      sl.drips.forEach((m) => { m.visible = true; });
-      Sfx.splat();
-    }
-    const spread = Math.min(1, (t - 0.35) / 0.15);
-    const fade = clamp((t - 1.1) / 0.5, 0, 1);
-    const wob = 1 + Math.sin(t * 22) * 0.05 * (1 - fade);
-    sl.cap.position.set(0, h * 0.35 * (1 - fade), 0);
-    sl.cap.scale.set(sl.w * 0.62 * wob, h * 0.7 * spread * (1 - 0.6 * fade), sl.d * 0.7 * wob);
-    sl.drips.forEach((m, i) => {
-      const dd = sl.dd[i], local = t - 0.4 - dd.delay;
-      if (local < 0) { m.position.set(dd.x, h * 0.75, sl.d * 0.4); return; }
-      dd.v += 6 * dt; dd.y += dd.v * dt;
-      m.position.set(dd.x, h * 0.75 - dd.y, sl.d * 0.42);
-      m.scale.set(1, 1 + Math.min(1.2, dd.v * 0.25), 1);
+
+    // 3. splat on the head: droplets fly off
+    if (t >= T.splat && !sl.splatted) { sl.splatted = true; Sfx.splat(); sl.sp.forEach((p) => { p.x = 0; p.y = h; p.z = 0.1; }); }
+    if (t < T.splat) sl.splatted = false;
+    sl.splash.forEach((m, i) => {
+      const p = sl.sp[i];
+      m.visible = sl.splatted && t < T.splat + 0.6;
+      if (!m.visible) return;
+      p.vy -= 9 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
+      m.position.set(p.x, Math.max(0.03, p.y), p.z);
+      m.scale.setScalar(0.05 * (1 - (t - T.splat) / 0.6) + 0.01);
     });
-    sl.mat.opacity = 0.92 * (1 - fade);
-    if (t > 1.6) { sl.t = -1; sl.group.visible = false; }
+
+    // 4. the coat flows down over the character (clip plane sweeps from above the head to the feet)
+    const top = h * 1.07, flowK = clamp((t - T.splat) / (T.flowEnd - T.splat), 0, 1);
+    const edge = top - (top + h * 0.08) * (flowK * flowK * (3 - 2 * flowK));
+    sl.coat.visible = t >= T.splat;
+    const wob = 1 + Math.sin(t * 18) * 0.035 * (1 - fade);
+    sl.coat.scale.set(w * 0.58 * wob, h * 0.56 * (1 - 0.25 * fade), d * 0.62 * wob);
+    sl.coat.position.y = h * 0.5 * (1 - 0.25 * fade);
+    sl.rig.inner.updateWorldMatrix(true, false);
+    tmpV.set(0, edge, 0); sl.rig.inner.localToWorld(tmpV);
+    sl.clip.constant = -tmpV.y; // keep only the part above the flowing edge
+    if (sl.coat.visible) sl.maxCover = Math.max(sl.maxCover, clamp((top - edge) / top, 0, 1));
+
+    // drips run just ahead of the edge, then fall off
+    const rx = w * 0.58, ry = h * 0.56, rz = d * 0.62, cy = h * 0.5;
+    sl.drips.forEach((m, i) => {
+      const dd = sl.dd[i];
+      m.visible = sl.coat.visible && fade < 1;
+      if (!m.visible) return;
+      let y = edge - dd.lead;
+      if (flowK >= 1) { dd.v += 7 * dt; dd.y += dd.v * dt; y = Math.max(-0.02, edge - dd.lead - dd.y); }
+      const ny = clamp((y - cy) / ry, -0.98, 0.98), k = Math.sqrt(1 - ny * ny) * 1.03;
+      m.position.set(rx * k * Math.sin(dd.phi), y, rz * k * Math.cos(dd.phi));
+      const stretch = 1 + Math.min(1.5, dd.v * 0.3);
+      m.scale.set(0.055 * dd.size, 0.12 * dd.size * stretch, 0.055 * dd.size);
+    });
+
+    // 5. puddle spreads at the feet
+    const pk = clamp((t - (T.flowEnd - 0.25)) / 0.35, 0, 1);
+    sl.puddle.visible = pk > 0;
+    sl.puddle.scale.setScalar(Math.max(0.001, easeOut(pk) * w * 0.72 * (1 + 0.1 * fade)));
+
+    if (t > T.end) { sl.t = -1; sl.group.visible = false; }
   }
 
   function ballY(z) {
@@ -1404,6 +1515,14 @@
       // Live overrides for manual/visual checks, e.g. __pong.set({ spinP: 1, forceLevel: 3 }).
       set(opts = {}) { dbg.spinP = opts.spinP ?? null; dbg.forceLevel = opts.forceLevel || 0; dbg.forcePower = opts.forcePower || null; if (mode === 'game') P.isAI = !!opts.autoPlayer; },
       chars: () => [...ORDER],
+      // Trigger / inspect the bucket slime on 'you' (near) or 'ai' (far).
+      slime(who) { slimeOn(who === 'you' ? nearRig : farRig, CHARS[who === 'you' ? aiKey : youKey], who === 'you'); },
+      // Advance the slime animation in fixed 1/60 s steps (independent of the machine's frame rate).
+      slimeStep(who, seconds) { const sl = slimes.get(who === 'you' ? nearRig : farRig); for (let i = 0; i < Math.round(seconds * 60); i++) updateSlime(sl, 1 / 60); },
+      slimeInfo(who) {
+        const sl = slimes.get(who === 'you' ? nearRig : farRig);
+        return { active: sl.t >= 0, visible: sl.group.visible, bucket: sl.group.visible && sl.bucket.pivot.visible, stream: sl.group.visible && sl.stream.visible, maxCover: sl.maxCover, segments: sl.coat.geometry.attributes.position.count };
+      },
       // Picks you + opponent through the same rules as the menu, starts a match, reports who's where.
       setup(you, ai) { pickYou(you); pickAi(ai); startGame(); const got = [nearRig.key, farRig.key]; toMenu(); return got; },
     };
