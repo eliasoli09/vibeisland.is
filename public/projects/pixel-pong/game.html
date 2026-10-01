@@ -589,7 +589,8 @@
   const power = { type: null, t: 0 };
   const dbg = { diff: null, spinP: null, forceLevel: 0, forcePower: null, stats: null }; // test hooks (?debug)
   const pins = [];             // table pins: { x, z, mesh, mat, rise, flash }
-  let hitsThisMatch = 0, trips = 0; // two paddle hits = one round trip
+  let rallyHits = 0, trips = 0;     // round trips in the current rally (two paddle hits = one)
+  const sinkingPins = [];          // pins sliding back into the table after a point
 
   const curDiffKey = () => dbg.diff || (mode === 'menu' ? 'normal' : diffKey);
   const curDiff = () => DIFF[curDiffKey()];
@@ -738,6 +739,7 @@
     serveDir = -winSide; // serve toward whoever lost the point
     const winRig = winSide > 0 ? nearRig : farRig, loseRig = winSide > 0 ? farRig : nearRig;
     winRig.jumpT = 0.7; loseRig.shakeT = 0.8;
+    clearPins();
     // the loser gets slimed in the winner's colour (and you also get it on screen)
     slimeOn(loseRig, CHARS[winRig.key], mode === 'game' && winSide < 0);
     if (mode !== 'game') { pointT = 0.9; return; }
@@ -885,7 +887,7 @@
     if (!REDUCED) shake = Math.max(shake, 0.12);
     const receiver = pad === P ? A : P;
     receiver.err = rollErr(receiver); receiver.think = 0;
-    if (++hitsThisMatch % 2 === 0) { trips++; growPins(); }
+    if (++rallyHits % 2 === 0) { trips++; growPins(); }
   }
 
   function fireShot(D) {
@@ -950,16 +952,21 @@
   }
   const pinPool = Array.from({ length: PIN_MAX }, makePinMesh);
   function resetPins() {
-    pins.length = 0; hitsThisMatch = 0; trips = 0;
+    pins.length = 0; sinkingPins.length = 0; rallyHits = 0; trips = 0;
     pinPool.forEach((p) => { p.mesh.visible = false; });
   }
-  // First 2 pins after 5 round trips, then one more every 3 trips, up to PIN_MAX.
+  // When a point ends the pins sink back into the table and the next rally starts clean.
+  function clearPins() {
+    for (const p of pins) { p.sink = 0; sinkingPins.push(p); }
+    pins.length = 0; rallyHits = 0; trips = 0;
+  }
+  // Within a rally: 2 pins after 5 round trips, then one more every 3 trips, up to PIN_MAX.
   function growPins() {
     const want = trips < 5 ? 0 : Math.min(PIN_MAX, 2 + Math.floor((trips - 5) / 3));
     const before = pins.length;
     while (pins.length < want && addPin()) { /* keep adding */ }
     if (pins.length > before) {
-      if (dbg.stats) dbg.stats.pinsAtTrip.push([trips, pins.length]);
+      if (dbg.stats) { dbg.stats.pinsAtTrip.push([trips, pins.length]); if (!before) dbg.stats.pinRallies++; }
       popText(pins.length - before > 1 ? 'PINS!' : '+1 PIN', '#4ade80'); Sfx.pinUp();
     }
   }
@@ -970,7 +977,9 @@
       if (pins.some((p) => Math.hypot(p.x - x, p.z - z) < 2)) continue;   // never pinch the ball between pins
       if (Math.hypot(ball.x - x, ball.z - z) < 1.6) continue;            // don't grow under the ball
       if (decoys.some((d) => d.active && Math.hypot(d.x - x, d.z - z) < 1)) continue;
-      const vis = pinPool[pins.length];
+      let vis = pinPool.find((v) => !pins.some((q) => q.mesh === v.mesh) && !sinkingPins.some((q) => q.mesh === v.mesh));
+      if (!vis && sinkingPins.length) { const old = sinkingPins.shift(); vis = pinPool.find((v) => v.mesh === old.mesh); } // reuse a pin that's still sinking
+      if (!vis) return false;
       vis.mesh.position.set(x, 0, z); vis.mesh.scale.y = 0.01; vis.mesh.visible = true;
       pins.push({ x, z, mesh: vis.mesh, mat: vis.mat, rise: 0, flash: 0 });
       return true;
@@ -981,25 +990,49 @@
   // ---------------------------------------------------------------- slime bucket
   // The loser of a point gets a bucket of slime (in the winner's colour) tipped over them:
   // the bucket drops in, tips toward the camera, a glossy stream pours onto their head and a
-  // high-resolution coat flows down over the whole character (revealed top-down by a moving
-  // clipping plane), then a puddle spreads, the bucket flies off and everything fades.
+  // coat built from the character's own pixels flows down over them (revealed top-down by a
+  // moving clipping plane), then a puddle spreads, the bucket flies off and everything fades.
   renderer.localClippingEnabled = true;
   const SLIME_T = { drop: 0.3, tip: 0.55, pour: 0.42, splat: 0.5, flowEnd: 1.35, away: 0.95, fade: 1.4, end: 2.0 };
   const slimeMat = (extra = {}) => new THREE.MeshPhysicalMaterial({
     color: 0x4ade80, emissive: 0x4ade80, emissiveIntensity: 0.12, roughness: 0.12, metalness: 0,
     clearcoat: 1, clearcoatRoughness: 0.08, transparent: true, opacity: 0.84, ...extra,
   });
-  function makeCoatGeometry() {
-    // smooth, slightly lumpy ellipsoid shell (~4k vertices)
-    const g = new THREE.SphereGeometry(1, 72, 54);
-    const pos = g.attributes.position, v = new THREE.Vector3();
-    for (let i = 0; i < pos.count; i++) {
-      v.fromBufferAttribute(pos, i);
-      const k = 1 + 0.05 * Math.sin(5 * v.x + 1.3) * Math.cos(4 * v.y) + 0.03 * Math.sin(9 * v.z + 2 * v.y);
-      pos.setXYZ(i, v.x * k, v.y * k, v.z * k);
-    }
+  // One soft, rounded-cube "goo blob" (a superellipsoid) per filled pixel of the character.
+  const BLOB_E = 0.04; // 0 = cube, 1 = sphere: nearly flat faces so neighbouring blobs merge into one smooth sheet
+  const blobGeo = (() => {
+    const g = new THREE.SphereGeometry(1, 16, 12);
+    const pos = g.attributes.position, sp = (u) => Math.sign(u) * Math.pow(Math.abs(u), BLOB_E);
+    for (let i = 0; i < pos.count; i++) pos.setXYZ(i, sp(pos.getX(i)), sp(pos.getY(i)), sp(pos.getZ(i)));
     g.computeVertexNormals();
     return g;
+  })();
+  const BLOB_CORNER = Math.pow(1 / Math.sqrt(3), BLOB_E); // how far a blob's corner reaches (fraction of its half-size)
+  // Builds the coat for one character: two instanced meshes with identical blobs. The first only
+  // writes depth, so the second draws just the outermost goo surface: overlapping blobs read as
+  // one even layer of slime instead of a patchy pile of translucent shapes.
+  function buildCoat(def, clip, coatMat) {
+    const s = def.voxel, rows = def.grid.length, cols = def.grid[0].length, cells = [];
+    def.grid.forEach((row, r) => [...row].forEach((ch, c) => { if (ch !== '.') cells.push([c, r]); }));
+    const pre = new THREE.InstancedMesh(blobGeo, new THREE.MeshBasicMaterial({ colorWrite: false, transparent: true, clippingPlanes: [clip] }), cells.length);
+    const goo = new THREE.InstancedMesh(blobGeo, coatMat, cells.length);
+    const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), pos = new THREE.Vector3(), sc = new THREE.Vector3();
+    cells.forEach(([c, r], i) => {
+      const dz = (def.depthAt ? def.depthAt(c, r) : def.depth) * s;
+      const j = 1;
+      pos.set((c - (cols - 1) / 2) * s, (rows - 1 - r) * s + s / 2, 0);
+      // wide overlap (0.66 of a pixel each way) hides the rounded seams between neighbouring blobs
+      sc.set((0.66 * s * j) / BLOB_CORNER, (0.66 * s * j) / BLOB_CORNER, (dz / 2 + 0.07 * s) / BLOB_CORNER);
+      m4.compose(pos, q, sc);
+      pre.setMatrixAt(i, m4); goo.setMatrixAt(i, m4);
+    });
+    const group = new THREE.Group();
+    for (const [mesh, order] of [[pre, 1], [goo, 2]]) {
+      mesh.instanceMatrix.needsUpdate = true; mesh.frustumCulled = false; mesh.renderOrder = order;
+      group.add(mesh);
+    }
+    group.visible = false;
+    return { group, goo, cells: cells.length, vertices: blobGeo.attributes.position.count * cells.length };
   }
   function makeBucket() {
     // brushed steel; low metalness because the scene has no environment to reflect (high metalness renders black)
@@ -1020,9 +1053,10 @@
   }
   function makeSlime(rig) {
     const mat = slimeMat(), clip = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-    const coatMat = slimeMat({ clippingPlanes: [clip] });
+    // drawn on top of the depth pre-pass: only the outer surface, nudged forward so equal depths pass
+    const coatMat = slimeMat({ clippingPlanes: [clip], depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -4 });
     const group = new THREE.Group();
-    const coat = new THREE.Mesh(makeCoatGeometry(), coatMat);
+    const coat = new THREE.Group(); // holds one fitted coat per character, built on first use
     const streamGeo = new THREE.CylinderGeometry(1, 1, 1, 32, 12, true); streamGeo.translate(0, -0.5, 0);
     const stream = new THREE.Mesh(streamGeo, mat);
     const dropGeo = new THREE.SphereGeometry(1, 24, 18);
@@ -1034,14 +1068,25 @@
     group.add(coat, stream, puddle, bucket.pivot, ...drips, ...splash);
     group.visible = false;
     rig.inner.add(group);
-    return { rig, group, mat, coatMat, clip, coat, stream, drips, splash, puddle, bucket, t: -1, maxCover: 0, dims: null, dd: [], sp: [] };
+    return { rig, group, mat, coatMat, clip, coat, coats: {}, fit: null, stream, drips, splash, puddle, bucket, t: -1, maxCover: 0, dims: null, dd: [], sp: [] };
   }
   const slimes = new Map([[nearRig, makeSlime(nearRig)], [farRig, makeSlime(farRig)]]);
   function charDims(def) {
-    const rows = def.grid.length, cols = def.grid[0].length;
+    const rows = def.grid.length, cols = def.grid[0].length, s = def.voxel;
     let depth = def.depth;
     if (def.depthAt) for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) depth = Math.max(depth, def.depthAt(c, r));
-    return { h: rows * def.voxel, w: cols * def.voxel, d: depth * def.voxel };
+    // top of the head nearest the middle, where the stream lands (Clawd's lands between the antennae)
+    let headY = rows * s;
+    for (const c of [Math.floor((cols - 1) / 2), Math.ceil((cols - 1) / 2)]) {
+      const r = def.grid.findIndex((row) => row[c] !== '.');
+      if (r >= 0) headY = Math.min(headY, (rows - r) * s);
+    }
+    return { h: rows * s, w: cols * s, d: depth * s, headY };
+  }
+  // front surface (z) of the coat at a pixel, or null if that pixel is empty
+  function coatFront(def, c, r) {
+    if (r < 0 || r >= def.grid.length || def.grid[r][c] === '.') return null;
+    return ((def.depthAt ? def.depthAt(c, r) : def.depth) * def.voxel) / 2 + 0.09 * def.voxel;
   }
   function slimeOn(rig, winnerDef, onScreen) {
     const sl = slimes.get(rig), def = CHARS[rig.key];
@@ -1053,9 +1098,13 @@
     sl.bucket.pivot.scale.setScalar(sl.bscale);
     sl.bucket.pivot.visible = true; sl.bucket.goo.visible = true;
     sl.coat.visible = sl.stream.visible = sl.puddle.visible = false;
-    sl.coat.scale.set(dims.w * 0.58, dims.h * 0.56, dims.d * 0.62);
-    sl.coat.position.set(0, dims.h * 0.5, 0);
-    sl.dd = sl.drips.map(() => ({ phi: rand(-1.3, 1.3), lead: rand(0.03, 0.14), v: 0, y: 0, size: rand(0.8, 1.3) }));
+    if (!sl.coats[rig.key]) { sl.coats[rig.key] = buildCoat(def, sl.clip, sl.coatMat); sl.coat.add(sl.coats[rig.key].group); }
+    for (const k in sl.coats) sl.coats[k].group.visible = k === rig.key;
+    sl.fit = sl.coats[rig.key];
+    sl.def = def;
+    // drips ride down real columns of the character and only show where there's body to run down
+    const cols = def.grid[0].length, used = [...Array(cols).keys()].filter((c) => def.grid.some((row) => row[c] !== '.'));
+    sl.dd = sl.drips.map(() => ({ c: used[Math.floor(Math.random() * used.length)], lead: rand(0.03, 0.14), v: 0, y: null, z: 0, size: rand(0.8, 1.3) }));
     sl.sp = sl.splash.map(() => ({ x: 0, y: 0, z: 0, vx: rand(-1.6, 1.6), vy: rand(1, 2.6), vz: rand(-0.4, 1.4) }));
     sl.drips.forEach((m) => { m.visible = false; });
     sl.splash.forEach((m) => { m.visible = false; });
@@ -1078,7 +1127,8 @@
     sl.t += dt;
     const T = SLIME_T, t = sl.t, { h, w, d } = sl.dims, bs = sl.bscale;
     const fade = clamp((t - T.fade) / (T.end - T.fade), 0, 1);
-    for (const m of [sl.mat, sl.coatMat]) m.opacity = 0.84 * (1 - fade);
+    sl.mat.opacity = 0.84 * (1 - fade);
+    sl.coatMat.opacity = 0.76 * (1 - fade); // see-through enough to tell who's underneath
 
     // 1. bucket drops in, tips toward the camera, then flies away
     const hangY = h + 0.75 * bs;
@@ -1099,14 +1149,14 @@
     sl.stream.visible = pourK > 0.02;
     if (sl.stream.visible) {
       const lipY = by + 0.18 * bs, lipZ = 0.38 * bs;
-      const len = Math.max(0.05, lipY - h * 0.98);
+      const len = Math.max(0.05, lipY - sl.dims.headY * 0.98);
       const r = 0.11 * bs * (0.45 + 0.55 * pourK) * (1 + Math.sin(t * 38) * 0.12);
       sl.stream.position.set(Math.sin(t * 23) * 0.03, lipY, lipZ * (1 - 0.5 * Math.min(1, (t - T.pour) / 0.2)));
       sl.stream.scale.set(r, len, r * 0.9);
     }
 
     // 3. splat on the head: droplets fly off
-    if (t >= T.splat && !sl.splatted) { sl.splatted = true; Sfx.splat(); sl.sp.forEach((p) => { p.x = 0; p.y = h; p.z = 0.1; }); }
+    if (t >= T.splat && !sl.splatted) { sl.splatted = true; Sfx.splat(); sl.sp.forEach((p) => { p.x = 0; p.y = sl.dims.headY; p.z = 0.1; }); }
     if (t < T.splat) sl.splatted = false;
     sl.splash.forEach((m, i) => {
       const p = sl.sp[i];
@@ -1118,27 +1168,31 @@
     });
 
     // 4. the coat flows down over the character (clip plane sweeps from above the head to the feet)
-    const top = h * 1.07, flowK = clamp((t - T.splat) / (T.flowEnd - T.splat), 0, 1);
-    const edge = top - (top + h * 0.08) * (flowK * flowK * (3 - 2 * flowK));
+    const vox = sl.def.voxel, top = h + vox * 0.2, flowK = clamp((t - T.splat) / (T.flowEnd - T.splat), 0, 1);
+    const edge = top - (top + vox * 0.3) * (flowK * flowK * (3 - 2 * flowK));
     sl.coat.visible = t >= T.splat;
-    const wob = 1 + Math.sin(t * 18) * 0.035 * (1 - fade);
-    sl.coat.scale.set(w * 0.58 * wob, h * 0.56 * (1 - 0.25 * fade), d * 0.62 * wob);
-    sl.coat.position.y = h * 0.5 * (1 - 0.25 * fade);
+    const wob = 1 + Math.sin(t * 18) * 0.025 * (1 - fade);
+    sl.coat.scale.set(wob, 1, wob);
     sl.rig.inner.updateWorldMatrix(true, false);
     tmpV.set(0, edge, 0); sl.rig.inner.localToWorld(tmpV);
     sl.clip.constant = -tmpV.y; // keep only the part above the flowing edge
     if (sl.coat.visible) sl.maxCover = Math.max(sl.maxCover, clamp((top - edge) / top, 0, 1));
 
-    // drips run just ahead of the edge, then fall off
-    const rx = w * 0.58, ry = h * 0.56, rz = d * 0.62, cy = h * 0.5;
+    // drips run down the front of the body just ahead of the edge, then fall off
+    const rows = sl.def.grid.length, cols = sl.def.grid[0].length;
     sl.drips.forEach((m, i) => {
       const dd = sl.dd[i];
-      m.visible = sl.coat.visible && fade < 1;
+      if (!sl.coat.visible || fade >= 1) { m.visible = false; return; }
+      if (flowK < 1) {
+        const y = edge - dd.lead, z = coatFront(sl.def, dd.c, rows - 1 - Math.floor(y / vox));
+        if (z !== null) { dd.y = y; dd.z = z; }
+        m.visible = z !== null;
+      } else if (dd.y !== null) {
+        dd.v += 7 * dt; dd.y -= dd.v * dt;
+        m.visible = dd.y > 0;
+      } else m.visible = false;
       if (!m.visible) return;
-      let y = edge - dd.lead;
-      if (flowK >= 1) { dd.v += 7 * dt; dd.y += dd.v * dt; y = Math.max(-0.02, edge - dd.lead - dd.y); }
-      const ny = clamp((y - cy) / ry, -0.98, 0.98), k = Math.sqrt(1 - ny * ny) * 1.03;
-      m.position.set(rx * k * Math.sin(dd.phi), y, rz * k * Math.cos(dd.phi));
+      m.position.set((dd.c - (cols - 1) / 2) * vox, dd.y, dd.z + 0.02);
       const stretch = 1 + Math.min(1.5, dd.v * 0.3);
       m.scale.set(0.055 * dd.size, 0.12 * dd.size * stretch, 0.055 * dd.size);
     });
@@ -1327,6 +1381,13 @@
       p.flash = Math.max(0, p.flash - dt * 4);
       p.mat.emissiveIntensity = 0.6 + p.flash * 1.6;
     }
+    for (let i = sinkingPins.length - 1; i >= 0; i--) {
+      const p = sinkingPins[i];
+      p.sink = Math.min(1, p.sink + dt * 2.5);
+      p.mesh.scale.y = Math.max(0.01, 1 - p.sink);
+      p.mesh.position.y = 0.75 * p.mesh.scale.y;
+      if (p.sink >= 1) { p.mesh.visible = false; sinkingPins.splice(i, 1); }
+    }
     slimes.forEach((sl) => updateSlime(sl, dt));
     animRig(nearRig, P, dt);
     animRig(farRig, A, dt);
@@ -1459,7 +1520,7 @@
     const freshStats = () => ({
       ret: [0, 0, 0, 0], miss: [0, 0, 0, 0], bend: [0, 0, 0, 0], bendN: [0, 0, 0, 0], powers: 0, spinShots: 0, maxStreak: 0,
       decoys: 0, decoyPops: 0, tripleShots: 0, tripleRet: 0, tripleMiss: 0, fireShots: 0, fireSpeedUp: null,
-      pinHits: 0, maxPins: 0, pinsAtTrip: [], slimes: { you: 0, ai: 0 }, slimeColors: { you: null, ai: null },
+      pinHits: 0, maxPins: 0, pinsAtTrip: [], pinRallies: 0, pinsAtServe: 0, slimes: { you: 0, ai: 0 }, slimeColors: { you: null, ai: null },
     });
     const badBall = () => !Number.isFinite(ball.x) || !Number.isFinite(ball.z) || Math.abs(ball.x) > WL + 1e-6;
     window.__pong = {
@@ -1475,6 +1536,7 @@
           step(STEP);
           if (badBall()) bad++;
           dbg.stats.maxPins = Math.max(dbg.stats.maxPins, pins.length);
+          if (phase === 'serve' && pins.length) dbg.stats.pinsAtServe++;
           rally = phase === 'play' ? rally + STEP : 0;
           flight = phase === 'play' && crossings() === seen ? flight + STEP : 0; // time without reaching a paddle
           if (flight === 0) path = [];
@@ -1521,7 +1583,13 @@
       slimeStep(who, seconds) { const sl = slimes.get(who === 'you' ? nearRig : farRig); for (let i = 0; i < Math.round(seconds * 60); i++) updateSlime(sl, 1 / 60); },
       slimeInfo(who) {
         const sl = slimes.get(who === 'you' ? nearRig : farRig);
-        return { active: sl.t >= 0, visible: sl.group.visible, bucket: sl.group.visible && sl.bucket.pivot.visible, stream: sl.group.visible && sl.stream.visible, maxCover: sl.maxCover, segments: sl.coat.geometry.attributes.position.count };
+        const def = CHARS[(who === 'you' ? nearRig : farRig).key];
+        const cells = def.grid.reduce((n, row) => n + [...row].filter((ch) => ch !== '.').length, 0);
+        return {
+          active: sl.t >= 0, visible: sl.group.visible, bucket: sl.group.visible && sl.bucket.pivot.visible,
+          stream: sl.group.visible && sl.stream.visible, maxCover: sl.maxCover,
+          cells, blobs: sl.fit ? sl.fit.cells : 0, vertices: sl.fit ? sl.fit.vertices : 0,
+        };
       },
       // Picks you + opponent through the same rules as the menu, starts a match, reports who's where.
       setup(you, ai) { pickYou(you); pickAi(ai); startGame(); const got = [nearRig.key, farRig.key]; toMenu(); return got; },

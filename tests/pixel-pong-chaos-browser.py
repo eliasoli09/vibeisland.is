@@ -45,14 +45,23 @@ def main():
         page.locator("#rosterYou .card[data-char='grok']").click()
         check(page.locator("#rosterAi .card[data-char='grok']").is_disabled(), "your own fighter is disabled in the opponent row")
 
-        # 2. Pins: they appear after 5 round trips, grow every 3, never trap the ball.
+        # 2. Pins: within a rally they appear after 5 round trips and grow every 3; every point clears them.
         run = page.evaluate("__pong.sim(900, { spinP: 0.4 })")
-        print("sim:", {k: run[k] for k in ("bad", "maxFlight", "points", "pinHits", "maxPins", "pinsAtTrip")})
+        print("sim:", {k: run[k] for k in ("bad", "maxFlight", "points", "pinHits", "maxPins", "pinRallies", "pinsAtServe")})
         check(run["bad"] == 0, "ball never leaves the table or becomes non-finite with pins")
         check(run["maxFlight"] < 3, f"ball always reaches a paddle quickly with pins ({run['maxFlight']:.2f}s)")
-        check(run["maxPins"] == 6, f"pins grow to the cap of 6 (max {run['maxPins']})")
-        check(run["pinsAtTrip"][:3] == [[5, 2], [8, 3], [11, 4]], f"first pins at 5 round trips, +1 every 3 ({run['pinsAtTrip'][:3]})")
-        check(run["pinHits"] > 30, f"the ball really bounces off pins ({run['pinHits']} hits)")
+        rule = all(n == min(6, 2 + (trip - 5) // 3) for trip, n in run["pinsAtTrip"])
+        check(rule and run["pinsAtTrip"], f"pins follow the rule: 2 at 5 round trips, +1 every 3 ({run['pinsAtTrip'][:4]})")
+        check(run["pinRallies"] >= 1, f"long rallies grow pins ({run['pinRallies']} rallies)")
+        check(run["pinsAtServe"] == 0, "pins are gone after every point (none at any serve)")
+        # Hard AIs rarely miss, so rallies run long enough to keep growing pins.
+        hard = page.evaluate("__pong.sim(900, { diff: 'hard', spinP: 0.2 })")
+        print("hard sim:", {k: hard[k] for k in ("bad", "maxFlight", "points", "pinHits", "maxPins", "pinRallies", "pinsAtServe")})
+        rule = all(n == min(6, 2 + (trip - 5) // 3) for trip, n in hard["pinsAtTrip"])
+        check(rule and hard["maxPins"] >= 3, f"pins keep growing in long rallies, +1 every 3 round trips (max {hard['maxPins']})")
+        check(hard["bad"] == 0 and hard["maxFlight"] < 3 and hard["pinsAtServe"] == 0, "long pin rallies stay glitch-free and clear after every point")
+        hits = run["pinHits"] + hard["pinHits"]
+        check(hits >= 5, f"the ball really bounces off pins ({hits} hits; pins only live during long rallies)")
 
         # 3. TRIPLE BALL: two decoys spawn, never score, and always disappear.
         tri = page.evaluate("__pong.simPlayer(240, { tapAt: 0.15, forcePower: 'triple' })")
@@ -89,9 +98,18 @@ def main():
             check(seen["bucket"] and seen["pour"], f"{who}: a bucket appears and pours a stream")
             info = page.evaluate(f"__pong.slimeStep('{who}', 0.4), __pong.slimeInfo('{who}')")
             check(info["maxCover"] >= 0.95, f"{who}: the slime flows down over the whole character (cover {info['maxCover']:.2f})")
-            check(info["segments"] >= 3000, f"{who}: the slime coat is high resolution ({info['segments']} vertices)")
+            check(info["blobs"] == info["cells"], f"{who}: the slime fits the character, one goo blob per pixel ({info['blobs']}/{info['cells']})")
+            check(info["vertices"] >= 3000, f"{who}: the slime coat is high resolution ({info['vertices']} vertices)")
             info = page.evaluate(f"__pong.slimeStep('{who}', 0.6), __pong.slimeInfo('{who}')")
             check(not info["active"] and not info["visible"], f"{who}: bucket and slime clean up afterwards")
+
+        for c in CHARS:
+            page.evaluate(f"__pong.setup('{c}', '{'claude' if c != 'claude' else 'codex'}')")
+            page.evaluate("__pong.slime('you'), __pong.slimeStep('you', 1.4)")
+            info = page.evaluate("__pong.slimeInfo('you')")
+            assert info["blobs"] == info["cells"] and info["maxCover"] >= 0.95, (c, info)
+            page.evaluate("__pong.slimeStep('you', 1)")
+        print("ok - the slime fits and fully covers all five characters")
 
         check(not ERRORS, f"no page errors ({ERRORS[:3]})")
         browser.close()
