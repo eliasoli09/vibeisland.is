@@ -32,11 +32,11 @@ export const projects: readonly Project[] = [
     slug: "pixel-pong",
     title: "Pixel Pong",
     description:
-      "Borðtennis í þrívídd þar sem Claude Code krabbinn mætir Codex skýjavélmenninu. Veldu þinn leikmann, stýrðu spaðanum með músinni og sigraðu gervigreindina í fyrsta að 7.",
+      "Borðtennis í þrívídd með fimm gervigreindar-karakterum: Claude, Codex, Muse, Grok og Clawd. Veldu þinn leikmann og andstæðing, gefðu boltanum snúning, safnaðu boostum, varastu pinnana á borðinu og forðastu slímið.",
     href: "/verkefni/pixel-pong",
     viewerPath: "/projects/pixel-pong/game.html",
     preview: "/projects/pixel-pong/preview.png",
-    previewAlt: "Claude krabbinn og Codex vélmennið spila borðtennis á neon borði",
+    previewAlt: "Grok og Clawd spila borðtennis á neon borði með pinnum og þremur boltum á lofti",
     status: "Gagnvirkur 3D leikur",
     tags: ["Three.js", "Leikur", "Gervigreind"],
     playInline: true,
