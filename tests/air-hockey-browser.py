@@ -72,8 +72,9 @@ def main():
         check(idle["smashes"] == 0 and idle["powers"] == 0, f"standing still never counts as a smash ({idle['smashes']})")
 
         for kind in ("big", "fire", "triple", "wide"):
-            for attempt in range(3):  # a boost earned in the last seconds of a run may not get used: retry
-                r = page.evaluate(f"__pong.hsimPlayer(180, {{ forcePower: '{kind}' }})")
+            for attempt in range(4):  # a boost earned in the last seconds of a run may not get used: retry
+                # (AI boosts off here: this checks YOUR boosts, and the AI's can end a match early)
+                r = page.evaluate(f"__pong.hsimPlayer(180, {{ forcePower: '{kind}', noAiPower: true }})")
                 used = {"big": r["bigSeen"] >= 1.49, "fire": r["fireShots"] >= 1, "triple": r["fakes"] >= 2, "wide": r["wideRatio"] >= 1.59}[kind]
                 if used:
                     break

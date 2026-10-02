@@ -177,6 +177,14 @@
   .h-touch { display: none; }
   body.touch .h-touch { display: inline; }
   body.touch .h-mouse { display: none; }
+  .qr svg { width: min(220px, 60vw); height: auto; display: block; background: #fff; border: 4px solid #fff; }
+  .qr:empty { display: none; }
+  .code { font: 22px var(--pix); letter-spacing: 6px; color: var(--cyan); }
+  .code:empty { display: none; }
+  #onLink { font: 15px ui-monospace, Menlo, monospace; padding: 10px; width: min(320px, 70vw); color: var(--ink); background: #0a1230; border: 2px solid var(--edge); }
+  body.online .pips { display: none; }
+  .net-badge { position: absolute; left: 12px; top: calc(12px + env(safe-area-inset-top, 0px)); font: 8px var(--pix); color: var(--easy); padding: 6px 8px; border: 2px solid var(--easy); background: rgba(5, 9, 24, 0.82); }
+  @media (max-width: 720px) { .net-badge { top: calc(112px + env(safe-area-inset-top, 0px)); } }
   .shot-clock { position: absolute; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 7px 12px; font: 9px var(--pix); color: var(--muted); background: rgba(5, 9, 24, 0.82); border: 2px solid var(--sc, var(--edge)); }
   .shot-clock b { font: 18px var(--pix); color: var(--sc, var(--ink)); font-variant-numeric: tabular-nums; min-width: 3.2em; text-align: right; }
   .shot-clock.low { animation: clockFlash 0.4s steps(2) infinite; }
@@ -204,7 +212,7 @@
     <div class="board">
       <div class="who"><span class="mini" id="miniYou"></span><span class="lbl">YOU</span></div>
       <div class="nums"><span id="sYou">0</span><span class="sep">-</span><span id="sAi">0</span></div>
-      <div class="who"><span class="lbl">AI</span><span class="mini" id="miniAi"></span></div>
+      <div class="who"><span class="lbl" id="lblAi">AI</span><span class="mini" id="miniAi"></span></div>
     </div>
     <div class="first-to">FIRST TO 7</div>
     <div class="hud-btns">
@@ -212,6 +220,7 @@
       <button id="btnPause" type="button">PAUSE</button>
     </div>
     <button id="spinBtn" type="button" aria-label="Spin">SPIN</button>
+    <div class="net-badge" id="netBadge" hidden>ONLINE</div>
     <div class="shot-clock" id="shotClock" hidden aria-live="off"><span>SHOT CLOCK</span><b id="shotNum">7.0</b></div>
     <div class="spin-hud">
       <div class="power ai-power" id="aiPowerChip" hidden><span id="aiPowerName">AI</span><b><em id="aiPowerFill"></em></b></div>
@@ -242,7 +251,10 @@
         <button class="pill" id="dNormal" type="button" role="radio" data-diff="normal" aria-checked="true">NORMAL</button>
         <button class="pill" id="dHard" type="button" role="radio" data-diff="hard" aria-checked="false">HARD</button>
       </div>
-      <button class="btn" id="btnStart" type="button">START MATCH</button>
+      <div class="row">
+        <button class="btn" id="btnStart" type="button">START MATCH</button>
+        <button class="btn ghost" id="btnOnline" type="button">PLAY ONLINE</button>
+      </div>
       <p class="hint" id="hintHockey" hidden><span class="h-mouse">Move the mouse to slide your mallet anywhere in your half (or <kbd>A</kbd> / <kbd>D</kbd>). Hit the character puck into the AI's goal. <strong>Three hard smashes in a row</strong> earn a boost: BIG MALLET, FIREBALL, TRIPLE PUCK or WIDE GOAL. <strong>Goals grow</strong> every time the puck crosses the middle, and a <strong>shot clock</strong> (10 s, shorter every crossing) hands the puck over if you hold it too long. <kbd>Space</kbd> pauses, <kbd>M</kbd> mutes.</span><span class="h-touch"><strong>Drag anywhere</strong> to slide your mallet around your half, and flick fast to smash. Three smashes in a row earn a boost: BIG MALLET, FIREBALL, TRIPLE PUCK or WIDE GOAL. Goals grow every time the puck crosses the middle, and the shot clock hands the puck over if you hold it too long.</span></p>
       <p class="hint" id="hintPong"><span class="h-mouse">Move the mouse left and right to steer your paddle (or <kbd>A</kbd> / <kbd>D</kbd>). Where the ball hits your paddle sets its angle. <strong>Click or tap just as the ball reaches your paddle to spin it</strong>. Chain 3 spins for a boost: BIG PADDLE, SLOW-MO, TRIPLE BALL or FIREBALL. Long matches grow pins on the table. <kbd>Space</kbd> pauses, <kbd>M</kbd> mutes.</span><span class="h-touch"><strong>Drag anywhere</strong> to steer your paddle. Tap <strong>SPIN</strong> just as the ball reaches you to spin it; 3 spins in a row earn a boost: BIG PADDLE, SLOW-MO, TRIPLE BALL or FIREBALL. Long rallies grow pins on the table.</span></p>
     </div>
@@ -255,6 +267,23 @@
         <button class="btn" id="btnResume" type="button">RESUME</button>
         <button class="btn ghost" id="btnQuit" type="button">MENU</button>
       </div>
+    </div>
+  </div>
+
+  <div id="online" class="overlay" hidden>
+    <div class="panel small">
+      <h2 class="title" style="font-size:22px">PLAY ONLINE</h2>
+      <p class="sub" id="onStatus">Creating a game...</p>
+      <div class="qr" id="onQR"></div>
+      <div class="code" id="onCode"></div>
+      <div class="row" id="onLinkRow" hidden>
+        <input id="onLink" readonly aria-label="Invite link">
+        <button class="btn ghost" id="onCopy" type="button">COPY</button>
+        <button class="btn ghost" id="onShare" type="button">SHARE</button>
+      </div>
+      <div class="pick" id="onPick" hidden><div class="roster" id="rosterJoin" role="group" aria-label="Your fighter"></div></div>
+      <button class="btn" id="onJoin" type="button" hidden>JOIN GAME</button>
+      <button class="btn ghost" id="onCancel" type="button">CANCEL</button>
     </div>
   </div>
 
@@ -594,6 +623,7 @@
   }
   let sparkIdx = 0;
   function burst(x, y, z, color, n, dirZ) {
+    if (n > 2) netEvent(['b', x, y, z, color, n, dirZ]); // (1-spark fire trails are drawn by each side)
     for (let i = 0; i < n; i++) {
       const s = sparks[sparkIdx++ % sparks.length];
       s.m.material.color.setHex(color); s.m.position.set(x, y, z); s.m.visible = true;
@@ -656,7 +686,7 @@
   const aiPower = { type: null, t: 0, fresh: false }; // the AI's boost (it earns them too)
   let aiStreak = 0;                                   // AI spin shots (pong) / smashes in a row (hockey)
   const powerOf = (owner) => (owner === 'ai' ? aiPower : power);
-  const dbg = { diff: null, spinP: null, forceLevel: 0, forcePower: null, forceAiPower: null, stats: null }; // test hooks (?debug)
+  const dbg = { diff: null, spinP: null, forceLevel: 0, forcePower: null, forceAiPower: null, noAiPower: false, stats: null }; // test hooks (?debug)
   const pins = [];             // table pins: { x, z, mesh, mat, rise, flash }
   let rallyHits = 0, trips = 0;     // round trips in the current rally (two paddle hits = one)
   const sinkingPins = [];          // pins sliding back into the table after a point
@@ -697,6 +727,7 @@
   function updateHUD() { $('#sYou').textContent = score[0]; $('#sAi').textContent = score[1]; }
   const pop = $('#pop');
   function popText(text, color) {
+    if (NET_SHARED_POPS.has(text)) netEvent(['pop', text, color]);
     pop.textContent = text; pop.style.color = color;
     pop.classList.remove('show'); void pop.offsetWidth; pop.classList.add('show');
   }
@@ -808,7 +839,7 @@
   }
 
   function setPaused(on) {
-    if (mode !== 'game' || phase === 'over') return;
+    if (mode !== 'game' || phase === 'over' || net.role) return; // an online match can't be paused
     paused = on;
     $('#pauseMenu').hidden = !on;
     document.body.classList.toggle('playing', !on);
@@ -817,6 +848,7 @@
   }
 
   function scorePoint(winSide) {
+    netEvent(['score', winSide]);
     phase = 'point';
     pointT = 1.2;
     serveDir = -winSide; // serve toward whoever lost the point
@@ -839,6 +871,7 @@
   }
 
   function gameOver() {
+    netEvent(['over']);
     phase = 'over';
     endPower();
     const youWon = score[0] > score[1];
@@ -848,9 +881,12 @@
     $('#overArt').innerHTML = gridSVG(CHARS[winKey]);
     $('#overTitle').textContent = CHARS[winKey].name + ' WINS!';
     $('#overTitle').style.color = CHARS[winKey].css;
-    $('#overSub').textContent = youWon
-      ? `You beat the AI ${score[0]}–${score[1]} on ${diffKey.toUpperCase()}.`
-      : `The AI took it ${score[1]}–${score[0]}. Run it back?`;
+    const rival = CHARS[farRig.key].name;
+    $('#overSub').textContent = net.live
+      ? (youWon ? `You beat ${rival} ${score[0]}–${score[1]} online!` : `${rival} won ${score[1]}–${score[0]}. Rematch?`)
+      : youWon
+        ? `You beat the AI ${score[0]}–${score[1]} on ${diffKey.toUpperCase()}.`
+        : `The AI took it ${score[1]}–${score[0]}. Run it back?`;
     $('#btnRematch').style.background = CHARS[youKey].css;
     $('#over').hidden = false;
     document.body.classList.remove('playing');
@@ -899,6 +935,14 @@
   // ---------------------------------------------------------------- physics
   // Decides the spin level of a hit. Player: a timed tap; AI: a chance per difficulty.
   function spinLevelFor(pad) {
+    if (pad === A && net.role === 'host' && netLive()) { // online: your friend's timed SPIN tap (a little extra time for lag)
+      const timed = net.spinA >= 0 && simTime - net.spinA <= SPIN.window + 0.15;
+      net.spinA = -1;
+      if (!timed) { net.aStreak = 0; return 0; }
+      const lvl = Math.min(++net.aStreak, 3);
+      netEvent(['spin', -1, lvl]); popText('INCOMING SPIN', SPIN.css[lvl]);
+      return lvl;
+    }
     if (pad === P && !P.isAI) {
       const timed = spinTapAt >= 0 && simTime - spinTapAt <= SPIN.window;
       spinTapAt = -1;
@@ -907,6 +951,7 @@
       if (dbg.stats) dbg.stats.spinShots++;
       const lvl = Math.min(streak, 3);
       popText(lvl > 1 ? `SPIN x${lvl}` : 'SPIN!', SPIN.css[lvl]);
+      netEvent(['spin', 1, lvl]);
       if (streak % 3 === 0) awardPower();
       updateSpinHUD();
       return lvl;
@@ -923,6 +968,8 @@
 
   // Boosts belong to a side: 'you' (near) or 'ai' (far).
   function awardPower(owner = 'you') {
+    if (net.role) return; // no boosts in online matches (fair, and simpler to keep in sync)
+    if (owner === 'ai' && dbg.noAiPower) return; // test hook: isolate your own boosts
     endPower(owner);
     const pw = powerOf(owner), ai = owner === 'ai';
     const set = powers(), kinds = Object.keys(set), forced = ai ? dbg.forceAiPower : dbg.forcePower;
@@ -977,6 +1024,7 @@
     const rig = pad === P ? nearRig : farRig;
     rig.pulse = 1;
     const key = padKey(pad);
+    netEvent(['h', pad.side]);
     burst(xc, ballY(ball.z), ball.z, CHARS[key].hex, 12, -pad.side);
     Sfx.hit(key);
     if (!REDUCED) shake = Math.max(shake, 0.12);
@@ -1376,7 +1424,7 @@
       const lvl = ball.spinLvl;
       if (dbg.stats && dbg.straightX !== undefined) { dbg.stats.bend[lvl] += Math.abs(xc - dbg.straightX); dbg.stats.bendN[lvl]++; }
       if (dbg.stats && ball.tripled && pad === A) dbg.stats[Math.abs(xc - pad.x) <= pad.w / 2 + R * 0.8 ? 'tripleRet' : 'tripleMiss']++;
-      if (Math.abs(xc - pad.x) <= pad.w / 2 + R * 0.8) {
+      if (reachX(pad, xc) <= pad.w / 2 + R * 0.8) {
         if (dbg.stats) dbg.stats.ret[lvl]++;
         ball.z = plane - (ball.z - plane);
         ball.x = xc;
@@ -1388,18 +1436,25 @@
   }
 
   function step(dt) {
+    if (net.role === 'guest' && netLive()) { netGuestStep(dt); return; } // online guest: the host runs the game
+    stepCore(dt);
+    netHostTick();
+  }
+  function humanPaddle(dt) {
+    if (keyDir) targetX = clamp(targetX + keyDir * 13 * dt, -padLim(P), padLim(P));
+    const prev = P.x;
+    P.x += (clamp(targetX, -padLim(P), padLim(P)) - P.x) * Math.min(1, dt * 22);
+    P.vx = (P.x - prev) / dt;
+  }
+  function stepCore(dt) {
     if (gameMode === 'hockey') { hkStep(dt); return; }
     simTime += dt;
     tickPowers(dt);
     // player paddle
     if (P.isAI) updateAI(P, dt);
-    else {
-      if (keyDir) targetX = clamp(targetX + keyDir * 13 * dt, -padLim(P), padLim(P));
-      const prev = P.x;
-      P.x += (clamp(targetX, -padLim(P), padLim(P)) - P.x) * Math.min(1, dt * 22);
-      P.vx = (P.x - prev) / dt;
-    }
-    updateAI(A, dt);
+    else humanPaddle(dt);
+    if (net.role === 'host' && netLive()) netMoveRemotePaddle(dt); // online: the far paddle is your friend
+    else updateAI(A, dt);
 
     if (phase === 'serve') { serveT -= dt; if (serveT <= 0) launch(); return; }
     // SLOW-MO only slows balls coming toward the player
@@ -1632,6 +1687,7 @@
     p.fire = false;
     const rig = m === MP ? nearRig : farRig;
     rig.pulse = 1; m.pulse = 1;
+    netEvent(['h', m.side]);
     burst(p.x, 0.3, p.z, CHARS[rig.key].hex, 10, -m.side);
     Sfx.hit(rig.key);
     // boosts: yours, or the AI's in a real match (never in the menu demo)
@@ -1743,6 +1799,7 @@
     const auto = m.isAI || (m === MP && dbg.autoPlayer);
     let tx, tz, maxV;
     if (auto) { hkAI(m); tx = m.tx; tz = m.tz; maxV = HDIFF[m === MP && dbg.autoPlayer ? 'hard' : curDiffKey()].speed; }
+    else if (m === MA && net.role === 'host' && netLive()) { tx = net.rx; tz = net.rz; maxV = 30; } // online: your friend's mallet
     else {
       if (keyDir) hk.aim.x = clamp(hk.aim.x + keyDir * 13 * dt, -HW, HW);
       tx = hk.aim.x; tz = hk.aim.z; maxV = 30;
@@ -1789,7 +1846,7 @@
       hk.clock -= dt;
       if (hk.clock <= 0) { // shot clock violation: the puck goes to the other side, no goal
         const before = [...score];
-        showBanner('SHOT CLOCK!', '#ff5d6c'); Sfx.buzzer();
+        showBanner('SHOT CLOCK!', '#ff5d6c'); Sfx.buzzer(); netEvent(['banner', 'SHOT CLOCK!', '#ff5d6c']);
         serveDir = -hk.side;
         const from = hk.side;
         hkResetServe(true);
@@ -2140,14 +2197,393 @@
     e.currentTarget.blur();
     Sfx.muted = !Sfx.muted; store.set('pp-muted', Sfx.muted ? '1' : '0'); updateMuteBtn(); Sfx.init();
   });
-  $('#btnRematch').addEventListener('click', startGame);
-  $('#btnChange').addEventListener('click', toMenu);
+  $('#btnRematch').addEventListener('click', () => {
+    if (net.role === 'host') netHostStartMatch(aiKey);
+    else if (net.role === 'guest') { netSend('rematch', {}, true); $('#overSub').textContent = 'Asked for a rematch...'; }
+    else startGame();
+  });
+  $('#btnChange').addEventListener('click', () => { if (net.role) netLeave(); toMenu(); });
+
+  // ================================================================ ONLINE (2 players, 2 devices)
+  // The host's browser runs the real game. The friend (guest) sends its paddle/mallet and SPIN taps;
+  // the host sends back snapshots + events. Both see the match from their own end: the guest
+  // mirrors everything (x -> -x, z -> -z, near <-> far). Players find each other with a room code
+  // shared as a QR code / link. Transport: a direct WebRTC data channel when the network allows it,
+  // otherwise the Supabase Realtime channel relays everything (it also carries the handshake).
+  const NET_URL = 'https://imzqngcwykvqxzylhujf.supabase.co';
+  const NET_KEY = 'sb_publishable_33PGYWKmqvdCDUkwRnthrQ_vgQiQsEE'; // public publishable key: only used for live game channels
+  const NET_SHARED_POPS = new Set(['PINS!', '+1 PIN', 'FACE-OFF']);
+  const pageParams = new URLSearchParams(location.search);
+  const net = {
+    role: null, code: null, sb: null, ch: null, pc: null, dc: null, live: false, transport: 'relay',
+    forceRelay: pageParams.get('net') === 'relay', lastRecv: 0, nextSend: 0, nextPing: 0, rtt: 0.1,
+    events: [], hostKey: null, hostMode: null, info: null, rx: 0, rz: -6, ahist: [], spinA: -1, aStreak: 0,
+    snap: null, waitTimer: null, iceQueue: [],
+  };
+  const netLive = () => net.live && mode === 'game';
+  function netEvent(e) { if (net.role === 'host' && netLive()) net.events.push(e); }
+
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = src; s.onload = resolve; s.onerror = () => reject(new Error('Could not load ' + src));
+      document.head.appendChild(s);
+    });
+  }
+  async function netClient() {
+    if (!window.supabase) await loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.0/dist/umd/supabase.js');
+    return net.sb || (net.sb = window.supabase.createClient(NET_URL, NET_KEY));
+  }
+  const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // no I/O: easy to read aloud
+  const makeCode = () => Array.from({ length: 4 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join('');
+  function joinLink(code) {
+    const onSite = location.protocol.startsWith('http') && location.pathname.startsWith('/projects/pixel-pong/');
+    return (onSite ? location.origin + '/verkefni/pixel-pong' : location.href.split('?')[0]) + '?join=' + code;
+  }
+
+  // ---------------------------------------------------------------- transport
+  function netSend(k, d, reliable) {
+    const msg = JSON.stringify({ k, d });
+    const dc = reliable ? net.dcc : net.dc;
+    if (net.transport === 'p2p' && dc && dc.readyState === 'open') { try { dc.send(msg); return; } catch (e) { /* fall back */ } }
+    if (net.ch) net.ch.send({ type: 'broadcast', event: 'm', payload: { k, d } });
+  }
+  async function netOpen(code) {
+    const sb = await netClient();
+    net.code = code;
+    net.ch = sb.channel('pixelpong:' + code, { config: { broadcast: { self: false } } });
+    net.ch.on('broadcast', { event: 'm' }, ({ payload }) => netRecv(payload.k, payload.d));
+    await new Promise((resolve, reject) => {
+      const t = setTimeout(() => reject(new Error('timeout')), 12000);
+      net.ch.subscribe((status) => {
+        if (status === 'SUBSCRIBED') { clearTimeout(t); resolve(); }
+        else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') { clearTimeout(t); reject(new Error(status)); }
+      });
+    });
+  }
+  function netAttachDc(dc) {
+    const reliable = dc.label === 'ctl';
+    if (reliable) net.dcc = dc; else net.dc = dc;
+    dc.onopen = () => { if (!reliable) { net.transport = 'p2p'; updateNetBadge(); } };
+    dc.onclose = () => { if (!reliable) { net.transport = 'relay'; updateNetBadge(); } };
+    dc.onmessage = (e) => { try { const { k, d } = JSON.parse(e.data); netRecv(k, d); } catch (err) { /* ignore bad packets */ } };
+  }
+  function netPeer() {
+    if (net.forceRelay || !window.RTCPeerConnection) return null;
+    const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] });
+    pc.onicecandidate = (e) => { if (e.candidate) netSend('ice', e.candidate.toJSON()); };
+    pc.ondatachannel = (e) => netAttachDc(e.channel);
+    net.pc = pc;
+    return pc;
+  }
+  async function netStartP2P() { // host side
+    const pc = netPeer();
+    if (!pc) return;
+    netAttachDc(pc.createDataChannel('game', { ordered: false, maxRetransmits: 0 }));
+    netAttachDc(pc.createDataChannel('ctl'));
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    netSend('offer', pc.localDescription.toJSON());
+  }
+  async function netOnSignal(k, d) {
+    try {
+      if (k === 'offer') {
+        const pc = netPeer();
+        if (!pc) return;
+        await pc.setRemoteDescription(d);
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        netSend('answer', pc.localDescription.toJSON());
+        for (const c of net.iceQueue.splice(0)) await pc.addIceCandidate(c);
+      } else if (k === 'answer' && net.pc) {
+        await net.pc.setRemoteDescription(d);
+        for (const c of net.iceQueue.splice(0)) await net.pc.addIceCandidate(c);
+      } else if (k === 'ice') {
+        if (net.pc && net.pc.remoteDescription) await net.pc.addIceCandidate(d);
+        else net.iceQueue.push(d);
+      }
+    } catch (e) { /* direct connection failed: the relay keeps working */ }
+  }
+
+  // ---------------------------------------------------------------- messages
+  function netRecv(k, d) {
+    net.lastRecv = performance.now();
+    if (k === 'offer' || k === 'answer' || k === 'ice') { netOnSignal(k, d); return; }
+    if (net.role === 'host') {
+      if (k === 'hi') netSend('info', { mode: gameMode, host: youKey }, true);
+      else if (k === 'join') netHostStartMatch(d.char);
+      else if (k === 'i') { net.rx = -d[0]; net.rz = -(d[1] ?? 6); } // guest input, mirrored into the host's frame
+      else if (k === 'spin') net.spinA = simTime;
+      else if (k === 'ping') netSend('pong', d);
+      else if (k === 'rematch' && phase === 'over') netHostStartMatch(aiKey);
+      else if (k === 'bye') netOpponentLeft();
+    } else if (net.role === 'guest') {
+      if (k === 'info') { net.info = d; netGuestShowPick(); }
+      else if (k === 'start') netGuestStartMatch(d);
+      else if (k === 's') net.snap = d;
+      else if (k === 'e') d.forEach(netGuestEvent);
+      else if (k === 'pong') net.rtt = clamp((performance.now() - d) / 1000, 0, 0.6);
+      else if (k === 'bye') netOpponentLeft();
+    }
+  }
+
+  // ---------------------------------------------------------------- host
+  async function netHost() {
+    netReset();
+    net.role = 'host';
+    showOnline('Creating a game...');
+    try { await netOpen(makeCode()); } catch (e) { showOnline('Could not reach the game server. Check your connection and try again.'); return; }
+    const link = joinLink(net.code);
+    showOnline('Scan the code or send the link to a friend. Waiting for them to join...');
+    $('#onCode').textContent = net.code;
+    $('#onLink').value = link;
+    $('#onLinkRow').hidden = false;
+    $('#onShare').hidden = !navigator.share;
+    renderQR(link);
+    clearInterval(net.waitTimer);
+    net.waitTimer = setInterval(() => { if (!net.live) netSend('info', { mode: gameMode, host: youKey }, true); }, 1000);
+  }
+  async function renderQR(link) {
+    try {
+      if (!window.qrcode) await loadScript('https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js');
+      const qr = qrcode(0, 'M'); qr.addData(link); qr.make();
+      $('#onQR').innerHTML = qr.createSvgTag({ cellSize: 5, margin: 3, scalable: true });
+    } catch (e) { $('#onQR').innerHTML = ''; }
+  }
+  function netHostStartMatch(guestChar) {
+    clearInterval(net.waitTimer);
+    if (!CHARS[guestChar] || guestChar === youKey) guestChar = ORDER.find((k) => k !== youKey);
+    aiKey = guestChar;
+    netSend('start', { mode: gameMode, host: youKey, guest: guestChar }, true);
+    netBeginMatch();
+    if (!net.pc) netStartP2P();
+  }
+
+  // ---------------------------------------------------------------- guest
+  async function netJoin(code) {
+    netReset();
+    net.role = 'guest';
+    showOnline('Joining game ' + code + '...');
+    try { await netOpen(code); } catch (e) { showOnline('Could not reach the game server. Check your connection and try again.'); return; }
+    netSend('hi', {}, true);
+    clearInterval(net.waitTimer);
+    net.waitTimer = setInterval(() => { if (!net.info) netSend('hi', {}, true); }, 1500);
+    showOnline('Looking for game ' + code + '... (ask your friend to keep their game open)');
+  }
+  function netGuestShowPick() {
+    if (net.live) return;
+    clearInterval(net.waitTimer);
+    const host = net.info.host;
+    if (youKey === host) youKey = ORDER.find((k) => k !== host);
+    showOnline(`${CHARS[host].name} wants to play ${net.info.mode === 'hockey' ? 'AIR HOCKEY' : 'PING PONG'}. Pick your fighter:`);
+    const roster = $('#rosterJoin');
+    roster.innerHTML = ORDER.map((k) => `<button class="card" type="button" data-char="${k}" style="--c:${CHARS[k].css}" aria-pressed="${k === youKey}" ${k === host ? 'disabled' : ''}><span class="art">${gridSVG(CHARS[k])}</span><span class="nm">${CHARS[k].name}</span></button>`).join('');
+    $('#onPick').hidden = false; $('#onJoin').hidden = false;
+  }
+  function netGuestStartMatch(d) {
+    youKey = d.guest; aiKey = d.host;
+    setGameMode(d.mode);
+    net.snap = null;
+    netBeginMatch();
+  }
+
+  // ---------------------------------------------------------------- both
+  function netBeginMatch() {
+    net.live = true;
+    net.lastRecv = performance.now();
+    net.aStreak = 0; net.spinA = -1; net.ahist = []; net.events = [];
+    $('#online').hidden = true;
+    startGame();
+    A.isAI = false; MA.isAI = false; // the far side is a person now
+    $('#lblAi').textContent = 'RIVAL';
+    $('#btnPause').hidden = true; // an online match can't be paused
+    document.body.classList.add('online'); // no boosts online, so no streak dots either
+    updateNetBadge();
+  }
+  function netOpponentLeft() {
+    if (!net.role) return;
+    const wasLive = net.live && phase !== 'over';
+    netLeave(false);
+    if (!wasLive) { showOnline('Your friend left.'); return; }
+    phase = 'over';
+    $('#overArt').innerHTML = gridSVG(CHARS[youKey]);
+    $('#overTitle').textContent = 'OPPONENT LEFT';
+    $('#overTitle').style.color = 'var(--ink)';
+    $('#overSub').textContent = 'Your friend disconnected, so the win is yours.';
+    $('#btnRematch').hidden = true;
+    $('#over').hidden = false;
+    document.body.classList.remove('playing');
+  }
+  function netReset() {
+    clearInterval(net.waitTimer);
+    try { if (net.pc) net.pc.close(); } catch (e) { /* already closed */ }
+    try { if (net.ch && net.sb) net.sb.removeChannel(net.ch); } catch (e) { /* already gone */ }
+    Object.assign(net, { role: null, code: null, ch: null, pc: null, dc: null, dcc: null, live: false, transport: 'relay', info: null, snap: null, events: [], iceQueue: [] });
+    A.isAI = true; MA.isAI = true;
+    $('#lblAi').textContent = 'AI';
+    $('#btnRematch').hidden = false; $('#btnPause').hidden = false;
+    document.body.classList.remove('online');
+    updateNetBadge();
+  }
+  function netLeave(sayBye = true) {
+    if (net.role && sayBye) netSend('bye', {}, true);
+    netReset();
+  }
+  window.addEventListener('pagehide', () => { if (net.role) netSend('bye', {}, true); });
+
+  // ---------------------------------------------------------------- host: remote paddle + snapshots
+  // The guest's paddle follows its reported position; a short history lets the host forgive lag
+  // when deciding whether the guest reached the ball.
+  function netMoveRemotePaddle(dt) {
+    const prev = A.x;
+    A.x += (clamp(net.rx, -padLim(A), padLim(A)) - A.x) * Math.min(1, dt * 22);
+    A.vx = (A.x - prev) / dt;
+    net.ahist.push([simTime, A.x]);
+    while (net.ahist.length && net.ahist[0][0] < simTime - 0.15) net.ahist.shift();
+  }
+  const reachX = (pad, xc) => (pad === A && net.role === 'host' && netLive() && net.ahist.length
+    ? Math.min(...net.ahist.map((h) => Math.abs(xc - h[1])))
+    : Math.abs(xc - pad.x));
+  const r3 = (v) => Math.round(v * 1000) / 1000;
+  function netSnapshot() {
+    const s = { m: gameMode, ph: phase, sc: [...score], st: r3(serveT) };
+    if (gameMode === 'hockey') {
+      const q = hk.puck;
+      s.h = [r3(q.x), r3(q.z), r3(q.vx), r3(q.vz), ORDER.indexOf(q.key), q.fire ? 1 : 0];
+      s.mp = [r3(MP.x), r3(MP.z), r3(MP.r)]; s.ma = [r3(MA.x), r3(MA.z), r3(MA.r)];
+      s.k = [hk.crossings, hk.side, r3(hk.clock)];
+      s.f = hk.fakes.map((f) => (f.active ? [r3(f.x), r3(f.z)] : 0));
+    } else {
+      s.b = [r3(ball.x), r3(ball.z), r3(ball.vx), r3(ball.vz), r3(ball.speed), r3(ball.curve), ball.spinLvl, ball.fire ? 1 : 0];
+      s.p = [r3(P.x), r3(P.w)]; s.a = [r3(A.x), r3(A.w)];
+      s.d = decoys.map((d) => (d.active ? [r3(d.x), r3(d.z)] : 0));
+      s.n = pins.map((q) => [r3(q.x), r3(q.z)]);
+    }
+    return s;
+  }
+  function netHostTick() {
+    if (net.role !== 'host' || !netLive()) return;
+    const now = performance.now();
+    if (now - net.lastRecv > 5000) { netOpponentLeft(); return; }
+    if (simTime < net.nextSend) return;
+    net.nextSend = simTime + (net.transport === 'p2p' ? 1 / 30 : 1 / 20);
+    netSend('s', netSnapshot());
+    if (net.events.length) { netSend('e', net.events, true); net.events = []; }
+  }
+
+  // ---------------------------------------------------------------- guest: own paddle, mirrored world
+  function netGuestStep(dt) {
+    simTime += dt;
+    const now = performance.now();
+    if (now - net.lastRecv > 5000) { netOpponentLeft(); return; }
+    // your own paddle/mallet moves instantly from your input
+    if (gameMode === 'hockey') hkMoveMallet(MP, dt); else humanPaddle(dt);
+    if (simTime >= net.nextSend) {
+      net.nextSend = simTime + (net.transport === 'p2p' ? 1 / 30 : 1 / 20);
+      netSend('i', gameMode === 'hockey' ? [r3(MP.x), r3(MP.z)] : [r3(P.x)]);
+    }
+    if (now > net.nextPing) { net.nextPing = now + 2000; netSend('ping', now, true); }
+    const s = net.snap;
+    if (s) { net.snap = null; netApplySnapshot(s); }
+    else if (phase === 'play') { // between snapshots: keep things moving with the same physics
+      if (gameMode === 'hockey') hkIntegrate(hk.puck, dt); else integrate(ball, dt);
+    }
+  }
+  function netApplySnapshot(s) {
+    if (s.m !== gameMode) return;
+    phase = s.ph === 'over' ? phase : s.ph;
+    serveT = s.st;
+    if (s.sc[1] !== score[0] || s.sc[0] !== score[1]) { score[0] = s.sc[1]; score[1] = s.sc[0]; updateHUD(); }
+    const lag = clamp(net.rtt / 2, 0, 0.15); // the snapshot is this old: run it forward that far
+    if (gameMode === 'hockey') {
+      const q = hk.puck;
+      Object.assign(q, { x: -s.h[0], z: -s.h[1], vx: -s.h[2], vz: -s.h[3], key: ORDER[s.h[4]] || q.key, fire: !!s.h[5] });
+      if (phase === 'play') for (let t = 0; t < lag; t += STEP) hkIntegrate(q, STEP);
+      // the host's near mallet is the far one here
+      const px = MA.x, pz = MA.z;
+      MA.x += (-s.mp[0] - MA.x) * 0.6; MA.z += (-s.mp[1] - MA.z) * 0.6; MA.r = s.mp[2];
+      MA.vx = (MA.x - px) * 20; MA.vz = (MA.z - pz) * 20;
+      MP.r = s.ma[2];
+      hk.crossings = s.k[0]; hk.side = -s.k[1]; hk.clock = s.k[2];
+      s.f.forEach((f, i) => { const g = hk.fakes[i]; g.active = !!f; if (f) { g.x = -f[0]; g.z = -f[1]; } });
+    } else {
+      Object.assign(ball, { x: -s.b[0], z: -s.b[1], vx: -s.b[2], vz: -s.b[3], speed: s.b[4], curve: -s.b[5], spinLvl: s.b[6], fire: !!s.b[7] });
+      if (phase === 'play' || phase === 'point') for (let t = 0; t < lag; t += STEP) integrate(ball, STEP);
+      const prev = A.x;
+      A.x += (-s.p[0] - A.x) * 0.6; A.w = s.p[1]; A.vx = (A.x - prev) * 20;
+      P.w = s.a[1];
+      s.d.forEach((d, i) => { const g = decoys[i]; g.active = !!d; if (d) { g.x = -d[0]; g.z = -d[1]; } });
+      netGuestPins(s.n);
+    }
+  }
+  function netGuestPins(list) {
+    const key = (q) => `${q[0]},${q[1]}`;
+    const want = new Set(list.map((q) => key([-q[0], -q[1]])));
+    for (let i = pins.length - 1; i >= 0; i--) if (!want.has(key([pins[i].x, pins[i].z]))) { pins[i].sink = 0; sinkingPins.push(pins[i]); pins.splice(i, 1); }
+    for (const q of list) {
+      const x = -q[0], z = -q[1];
+      if (pins.some((p) => p.x === x && p.z === z)) continue;
+      const vis = takePinMesh();
+      if (!vis) break;
+      vis.mesh.position.set(x, 0, z); vis.mesh.scale.y = 0.01; vis.mesh.visible = true;
+      pins.push({ x, z, mesh: vis.mesh, mat: vis.mat, rise: 0, flash: 0 });
+    }
+  }
+  function netGuestEvent(e) {
+    const [k, ...a] = e;
+    if (k === 's' && Sfx[a[0]]) Sfx[a[0]](...a[1]);
+    else if (k === 'b') burst(-a[0], a[1], -a[2], a[3], a[4], -a[5]);
+    else if (k === 'h') { const rig = a[0] > 0 ? farRig : nearRig; rig.pulse = 1; (a[0] > 0 ? (gameMode === 'hockey' ? MA : A) : (gameMode === 'hockey' ? MP : P)).pulse = 1; }
+    else if (k === 'score') scorePoint(-a[0]);
+    else if (k === 'over') gameOver();
+    else if (k === 'spin') popText(a[0] < 0 ? (a[1] > 1 ? `SPIN x${a[1]}` : 'SPIN!') : 'INCOMING SPIN', SPIN.css[a[1]]);
+    else if (k === 'pop') popText(a[0], a[1]);
+    else if (k === 'banner') showBanner(a[0], a[1]);
+  }
+  // the host's sounds play on the guest too
+  for (const name of Object.keys(Sfx)) {
+    if (typeof Sfx[name] !== 'function' || ['init', 'tone', 'good', 'bad', 'win', 'lose', 'bucket', 'splat'].includes(name)) continue;
+    const original = Sfx[name];
+    Sfx[name] = function (...args) { netEvent(['s', name, args]); return original.apply(this, args); };
+  }
+
+  // ---------------------------------------------------------------- online panel
+  function showOnline(status) {
+    $('#online').hidden = false;
+    $('#menu').hidden = true;
+    $('#onStatus').textContent = status;
+    $('#onPick').hidden = true; $('#onJoin').hidden = true;
+    if (net.role !== 'host') { $('#onLinkRow').hidden = true; $('#onQR').innerHTML = ''; $('#onCode').textContent = ''; }
+  }
+  function updateNetBadge() {
+    const b = $('#netBadge');
+    b.hidden = !net.live;
+    b.textContent = net.transport === 'p2p' ? 'ONLINE - DIRECT' : 'ONLINE - RELAY';
+  }
+  $('#btnOnline').addEventListener('click', () => { Sfx.init(); if (document.activeElement) document.activeElement.blur(); netHost(); });
+  $('#onCancel').addEventListener('click', () => { netLeave(); $('#online').hidden = true; toMenu(); });
+  $('#onCopy').addEventListener('click', async () => {
+    const input = $('#onLink');
+    try { await navigator.clipboard.writeText(input.value); $('#onCopy').textContent = 'COPIED'; }
+    catch (e) { input.select(); }
+    setTimeout(() => { $('#onCopy').textContent = 'COPY'; }, 1500);
+  });
+  $('#onShare').addEventListener('click', () => { navigator.share({ title: 'Pixel Pong', text: 'Play me in Pixel Pong!', url: $('#onLink').value }).catch(() => {}); });
+  $('#rosterJoin').addEventListener('click', (e) => {
+    const el = e.target.closest('.card');
+    if (!el || el.disabled) return;
+    youKey = el.dataset.char;
+    for (const c of document.querySelectorAll('#rosterJoin .card')) c.setAttribute('aria-pressed', String(c.dataset.char === youKey));
+  });
+  $('#onJoin').addEventListener('click', () => { Sfx.init(); netSend('join', { char: youKey }, true); showOnline('Starting...'); });
 
   // ---------------------------------------------------------------- boot
   buildRosters();
   setGameMode(gameMode);
   updateMuteBtn();
   toMenu();
+  const joinCode = (pageParams.get('join') || '').toUpperCase();
+  if (/^[A-Z]{4}$/.test(joinCode)) netJoin(joinCode);
 
   let last = performance.now(), acc = 0;
 
@@ -2193,7 +2629,7 @@
       // Scripted player that tracks the ball and taps `tapAt` seconds before contact.
       simPlayer(seconds, opts = {}) {
         if (!opts.resume) { setGameMode('pong'); startGame(); } // resume: keep playing the current match
-        dbg.diff = opts.diff || null; dbg.forcePower = opts.forcePower || null; dbg.forceAiPower = opts.forceAiPower || null; dbg.stats = freshStats();
+        dbg.diff = opts.diff || null; dbg.forcePower = opts.forcePower || null; dbg.forceAiPower = opts.forceAiPower || null; dbg.noAiPower = !!opts.noAiPower; dbg.stats = freshStats();
         let tapped = false, bad = 0;
         for (let i = 0, n = Math.round(seconds / STEP); i < n && phase !== 'over'; i++) {
           if (opts.idle) { /* stand still: the AI scores */ } else if (phase === 'play' && ball.vz > 0) {
@@ -2212,13 +2648,21 @@
         };
         if (!opts.keep) clearDecoys(); // count any still in flight so the books balance
         out.decoyPops = dbg.stats.decoyPops;
-        Object.assign(dbg, { diff: null, forcePower: null, forceAiPower: null, stats: null });
+        Object.assign(dbg, { diff: null, forcePower: null, forceAiPower: null, noAiPower: false, stats: null });
         if (!opts.keep) toMenu();
         return out;
       },
       // Live overrides for manual/visual checks, e.g. __pong.set({ spinP: 1, forceLevel: 3 }).
       set(opts = {}) { dbg.spinP = opts.spinP ?? null; dbg.forceLevel = opts.forceLevel || 0; dbg.forcePower = opts.forcePower || null; if (mode === 'game') P.isAI = !!opts.autoPlayer; },
       chars: () => [...ORDER],
+      // online test hooks
+      net: () => ({
+        role: net.role, live: net.live, transport: net.transport, mode: gameMode, phase, score: [...score], you: youKey, rival: aiKey,
+        ball: [ball.x, ball.z], puck: [hk.puck.x, hk.puck.z], px: P.x, ax: A.x, mp: [MP.x, MP.z], ma: [MA.x, MA.z],
+        slimeYou: slimes.get(nearRig).t >= 0, slimeAi: slimes.get(farRig).t >= 0, over: !$('#over').hidden, overTitle: $('#overTitle').textContent,
+      }),
+      netAim(x, z) { targetX = x; hk.aim.x = x; hk.aim.z = z; },
+      netForceScore(winSide) { scorePoint(winSide); },
       state: () => ({ you: youKey, mode: gameMode, phase, px: P.x, mx: MP.x, mz: MP.z, spinTap: spinTapAt }),
       mode(m) { setGameMode(m); startGame(); },
       // where the table's corners land on screen (normalised -1..1) with the current camera
@@ -2253,7 +2697,7 @@
       // Scripted Air Hockey player (driven by the hard AI but treated as you, so it earns boosts).
       hsimPlayer(seconds, opts = {}) {
         setGameMode('hockey'); startGame();
-        dbg.autoPlayer = !opts.idle; dbg.forcePower = opts.forcePower || null; dbg.forceAiPower = opts.forceAiPower || null; dbg.stats = freshStats(); // idle: your mallet never moves
+        dbg.autoPlayer = !opts.idle; dbg.forcePower = opts.forcePower || null; dbg.forceAiPower = opts.forceAiPower || null; dbg.noAiPower = !!opts.noAiPower; dbg.stats = freshStats(); // idle: your mallet never moves
         let bad = 0;
         for (let i = 0, n = Math.round(seconds / STEP); i < n && phase !== 'over'; i++) {
           step(STEP);
@@ -2267,7 +2711,7 @@
         }
         hk.fakes.forEach((f) => { if (f.active) hkPopFake(f, true); });
         const out = { ...dbg.stats, bad, score: [...score] };
-        Object.assign(dbg, { autoPlayer: false, forcePower: null, forceAiPower: null, stats: null });
+        Object.assign(dbg, { autoPlayer: false, forcePower: null, forceAiPower: null, noAiPower: false, stats: null });
         toMenu();
         return out;
       },

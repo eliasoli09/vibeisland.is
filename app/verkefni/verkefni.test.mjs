@@ -154,6 +154,21 @@ test("Pixel Pong works on phones", () => {
   assert.match(staticPongSource, /function fitsView\(cam\)/);
 });
 
+test("Pixel Pong can be played online", () => {
+  // the game: QR + link invites, a host-run match over Supabase Realtime / WebRTC
+  assert.match(staticPongSource, /id="btnOnline"/);
+  assert.match(staticPongSource, /function netHost\(\)/);
+  assert.match(staticPongSource, /function netJoin\(code\)/);
+  assert.match(staticPongSource, /RTCPeerConnection/);
+  assert.match(staticPongSource, /sb_publishable_/);
+  // the page passes an invite's room code on to the game and escapes in-app browsers
+  assert.match(pongDetailSource, /\?join=\$\{code\}/);
+  assert.match(pongDetailSource, /<OpenInBrowser \/>/);
+  const escape = readIfPresent("./pixel-pong/open-in-browser.tsx");
+  assert.match(escape, /intent:\/\//);
+  assert.match(escape, /x-safari-https:\/\//);
+});
+
 test("Pixel Pong has an Air Hockey mode", () => {
   assert.match(staticPongSource, /data-mode="hockey"/);
   assert.match(staticPongSource, /function hkStep\(dt\)/);
