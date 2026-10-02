@@ -46,6 +46,10 @@
   .title .b { color: var(--codex); }
   .sub { margin: 0; color: var(--muted); font-size: 22px; }
 
+  .modes { display: flex; border: 2px solid var(--edge); }
+  .mode { appearance: none; cursor: pointer; font: 11px var(--pix); padding: 11px 16px; background: transparent; color: var(--muted); border: 0; }
+  .mode:hover { color: var(--ink); }
+  .mode[aria-checked="true"] { background: var(--edge); color: var(--ink); }
   .picks { width: 100%; display: grid; gap: 10px; justify-items: center; }
   .pick { display: grid; gap: 8px; justify-items: center; }
   .pick-lbl { font: 10px var(--pix); color: var(--muted); letter-spacing: 1px; }
@@ -171,7 +175,7 @@
     </div>
     <div class="spin-hud">
       <div class="power" id="powerChip" hidden><span id="powerName">BIG PADDLE</span><b><em id="powerFill"></em></b></div>
-      <div class="pips" id="spinPips" aria-label="Spin streak">SPIN <i></i><i></i><i></i></div>
+      <div class="pips" id="spinPips" aria-label="Streak"><span id="pipsLbl">SPIN</span> <i></i><i></i><i></i></div>
     </div>
   </div>
 
@@ -182,6 +186,10 @@
   <div id="menu" class="overlay">
     <div class="panel">
       <h1 class="title"><span class="a">PIXEL</span> <span class="b">PONG</span></h1>
+      <div class="modes" role="radiogroup" aria-label="Game mode">
+        <button class="mode" id="modePong" type="button" role="radio" data-mode="pong" aria-checked="true">PING PONG</button>
+        <button class="mode" id="modeHockey" type="button" role="radio" data-mode="hockey" aria-checked="false">AIR HOCKEY</button>
+      </div>
       <p class="sub">Pick your fighter and who you want to beat.</p>
       <div class="picks">
         <div class="pick"><span class="pick-lbl">YOU</span><div class="roster" id="rosterYou" role="group" aria-label="Your fighter"></div></div>
@@ -194,7 +202,8 @@
         <button class="pill" id="dHard" type="button" role="radio" data-diff="hard" aria-checked="false">HARD</button>
       </div>
       <button class="btn" id="btnStart" type="button">START MATCH</button>
-      <p class="hint">Move the mouse left and right to steer your paddle (or <kbd>A</kbd> / <kbd>D</kbd>). Where the ball hits your paddle sets its angle. <strong>Click or tap just as the ball reaches your paddle to spin it</strong>. Chain 3 spins for a boost: BIG PADDLE, SLOW-MO, TRIPLE BALL or FIREBALL. Long matches grow pins on the table. <kbd>Space</kbd> pauses, <kbd>M</kbd> mutes.</p>
+      <p class="hint" id="hintHockey" hidden>Move the mouse to slide your mallet anywhere in your half (or <kbd>A</kbd> / <kbd>D</kbd>). Hit the character puck into the AI's goal. <strong>Three hard smashes in a row</strong> earn a boost: BIG MALLET, FIREBALL, TRIPLE PUCK or WIDE GOAL. Long rallies grow bumpers. <kbd>Space</kbd> pauses, <kbd>M</kbd> mutes.</p>
+      <p class="hint" id="hintPong">Move the mouse left and right to steer your paddle (or <kbd>A</kbd> / <kbd>D</kbd>). Where the ball hits your paddle sets its angle. <strong>Click or tap just as the ball reaches your paddle to spin it</strong>. Chain 3 spins for a boost: BIG PADDLE, SLOW-MO, TRIPLE BALL or FIREBALL. Long matches grow pins on the table. <kbd>Space</kbd> pauses, <kbd>M</kbd> mutes.</p>
     </div>
   </div>
 
@@ -368,6 +377,15 @@
     hard:   { speed: 14,   react: 0.09, aim: 0.9,  missP: 0.04, serve: 12.5, max: 28 },
   };
   const STEP = 1 / 120;               // fixed physics step
+  // Air Hockey: puck/mallet radii, goal mouth half-width, speeds, friction and bounciness.
+  // AI tuning (defErr = defence aim error) was measured so AI-vs-AI scores about every
+  // 25-35 s on Normal and ~70 s on Hard: matches to 7 stay snappy.
+  const HK = { R_P: 0.45, R_M: 0.55, GOAL: 1.5, MAXV: 24, FIREV: 34, FRICTION: 0.35, E_MALLET: 0.85, E_RAIL: 0.9, SMASH: 15, PIN_MAX: 4 };
+  const HDIFF = {
+    easy:   { speed: 9,  react: 0.25, aim: 1.4, hesitate: 0.2,  realP: 0.34, notice: 0.7,  corner: 0.0, defErr: 1.6 },
+    normal: { speed: 12, react: 0.15, aim: 0.9, hesitate: 0.1,  realP: 0.45, notice: 0.45, corner: 0.4, defErr: 2.0 },
+    hard:   { speed: 17, react: 0.08, aim: 0.5, hesitate: 0.04, realP: 0.6,  notice: 0.3,  corner: 0.7, defErr: 1.4 },
+  };
   const SPIN = {
     window: 0.33,                                   // a tap counts if it lands this long before contact
     curve: [0, 5.5, 8, 11],                         // sideways acceleration per spin level
@@ -418,10 +436,11 @@
   );
   top.position.y = -0.15; table.add(top);
   const lineMat = new THREE.MeshBasicMaterial({ color: 0xa8d8ff });
-  const addLine = (w, d, x, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, 0.02, d), lineMat); m.position.set(x, 0.01, z); table.add(m); };
+  const addLine = (w, d, x, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, 0.02, d), lineMat); m.position.set(x, 0.01, z); table.add(m); return m; };
+  const pongParts = new THREE.Group(); table.add(pongParts); // net + centre stripe (hidden in Air Hockey)
   addLine(0.07, HL * 2, -(HW - 0.035), 0); addLine(0.07, HL * 2, HW - 0.035, 0);
   addLine(HW * 2, 0.07, 0, -(HL - 0.035)); addLine(HW * 2, 0.07, 0, HL - 0.035);
-  addLine(0.05, HL * 2, 0, 0);
+  pongParts.add(addLine(0.05, HL * 2, 0, 0));
   const railMat = new THREE.MeshStandardMaterial({ color: 0x7cc4ff, emissive: 0x3a7bd5, emissiveIntensity: 0.8, transparent: true, opacity: 0.5, depthWrite: false });
   for (const s of [-1, 1]) {
     const rail = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.34, HL * 2), railMat);
@@ -439,12 +458,12 @@
     const tex = new THREE.CanvasTexture(c); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(HW * 2 / 0.22, 0.55 / 0.22);
     const net = new THREE.Mesh(new THREE.PlaneGeometry(HW * 2 + 0.3, 0.55),
       new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.45, side: THREE.DoubleSide, depthWrite: false }));
-    net.position.set(0, 0.275, 0); table.add(net);
+    net.position.set(0, 0.275, 0); pongParts.add(net);
     const band = new THREE.Mesh(new THREE.BoxGeometry(HW * 2 + 0.3, 0.06, 0.06), new THREE.MeshBasicMaterial({ color: 0xeaf4ff }));
-    band.position.set(0, 0.56, 0); table.add(band);
+    band.position.set(0, 0.56, 0); pongParts.add(band);
     for (const s of [-1, 1]) {
       const post = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.62, 0.1), new THREE.MeshStandardMaterial({ color: 0x6fa8ff, emissive: 0x2a5bc0 }));
-      post.position.set(s * (HW + 0.2), 0.31, 0); table.add(post);
+      post.position.set(s * (HW + 0.2), 0.31, 0); pongParts.add(post);
     }
   })();
 
@@ -642,8 +661,9 @@
     const chip = $('#powerChip');
     chip.hidden = !power.type;
     if (!power.type) return;
-    $('#powerName').textContent = POWER[power.type].name + (POWER[power.type].shot ? ' - NEXT HIT' : '');
-    chip.style.setProperty('--pc', POWER[power.type].css);
+    const pw = powers()[power.type];
+    $('#powerName').textContent = pw.name + (pw.shot ? ' - NEXT HIT' : '');
+    chip.style.setProperty('--pc', pw.css);
   }
   function updateMuteBtn() { $('#btnMute').textContent = Sfx.muted ? 'SOUND OFF' : 'SOUND ON'; }
 
@@ -669,10 +689,12 @@
       el.disabled = !you && k === youKey;
     }
     for (const el of document.querySelectorAll('.pill')) el.setAttribute('aria-checked', String(el.dataset.diff === diffKey));
+    for (const el of document.querySelectorAll('.mode')) el.setAttribute('aria-checked', String(el.dataset.mode === gameMode));
   }
 
   // ---------------------------------------------------------------- flow
   function resetServe() {
+    if (gameMode === 'hockey') { hkResetServe(); return; }
     phase = 'serve';
     serveT = firstServe ? 1.3 : 0.85;
     ball.x = 0; ball.z = 0; ball.vx = 0; ball.vz = 0;
@@ -704,6 +726,7 @@
     score[0] = score[1] = 0; updateHUD();
     P.isAI = false; P.x = 0; A.x = 0; targetX = 0;
     streak = 0; updateSpinHUD(); endPower(); resetPins();
+    MP.isAI = false; hkResetMallets();
     nearRig.loop = farRig.loop = false;
     assignChars();
     $('#menu').hidden = true; $('#over').hidden = true; $('#pauseMenu').hidden = true; $('#hud').hidden = false;
@@ -716,6 +739,7 @@
     mode = 'menu'; paused = false;
     P.isAI = true;
     streak = 0; updateSpinHUD(); endPower(); resetPins();
+    MP.isAI = true; hkResetMallets();
     nearRig.loop = farRig.loop = false;
     $('#menu').hidden = false; $('#over').hidden = true; $('#pauseMenu').hidden = true; $('#hud').hidden = true;
     document.body.classList.remove('playing');
@@ -837,18 +861,19 @@
 
   function awardPower() {
     endPower();
-    const kinds = Object.keys(POWER);
-    power.type = dbg.forcePower || kinds[Math.floor(Math.random() * kinds.length)];
-    power.t = POWER[power.type].dur;
+    const set = powers(), kinds = Object.keys(set);
+    power.type = dbg.forcePower && set[dbg.forcePower] ? dbg.forcePower : kinds[Math.floor(Math.random() * kinds.length)];
+    power.t = set[power.type].dur;
     power.fresh = true; // a shot boost starts on the *next* hit, not the one that earned it
-    if (power.type === 'big') P.w = PW * 1.5;
+    if (power.type === 'big') { if (gameMode === 'hockey') MP.r = HK.R_M * 1.5; else P.w = PW * 1.5; }
     if (dbg.stats) dbg.stats.powers++;
-    showBanner(POWER[power.type].name + '!', POWER[power.type].css);
+    showBanner(set[power.type].name + '!', set[power.type].css);
     Sfx.power();
     updatePowerHUD();
   }
   function endPower() {
     power.type = null; power.t = 0; P.w = PW;
+    MP.r = HK.R_M;
     updatePowerHUD();
   }
 
@@ -970,6 +995,12 @@
       popText(pins.length - before > 1 ? 'PINS!' : '+1 PIN', '#4ade80'); Sfx.pinUp();
     }
   }
+  // a free pin mesh from the pool, reusing one that's still sinking if all are taken
+  function takePinMesh() {
+    let vis = pinPool.find((v) => !pins.some((q) => q.mesh === v.mesh) && !sinkingPins.some((q) => q.mesh === v.mesh));
+    if (!vis && sinkingPins.length) { const old = sinkingPins.shift(); vis = pinPool.find((v) => v.mesh === old.mesh); }
+    return vis || null;
+  }
   function addPin() {
     for (let i = 0; i < 80; i++) {
       const x = rand(-3.2, 3.2), z = rand(-3.6, 3.6);
@@ -977,8 +1008,7 @@
       if (pins.some((p) => Math.hypot(p.x - x, p.z - z) < 2)) continue;   // never pinch the ball between pins
       if (Math.hypot(ball.x - x, ball.z - z) < 1.6) continue;            // don't grow under the ball
       if (decoys.some((d) => d.active && Math.hypot(d.x - x, d.z - z) < 1)) continue;
-      let vis = pinPool.find((v) => !pins.some((q) => q.mesh === v.mesh) && !sinkingPins.some((q) => q.mesh === v.mesh));
-      if (!vis && sinkingPins.length) { const old = sinkingPins.shift(); vis = pinPool.find((v) => v.mesh === old.mesh); } // reuse a pin that's still sinking
+      const vis = takePinMesh();
       if (!vis) return false;
       vis.mesh.position.set(x, 0, z); vis.mesh.scale.y = 0.01; vis.mesh.visible = true;
       pins.push({ x, z, mesh: vis.mesh, mat: vis.mat, rise: 0, flash: 0 });
@@ -1283,6 +1313,7 @@
   }
 
   function step(dt) {
+    if (gameMode === 'hockey') { hkStep(dt); return; }
     simTime += dt;
     if (power.type) { power.t -= dt; if (power.t <= 0) endPower(); }
     // player paddle
@@ -1311,6 +1342,444 @@
       }
     }
   }
+
+  // ================================================================ AIR HOCKEY
+  // Second game mode. Shares the table, characters, menu, HUD, slime, pins and boost system with
+  // Ping Pong. The puck is a little character; mallets move freely in their own half.
+  let gameMode = store.get('pp-mode', 'pong') === 'hockey' ? 'hockey' : 'pong';
+  const HPOWER = {
+    big: { name: 'BIG MALLET', dur: 8, css: '#5be38a' },
+    fire: { name: 'FIREBALL', dur: 10, css: '#ff6a3d', shot: true },    // next hit launches the puck at 28-34
+    triple: { name: 'TRIPLE PUCK', dur: 10, css: '#ffc34d', shot: true }, // next hit adds 2 fake pucks
+    wide: { name: 'WIDE GOAL', dur: 8, css: '#ff5d6c' },                // the AI's goal is 1.6x wider
+  };
+  const powers = () => (gameMode === 'hockey' ? HPOWER : POWER);
+  const goalHalf = (sz) => (sz < 0 && power.type === 'wide' ? HK.GOAL * 1.6 : HK.GOAL);
+
+  const hk = {
+    puck: { x: 0, z: 2.2, vx: 0, vz: 0, key: 'claude', fire: false },
+    fakes: [0, 1].map(() => ({ active: false, x: 0, z: 0, vx: 0, vz: 0, age: 0, fire: false })),
+    hits: 0, slowT: 0, aim: { x: 0, z: 6 },
+  };
+
+  // ---------------------------------------------------------------- hockey table parts
+  const hockeyParts = new THREE.Group(); table.add(hockeyParts);
+  (() => {
+    const glow = new THREE.MeshBasicMaterial({ color: 0xa8d8ff, side: THREE.DoubleSide });
+    const centre = new THREE.Mesh(new THREE.BoxGeometry(HW * 2, 0.02, 0.07), glow);
+    centre.position.y = 0.012; hockeyParts.add(centre);
+    const circle = new THREE.Mesh(new THREE.RingGeometry(1.45, 1.53, 64), glow);
+    circle.rotation.x = -Math.PI / 2; circle.position.y = 0.013; hockeyParts.add(circle);
+    for (const sz of [-1, 1]) {
+      const crease = new THREE.Mesh(new THREE.RingGeometry(2.0, 2.08, 48, 1, 0, Math.PI), glow);
+      crease.rotation.x = sz > 0 ? -Math.PI / 2 : Math.PI / 2; // the half-ring opens toward the table centre
+      crease.position.set(0, 0.013, sz * HL); hockeyParts.add(crease);
+    }
+  })();
+  // end rails with a goal slot; their inner ends move when WIDE GOAL widens a goal
+  const hkRails = {};
+  for (const sz of [-1, 1]) {
+    const segs = [-1, 1].map(() => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(1, 0.34, 0.14), railMat);
+      hockeyParts.add(m); return m;
+    });
+    const mouth = new THREE.Mesh(new THREE.BoxGeometry(1, 0.04, 0.06), new THREE.MeshBasicMaterial({ color: 0xff5d6c }));
+    const pit = new THREE.Mesh(new THREE.BoxGeometry(1, 0.05, 0.7), new THREE.MeshBasicMaterial({ color: 0x03050d }));
+    hockeyParts.add(mouth, pit);
+    hkRails[sz] = { segs, mouth, pit, gh: -1 };
+  }
+  function setGoalWidth(sz, gh) {
+    const r = hkRails[sz];
+    if (r.gh === gh) return;
+    r.gh = gh;
+    const len = HW + 0.14 - gh;
+    r.segs.forEach((m, i) => { const sx = i ? 1 : -1; m.scale.x = len; m.position.set(sx * (gh + len / 2), 0.17, sz * (HL + 0.07)); });
+    r.mouth.scale.x = gh * 2; r.mouth.position.set(0, 0.02, sz * HL);
+    r.pit.scale.x = gh * 2; r.pit.position.set(0, -0.02, sz * (HL + 0.38));
+  }
+  setGoalWidth(-1, HK.GOAL); setGoalWidth(1, HK.GOAL);
+
+  // ---------------------------------------------------------------- mallets and character pucks
+  function makeMallet(side) {
+    const group = new THREE.Group(), disc = new THREE.Group();
+    const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.35, roughness: 0.35 });
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.16, 40), mat); base.position.y = 0.08;
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.82, 0.06, 10, 40), mat); ring.rotation.x = Math.PI / 2; ring.position.y = 0.17;
+    disc.add(base, ring); // scaled by the mallet radius
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.28, 0.3, 20), mat); neck.position.y = 0.3;
+    const knob = new THREE.Mesh(new THREE.SphereGeometry(0.28, 20, 14), mat); knob.position.y = 0.52;
+    group.add(disc, neck, knob); group.visible = false; scene.add(group);
+    return { side, group, disc, mat, x: 0, z: side * 6, vx: 0, vz: 0, r: HK.R_M, isAI: true, think: 0, tx: 0, tz: side * 6, lastHit: -1, pulse: 0, track: null, trackSince: 0 };
+  }
+  const MP = makeMallet(1);  // you (near)
+  const MA = makeMallet(-1); // AI (far)
+  function makePuckSlot() {
+    const group = new THREE.Group(), holder = new THREE.Group();
+    const discMat = new THREE.MeshStandardMaterial({ color: 0xeaf4ff, emissive: 0x9fd3ff, emissiveIntensity: 0.6, roughness: 0.3 });
+    const disc = new THREE.Mesh(new THREE.CylinderGeometry(HK.R_P, HK.R_P, 0.1, 36), discMat); disc.position.y = 0.05;
+    holder.position.y = 0.1;
+    group.add(disc, holder); group.visible = false; scene.add(group);
+    return { group, holder, discMat, models: {}, key: null, angle: 0 };
+  }
+  const puckSlots = [makePuckSlot(), makePuckSlot(), makePuckSlot()]; // real puck + 2 TRIPLE PUCK fakes
+  function setPuckChar(slot, key) {
+    if (slot.key === key) return;
+    for (const k in slot.models) slot.models[k].visible = false;
+    if (!slot.models[key]) {
+      const def = CHARS[key], m = buildModel(def);
+      m.scale.setScalar((HK.R_P * 2 * 0.95) / (def.grid[0].length * def.voxel)); // a figurine as wide as the puck
+      slot.holder.add(m); slot.models[key] = m;
+    }
+    slot.models[key].visible = true; slot.key = key;
+  }
+
+  function setGameMode(m) {
+    gameMode = m === 'hockey' ? 'hockey' : 'pong';
+    store.set('pp-mode', gameMode);
+    const hockey = gameMode === 'hockey';
+    pongParts.visible = !hockey; hockeyParts.visible = hockey;
+    P.group.visible = A.group.visible = !hockey;
+    MP.group.visible = MA.group.visible = hockey;
+    if (!hockey) puckSlots.forEach((sl) => { sl.group.visible = false; });
+    $('#hintPong').hidden = hockey; $('#hintHockey').hidden = !hockey;
+    $('#pipsLbl').textContent = hockey ? 'SMASH' : 'SPIN';
+    for (const el of document.querySelectorAll('.mode')) el.setAttribute('aria-checked', String(el.dataset.mode === gameMode));
+  }
+
+  function hkResetMallets() {
+    for (const m of [MP, MA]) Object.assign(m, { x: 0, z: m.side * 6, vx: 0, vz: 0, r: HK.R_M, tx: 0, tz: m.side * 6, think: 0, track: null, lastHit: -1 });
+    hk.aim.x = 0; hk.aim.z = 6;
+  }
+  // The side that conceded gets the next puck: a new random character drops in on their side.
+  function hkResetServe() {
+    phase = 'serve';
+    serveT = firstServe ? 1.3 : 0.9;
+    const keys = ORDER.filter((k) => k !== hk.puck.key);
+    const key = keys[Math.floor(Math.random() * keys.length)];
+    Object.assign(hk.puck, { x: rand(-0.6, 0.6), z: (serveDir > 0 ? 1 : -1) * 2.2, vx: 0, vz: 0, key, fire: false });
+    hk.fakes.forEach((f) => { if (f.active) hkPopFake(f, true); });
+    hk.hits = 0; hk.slowT = 0; MA.track = MP.track = null;
+    if (dbg.stats) dbg.stats.puckKeys[key] = true;
+    if (mode === 'game' && firstServe) showBanner('READY?', 'var(--ink)');
+    firstServe = false;
+  }
+
+  // ---------------------------------------------------------------- hockey physics
+  const hkCap = (p) => {
+    const max = p.fire ? HK.FIREV : HK.MAXV, sp = Math.hypot(p.vx, p.vz);
+    if (sp > max) { p.vx *= max / sp; p.vz *= max / sp; }
+  };
+  function hkPinsPush(p) {
+    let hitPin = null;
+    for (const pin of pins) {
+      const dx = p.x - pin.x, dz = p.z - pin.z, min = HK.R_P + PIN_R, d2 = dx * dx + dz * dz;
+      if (d2 >= min * min) continue;
+      const d = Math.sqrt(d2), nx = d > 1e-6 ? dx / d : 1, nz = d > 1e-6 ? dz / d : 0;
+      p.x = pin.x + nx * (min + 1e-3); p.z = pin.z + nz * (min + 1e-3);
+      const vn = p.vx * nx + p.vz * nz;
+      if (vn < 0) {
+        p.vx -= 2 * vn * nx; p.vz -= 2 * vn * nz;
+        p.vx *= 1.05; p.vz *= 1.05; hkCap(p); // bumpers give a little kick
+      }
+      hitPin = pin;
+    }
+    return hitPin;
+  }
+  // Moves a puck (real or fake) one step: friction, rails, goal mouths, round goal posts, pins.
+  // Used for the real puck, the fakes and the AI's prediction, so they always agree.
+  function hkIntegrate(p, dt) {
+    const ev = { rail: false, pin: null };
+    const f = Math.exp(-HK.FRICTION * dt);
+    p.vx *= f; p.vz *= f;
+    p.x += p.vx * dt; p.z += p.vz * dt;
+    const xl = HW - HK.R_P, zl = HL - HK.R_P;
+    if (p.x > xl) { p.x = xl; p.vx = -Math.abs(p.vx) * HK.E_RAIL; ev.rail = true; }
+    else if (p.x < -xl) { p.x = -xl; p.vx = Math.abs(p.vx) * HK.E_RAIL; ev.rail = true; }
+    for (const sz of [-1, 1]) {
+      const gh = goalHalf(sz);
+      if (p.z * sz > HL - 0.05 && Math.abs(p.x) < gh + HK.R_P) {
+        // inside the goal channel: its side walls keep the puck in the slot
+        const cx = gh - 0.05;
+        if (Math.abs(p.x) > cx) { p.x = Math.sign(p.x) * cx; p.vx = -p.vx * HK.E_RAIL; }
+      } else if (p.z * sz > zl && Math.abs(p.x) >= gh) {
+        p.z = sz * zl; p.vz = -sz * Math.abs(p.vz) * HK.E_RAIL; ev.rail = true;
+      }
+      for (const sx of [-1, 1]) { // round goal posts at the corners of the mouth
+        const dx = p.x - sx * gh, dz = p.z - sz * HL, d = Math.hypot(dx, dz);
+        if (d >= HK.R_P || d < 1e-6) continue;
+        const nx = dx / d, nz = dz / d, vn = p.vx * nx + p.vz * nz;
+        p.x = sx * gh + nx * HK.R_P; p.z = sz * HL + nz * HK.R_P;
+        if (vn < 0) { p.vx -= (1 + HK.E_RAIL) * vn * nx; p.vz -= (1 + HK.E_RAIL) * vn * nz; }
+        ev.rail = true;
+      }
+    }
+    ev.pin = hkPinsPush(p);
+    return ev;
+  }
+  // Position-only clamp used after a mallet shove: rails (outside the goal mouths) and pins.
+  function hkClampPuck(p) {
+    const xl = HW - HK.R_P, zl = HL - HK.R_P;
+    p.x = clamp(p.x, -xl, xl);
+    for (const sz of [-1, 1]) if (p.z * sz > zl && Math.abs(p.x) >= goalHalf(sz)) p.z = sz * zl;
+    hkPinsPush(p);
+  }
+  function hkClampMallet(m) {
+    m.x = clamp(m.x, -(HW - m.r), HW - m.r);
+    m.z = m.side > 0 ? clamp(m.z, 0.3, HL - m.r) : clamp(m.z, -(HL - m.r), -0.3);
+    for (const pin of pins) { // mallets can't pass through bumpers
+      const dx = m.x - pin.x, dz = m.z - pin.z, min = m.r + PIN_R, d = Math.hypot(dx, dz);
+      if (d < min && d > 1e-6) { m.x = pin.x + (dx / d) * min; m.z = pin.z + (dz / d) * min; }
+    }
+  }
+  function hkMalletContact(p, m) {
+    const min = HK.R_P + m.r;
+    let dx = p.x - m.x, dz = p.z - m.z, d = Math.hypot(dx, dz);
+    if (d >= min) return;
+    const nx = d > 1e-6 ? dx / d : 0, nz = d > 1e-6 ? dz / d : -m.side;
+    p.x = m.x + nx * min; p.z = m.z + nz * min;
+    const vn = (p.vx - m.vx) * nx + (p.vz - m.vz) * nz;
+    if (vn < 0) {
+      p.vx -= (1 + HK.E_MALLET) * vn * nx; p.vz -= (1 + HK.E_MALLET) * vn * nz;
+      hkCap(p);
+      // how hard the mallet itself was moving into the puck (a still mallet is a block, not a smash)
+      const swing = m.vx * nx + m.vz * nz;
+      if (simTime - m.lastHit > 0.12) { m.lastHit = simTime; hkHit(p, m, swing); }
+    }
+    // pinned against a rail or bumper: the puck stays put and the mallet is pushed back instead
+    hkClampPuck(p);
+    dx = p.x - m.x; dz = p.z - m.z; d = Math.hypot(dx, dz);
+    if (d < min - 1e-4) {
+      const ux = d > 1e-6 ? dx / d : nx, uz = d > 1e-6 ? dz / d : nz;
+      m.x = p.x - ux * min; m.z = p.z - uz * min;
+      hkClampMallet(m);
+    }
+    if (dbg.stats) dbg.stats.maxPen = Math.max(dbg.stats.maxPen, min - Math.hypot(p.x - m.x, p.z - m.z));
+  }
+  function hkHit(p, m, swing) {
+    hk.hits++;
+    p.fire = false;
+    const rig = m === MP ? nearRig : farRig;
+    rig.pulse = 1; m.pulse = 1;
+    burst(p.x, 0.3, p.z, CHARS[rig.key].hex, 10, -m.side);
+    Sfx.hit(rig.key);
+    if (m === MP && !MP.isAI) {
+      if (power.type && HPOWER[power.type].shot) { // shot boosts fire on the hit after the one that earned them
+        if (power.fresh) power.fresh = false;
+        else if (power.type === 'fire') hkFire(p);
+        else if (power.type === 'triple') hkTriple(p);
+      }
+      if (swing >= 5 && Math.hypot(p.vx, p.vz) >= HK.SMASH) { // a real swing that sends it flying
+        streak++;
+        if (dbg.stats) dbg.stats.smashes++;
+        const n = ((streak - 1) % 3) + 1;
+        popText(n > 1 ? `SMASH x${n}` : 'SMASH!', '#ffc34d');
+        if (streak % 3 === 0) awardPower();
+      } else if (streak) streak = 0;
+      updateSpinHUD();
+    }
+    hkGrowPins();
+    (m === MP ? MA : MP).think = 0; // the other side reacts right away
+  }
+  function hkFire(p) {
+    // even a gentle touch becomes a blazing shot: 1.5x the hit, at least 28, at most 34
+    const sp = Math.hypot(p.vx, p.vz) || 1, k = clamp(sp * 1.5, 28, HK.FIREV) / sp;
+    p.vx *= k; p.vz *= k; p.fire = true;
+    if (dbg.stats) { dbg.stats.fireShots++; dbg.stats.fireSpeed = Math.max(dbg.stats.fireSpeed, sp * k); dbg.stats.fireMin = Math.min(dbg.stats.fireMin ?? Infinity, sp * k); }
+    popText('FIREBALL!', HPOWER.fire.css); Sfx.fire();
+    endPower();
+  }
+  function hkTriple(p) {
+    hk.fakes.forEach((f, i) => {
+      const a = i ? 0.4 : -0.4, c = Math.cos(a), s = Math.sin(a);
+      Object.assign(f, { active: true, x: p.x, z: p.z, vx: p.vx * c - p.vz * s, vz: p.vx * s + p.vz * c, age: 0, fire: p.fire });
+      if (dbg.stats) dbg.stats.fakes++;
+    });
+    // the AI first chases one of the three pucks, the real one only some of the time
+    const D = HDIFF[curDiffKey()];
+    MA.track = Math.random() < D.realP ? null : hk.fakes[Math.random() < 0.5 ? 0 : 1];
+    MA.trackSince = simTime;
+    popText('TRIPLE PUCK!', HPOWER.triple.css); Sfx.power();
+    endPower();
+  }
+  function hkPopFake(f, quiet) {
+    f.active = false;
+    if (!quiet) { burst(f.x, 0.3, f.z, 0xdfe7ff, 8, 1); Sfx.poof(); }
+    if (dbg.stats) dbg.stats.fakePops++;
+  }
+  function hkMoveFakes(dt) {
+    for (const f of hk.fakes) {
+      if (!f.active) continue;
+      hkIntegrate(f, dt);
+      f.age += dt;
+      // fakes never score: they pop as soon as they reach a goal mouth
+      const inMouth = [-1, 1].some((sz) => f.z * sz > HL - HK.R_P && Math.abs(f.x) < goalHalf(sz));
+      if (inMouth || f.age > 2.5 || phase !== 'play') hkPopFake(f);
+    }
+  }
+
+  // ---------------------------------------------------------------- hockey pins (per goal)
+  // 2 bumpers after 10 puck hits since the last goal, +1 every 6 more, max 4; cleared on every goal.
+  function hkGrowPins() {
+    const want = hk.hits < 10 ? 0 : Math.min(HK.PIN_MAX, 2 + Math.floor((hk.hits - 10) / 6));
+    const before = pins.length;
+    while (pins.length < want && hkAddPin()) { /* keep adding */ }
+    if (pins.length > before) { popText(pins.length - before > 1 ? 'BUMPERS!' : '+1 BUMPER', '#4ade80'); Sfx.pinUp(); }
+    if (dbg.stats && pins.length > before && pins.length === want) dbg.stats.pinsAtHit.push([hk.hits, pins.length]);
+  }
+  function hkAddPin() {
+    for (let i = 0; i < 120; i++) {
+      const x = rand(-3, 3), z = rand(-4.6, 4.6);
+      if (Math.hypot(x, z) < 1.9) continue;                                // centre circle stays clear
+      if (pins.some((q) => Math.hypot(q.x - x, q.z - z) < 2)) continue;
+      if (Math.hypot(hk.puck.x - x, hk.puck.z - z) < 1.6) continue;
+      if ([MP, MA].some((m) => Math.hypot(m.x - x, m.z - z) < 1.4)) continue;
+      const vis = takePinMesh();
+      if (!vis) return false;
+      vis.mesh.position.set(x, 0, z); vis.mesh.scale.y = 0.01; vis.mesh.visible = true;
+      pins.push({ x, z, mesh: vis.mesh, mat: vis.mat, rise: 0, flash: 0 });
+      return true;
+    }
+    return false;
+  }
+
+  // ---------------------------------------------------------------- hockey AI
+  function hkPredictX(p, zLine) {
+    const s = { x: p.x, z: p.z, vx: p.vx, vz: p.vz, fire: p.fire };
+    for (let i = 0; i < 360; i++) {
+      if ((s.vz > 0 && s.z >= zLine) || (s.vz < 0 && s.z <= zLine) || Math.hypot(s.vx, s.vz) < 0.5) break;
+      hkIntegrate(s, STEP);
+    }
+    return s.x;
+  }
+  function hkAI(m) {
+    const D = HDIFF[m === MP && dbg.autoPlayer ? 'hard' : curDiffKey()];
+    m.think -= STEP;
+    if (m.think > 0) return;
+    m.think = D.react;
+    if (Math.random() < D.hesitate) { m.think = D.react * 3; return; } // a moment of hesitation
+    const s = m.side, defZ = s * (HL - 1.8);
+    if (phase !== 'play') { m.tx = 0; m.tz = defZ; return; }
+    const noticed = !m.track || !m.track.active || simTime - m.trackSince > D.notice;
+    const p = noticed ? hk.puck : m.track;
+    const mine = p.z * s > 0.15, coming = p.vz * s > 0.8, speed = Math.hypot(p.vx, p.vz);
+    if (mine && (!coming || speed < 6)) {
+      // attack: line up behind the puck (goal side) and drive through it at the other goal
+      const gx = (Math.random() < 0.5 ? -1 : 1) * clamp(rand(D.corner, 1.25), 0, 1.25), gz = -s * HL; // aim for a corner of the goal
+      let ux = gx - p.x, uz = gz - p.z;
+      const L = Math.hypot(ux, uz) || 1; ux /= L; uz /= L;
+      const back = HK.R_P + m.r + 0.35, bx = p.x - ux * back, bz = p.z - uz * back;
+      if ((m.z - p.z) * s < 0.1) { m.tx = p.x + (Math.sign(m.x - p.x) || 1) * (back + 0.2); m.tz = bz + s * 0.6; } // go round it
+      else if (Math.hypot(m.x - bx, m.z - bz) < 0.4) { m.tx = p.x + ux * 1.5; m.tz = p.z + uz * 1.5; m.think = 0.22; } // strike
+      else { m.tx = bx; m.tz = bz; }
+    } else {
+      // defend: stand where the puck will cross our defence line
+      const px = coming ? hkPredictX(p, defZ) : p.x * 0.5;
+      m.tx = clamp(px + rand(-1, 1) * D.aim * D.defErr, -2.4, 2.4); m.tz = defZ;
+    }
+  }
+  function hkMoveMallet(m, dt) {
+    const auto = m.isAI || (m === MP && dbg.autoPlayer);
+    let tx, tz, maxV;
+    if (auto) { hkAI(m); tx = m.tx; tz = m.tz; maxV = HDIFF[m === MP && dbg.autoPlayer ? 'hard' : curDiffKey()].speed; }
+    else {
+      if (keyDir) hk.aim.x = clamp(hk.aim.x + keyDir * 13 * dt, -HW, HW);
+      tx = hk.aim.x; tz = hk.aim.z; maxV = 30;
+    }
+    tx = clamp(tx, -(HW - m.r), HW - m.r);
+    tz = m.side > 0 ? clamp(tz, 0.3, HL - m.r) : clamp(tz, -(HL - m.r), -0.3);
+    const dx = tx - m.x, dz = tz - m.z, dist = Math.hypot(dx, dz);
+    const stepLen = Math.min(auto ? dist : dist * Math.min(1, dt * 25), maxV * dt);
+    const k = dist > 1e-6 ? stepLen / dist : 0;
+    const px = m.x, pz = m.z;
+    m.x += dx * k; m.z += dz * k;
+    hkClampMallet(m);
+    m.vx = (m.x - px) / dt; m.vz = (m.z - pz) / dt;
+  }
+
+  // ---------------------------------------------------------------- hockey step
+  function hkStep(dt) {
+    simTime += dt;
+    if (power.type) { power.t -= dt; if (power.t <= 0) endPower(); }
+    hkMoveMallet(MP, dt); hkMoveMallet(MA, dt);
+    const p = hk.puck;
+    if (phase === 'serve') {
+      // the puck is dropping in: mallets can't shove it yet
+      for (const m of [MP, MA]) {
+        const dx = m.x - p.x, dz = m.z - p.z, min = HK.R_P + m.r, d = Math.hypot(dx, dz);
+        if (d < min) { m.x = p.x + (d > 1e-6 ? dx / d : 0) * min; m.z = p.z + (d > 1e-6 ? dz / d : m.side) * min; hkClampMallet(m); }
+      }
+      serveT -= dt;
+      if (serveT <= 0) { phase = 'play'; if (mode === 'game' && score[0] + score[1] === 0) showBanner('GO!', 'var(--you)'); }
+      return;
+    }
+    if (phase === 'play') {
+      const ev = hkIntegrate(p, dt);
+      if (ev.rail) Sfx.wall();
+      if (ev.pin) { Sfx.pin(); ev.pin.flash = 1; if (dbg.stats) dbg.stats.pinHits++; }
+      hkMalletContact(p, MP); hkMalletContact(p, MA);
+      hkMoveFakes(dt);
+      for (const sz of [-1, 1]) {
+        if (p.z * sz > HL + 0.25 && Math.abs(p.x) < goalHalf(sz)) { // GOAL: the side that owns this goal concedes
+          burst(p.x, 0.3, sz * HL, 0xffffff, 16, -sz); Sfx.wall();
+          scorePoint(-sz);
+          return;
+        }
+      }
+      // anti-stall: a puck that barely moves for 4 s is dropped again
+      hk.slowT = Math.hypot(p.vx, p.vz) < 1.2 ? hk.slowT + dt : 0;
+      if (dbg.stats) dbg.stats.maxSlow = Math.max(dbg.stats.maxSlow, hk.slowT);
+      if (hk.slowT > 4) {
+        popText('FACE-OFF', '#43e0ff');
+        if (dbg.stats) dbg.stats.faceoffs++;
+        serveDir = p.z >= 0 ? 1 : -1;
+        clearPins();
+        hkResetServe();
+      }
+      if (!Number.isFinite(p.x) || !Number.isFinite(p.z)) hkResetServe();
+      return;
+    }
+    if (phase === 'point') {
+      pointT -= dt;
+      if (pointT <= 0) {
+        if (mode === 'game' && (score[0] >= WIN || score[1] >= WIN)) gameOver();
+        else hkResetServe();
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------- hockey visuals
+  function hkRender(dt) {
+    for (const m of [MP, MA]) {
+      m.pulse = Math.max(0, m.pulse - dt * 4);
+      m.group.position.set(m.x, 0, m.z);
+      m.disc.scale.set(m.r, 1, m.r);
+      m.mat.emissiveIntensity = 0.35 + m.pulse * 0.9;
+      m.mat.color.setHex(CHARS[(m === MP ? nearRig : farRig).key].hex);
+      m.mat.emissive.setHex(CHARS[(m === MP ? nearRig : farRig).key].hex);
+    }
+    setGoalWidth(-1, goalHalf(-1));
+    const p = hk.puck, live = phase === 'serve' || phase === 'play';
+    const real = puckSlots[0];
+    setPuckChar(real, p.key);
+    real.group.visible = live;
+    let y = 0;
+    if (phase === 'serve') y = 3.5 * (1 - bounceOut(clamp(1 - serveT / 0.9, 0, 1))); // drops in from above
+    real.group.position.set(p.x, y, p.z);
+    real.angle += Math.hypot(p.vx, p.vz) * dt * 0.8; // spins faster the harder it's hit
+    real.holder.rotation.y = real.angle;
+    real.discMat.emissive.setHex(p.fire ? FIRE_COLOR : 0x9fd3ff);
+    if (p.fire && live && Math.random() < 0.7) burst(p.x, 0.25, p.z, FIRE_COLOR, 1, 0);
+    hk.fakes.forEach((f, i) => {
+      const sl = puckSlots[i + 1];
+      sl.group.visible = f.active;
+      if (!f.active) return;
+      setPuckChar(sl, p.key); // fakes look exactly like the real puck
+      sl.group.position.set(f.x, 0, f.z);
+      sl.angle += Math.hypot(f.vx, f.vz) * dt * 0.8; sl.holder.rotation.y = sl.angle;
+      sl.discMat.emissive.setHex(f.fire ? FIRE_COLOR : 0x9fd3ff);
+    });
+  }
+
 
   // ---------------------------------------------------------------- visuals
   function animRig(rig, pad, dt) {
@@ -1353,7 +1822,7 @@
       pad.tapGlow = Math.max(0, pad.tapGlow - dt * 5);
       pad.mat.emissiveIntensity = 0.35 + pad.pulse * 0.9 + pad.tapGlow * 0.7;
     }
-    if (power.type) $('#powerFill').style.width = `${clamp(power.t / POWER[power.type].dur, 0, 1) * 100}%`;
+    if (power.type) $('#powerFill').style.width = `${clamp(power.t / powers()[power.type].dur, 0, 1) * 100}%`;
     const look = ball.fire ? 4 : ball.spinLvl; // 0-3 spin level, 4 = FIREBALL
     if (shownSpin !== look) {
       shownSpin = look;
@@ -1389,11 +1858,13 @@
       if (p.sink >= 1) { p.mesh.visible = false; sinkingPins.splice(i, 1); }
     }
     slimes.forEach((sl) => updateSlime(sl, dt));
-    animRig(nearRig, P, dt);
-    animRig(farRig, A, dt);
+    const hockey = gameMode === 'hockey';
+    animRig(nearRig, hockey ? MP : P, dt);
+    animRig(farRig, hockey ? MA : A, dt);
+    if (hockey) hkRender(dt);
 
-    // ball
-    const showBall = phase !== 'over' && Math.abs(ball.z) < HL + 4;
+    // ball (Ping Pong only)
+    const showBall = !hockey && phase !== 'over' && Math.abs(ball.z) < HL + 4;
     let by = phase === 'serve' ? ballY(0) + Math.sin(time * 6) * 0.08 : ballY(ball.z);
     ballMesh.visible = ballGlow.visible = showBall && by > -2.8;
     ballMesh.position.set(ball.x, by, ball.z);
@@ -1408,7 +1879,7 @@
       shadow.scale.setScalar(1 + h * 0.4);
       shadow.material.opacity = clamp(0.5 - h * 0.25, 0.12, 0.5);
     }
-    drawTrail(trail, trailHist, ball.x, by, ball.z, phase === 'play' || phase === 'point', ballMesh.visible);
+    drawTrail(trail, trailHist, ball.x, by, ball.z, !hockey && (phase === 'play' || phase === 'point'), ballMesh.visible);
 
     // sparks
     for (const s of sparks) {
@@ -1422,7 +1893,7 @@
 
     // camera
     shake = Math.max(0, shake - dt * 1.6);
-    const sway = mode === 'game' ? P.x * 0.1 : Math.sin(time * 0.25) * 1.2;
+    const sway = mode === 'game' ? (hockey ? MP.x : P.x) * 0.1 : Math.sin(time * 0.25) * 1.2;
     camera.position.set(
       camBase.pos.x + sway + (Math.random() - 0.5) * shake * 0.5,
       camBase.pos.y + (Math.random() - 0.5) * shake * 0.5,
@@ -1448,16 +1919,19 @@
   const ndc = new THREE.Vector2();
   const paddlePlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -PZ);
   const hitPt = new THREE.Vector3();
+  const tablePlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
   function aimAt(e) {
     ndc.set((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
     ray.setFromCamera(ndc, refCam);
     if (ray.ray.intersectPlane(paddlePlane, hitPt)) targetX = clamp(hitPt.x, -padLim(P), padLim(P));
+    // Air Hockey: the mallet goes where the pointer touches the table
+    if (ray.ray.intersectPlane(tablePlane, hitPt)) { hk.aim.x = hitPt.x; hk.aim.z = hitPt.z; }
   }
   window.addEventListener('pointermove', aimAt);
 
   // Spin: a click / trackpad tap / touch on the table (not on buttons), or Shift.
   function tapSpin() {
-    if (mode !== 'game' || paused || phase !== 'play') return;
+    if (gameMode === 'hockey' || mode !== 'game' || paused || phase !== 'play') return;
     spinTapAt = simTime;
     P.tapGlow = 1;
   }
@@ -1489,6 +1963,10 @@
   document.addEventListener('visibilitychange', () => { if (document.hidden && mode === 'game' && !paused) setPaused(true); });
 
   // Buttons
+  $('.modes').addEventListener('click', (e) => {
+    const el = e.target.closest('.mode');
+    if (el) { setGameMode(el.dataset.mode); toMenu(); }
+  });
   $('.picks').addEventListener('click', (e) => {
     const el = e.target.closest('.card');
     if (!el || el.disabled) return;
@@ -1511,6 +1989,7 @@
 
   // ---------------------------------------------------------------- boot
   buildRosters();
+  setGameMode(gameMode);
   updateMuteBtn();
   toMenu();
 
@@ -1521,11 +2000,14 @@
       ret: [0, 0, 0, 0], miss: [0, 0, 0, 0], bend: [0, 0, 0, 0], bendN: [0, 0, 0, 0], powers: 0, spinShots: 0, maxStreak: 0,
       decoys: 0, decoyPops: 0, tripleShots: 0, tripleRet: 0, tripleMiss: 0, fireShots: 0, fireSpeedUp: null,
       pinHits: 0, maxPins: 0, pinsAtTrip: [], pinRallies: 0, pinsAtServe: 0, slimes: { you: 0, ai: 0 }, slimeColors: { you: null, ai: null },
+      maxSlow: 0, faceoffs: 0, maxPen: 0, puckKeys: {}, pinsAtHit: [], pinsAtFaceoff: 0, smashes: 0,
+      fakes: 0, fakePops: 0, fakeGoals: 0, fireSpeed: 0, bigSeen: 0, wideSeen: 0,
     });
     const badBall = () => !Number.isFinite(ball.x) || !Number.isFinite(ball.z) || Math.abs(ball.x) > WL + 1e-6;
     window.__pong = {
       // Headless AI-vs-AI run: invariants plus return/miss counts per spin level.
       sim(seconds, opts = {}) {
+        setGameMode('pong');
         toMenu();
         dbg.diff = opts.diff || null; dbg.spinP = opts.spinP ?? null; dbg.forceLevel = opts.forceLevel || 0;
         dbg.stats = freshStats();
@@ -1577,6 +2059,45 @@
       // Live overrides for manual/visual checks, e.g. __pong.set({ spinP: 1, forceLevel: 3 }).
       set(opts = {}) { dbg.spinP = opts.spinP ?? null; dbg.forceLevel = opts.forceLevel || 0; dbg.forcePower = opts.forcePower || null; if (mode === 'game') P.isAI = !!opts.autoPlayer; },
       chars: () => [...ORDER],
+      tuneHockey(diff, values) { Object.assign(HDIFF[diff], values); return HDIFF[diff]; },
+      parts: () => ({ pong: pongParts.visible && P.group.visible, hockey: hockeyParts.visible && MP.group.visible }),
+      // Headless Air Hockey AI-vs-AI run.
+      hsim(seconds, opts = {}) {
+        setGameMode('hockey'); toMenu();
+        dbg.diff = opts.diff || null; dbg.stats = freshStats();
+        let bad = 0, goals = 0;
+        for (let i = 0, n = Math.round(seconds / STEP); i < n; i++) {
+          const before = phase;
+          step(STEP);
+          const q = hk.puck;
+          if (!Number.isFinite(q.x) || !Number.isFinite(q.z) || Math.abs(q.x) > HW || Math.abs(q.z) > HL + 1) bad++;
+          if (before === 'play' && phase === 'point') goals++;
+          if (phase === 'serve' && pins.length) dbg.stats.pinsAtFaceoff++;
+          dbg.stats.maxPins = Math.max(dbg.stats.maxPins, pins.length);
+        }
+        const out = { bad, goals, ...dbg.stats, puckKeys: Object.keys(dbg.stats.puckKeys) };
+        Object.assign(dbg, { diff: null, stats: null });
+        toMenu();
+        return out;
+      },
+      // Scripted Air Hockey player (driven by the hard AI but treated as you, so it earns boosts).
+      hsimPlayer(seconds, opts = {}) {
+        setGameMode('hockey'); startGame();
+        dbg.autoPlayer = !opts.idle; dbg.forcePower = opts.forcePower || null; dbg.stats = freshStats(); // idle: your mallet never moves
+        let bad = 0;
+        for (let i = 0, n = Math.round(seconds / STEP); i < n && phase !== 'over'; i++) {
+          step(STEP);
+          const q = hk.puck;
+          if (!Number.isFinite(q.x) || !Number.isFinite(q.z) || Math.abs(q.x) > HW || Math.abs(q.z) > HL + 1) bad++;
+          dbg.stats.bigSeen = Math.max(dbg.stats.bigSeen, MP.r / HK.R_M);
+          dbg.stats.wideSeen = Math.max(dbg.stats.wideSeen, goalHalf(-1));
+        }
+        hk.fakes.forEach((f) => { if (f.active) hkPopFake(f, true); });
+        const out = { ...dbg.stats, bad, score: [...score] };
+        Object.assign(dbg, { autoPlayer: false, forcePower: null, stats: null });
+        toMenu();
+        return out;
+      },
       // Trigger / inspect the bucket slime on 'you' (near) or 'ai' (far).
       slime(who) { slimeOn(who === 'you' ? nearRig : farRig, CHARS[who === 'you' ? aiKey : youKey], who === 'you'); },
       // Advance the slime animation in fixed 1/60 s steps (independent of the machine's frame rate).
@@ -1592,7 +2113,7 @@
         };
       },
       // Picks you + opponent through the same rules as the menu, starts a match, reports who's where.
-      setup(you, ai) { pickYou(you); pickAi(ai); startGame(); const got = [nearRig.key, farRig.key]; toMenu(); return got; },
+      setup(you, ai) { setGameMode('pong'); pickYou(you); pickAi(ai); startGame(); const got = [nearRig.key, farRig.key]; toMenu(); return got; },
     };
   }
   function frame(now) {
