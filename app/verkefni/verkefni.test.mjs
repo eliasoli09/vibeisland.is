@@ -140,6 +140,16 @@ test("Pixel Pong has five fighters, new boosts, table pins and slime", () => {
   assert.match(projectsSource, /Muse, Grok og Clawd/);
 });
 
+test("Pixel Pong has an Air Hockey mode", () => {
+  assert.match(staticPongSource, /data-mode="hockey"/);
+  assert.match(staticPongSource, /function hkStep\(dt\)/);
+  assert.match(staticPongSource, /function hkIntegrate\(p, dt\)/);
+  assert.match(staticPongSource, /'TRIPLE PUCK'/);
+  assert.match(staticPongSource, /'WIDE GOAL'/);
+  assert.match(projectsSource, /lofthokkí/);
+  assert.match(pongDetailSource, /lofthokkí/);
+});
+
 const auroraDetailSource = readIfPresent("./nordurljos/page.tsx");
 const staticAuroraUrl = fileUrl("../../public/projects/nordurljos/app.html");
 const staticAuroraSource = existsSync(staticAuroraUrl) ? readFileSync(staticAuroraUrl, "utf8") : "";
