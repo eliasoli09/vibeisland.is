@@ -70,6 +70,7 @@ test("static viewer keeps the complete Vallaeyjar feature set", () => {
 
 const pongDetailSource = readIfPresent("./pixel-pong/page.tsx");
 const embedSource = readIfPresent("./project-embed.tsx");
+const playSource = readIfPresent("./project-play.tsx");
 const staticPongUrl = fileUrl("../../public/projects/pixel-pong/game.html");
 const staticPongSource = existsSync(staticPongUrl) ? readFileSync(staticPongUrl, "utf8") : "";
 
@@ -99,8 +100,9 @@ test("Pixel Pong is playable directly on the projects index", () => {
   assert.match(projectsSource, /playInline\?: boolean/);
   assert.match(projectsSource, /slug: "pixel-pong",[\s\S]*playInline: true/);
   assert.match(indexSource, /project\.playInline \?/);
-  assert.match(indexSource, /<ProjectEmbed/);
-  assert.match(indexSource, /loading="lazy"/);
+  assert.match(indexSource, /<ProjectPlay/);
+  assert.match(playSource, /<ProjectEmbed/);
+  assert.match(playSource, /loading="lazy"/);
   assert.match(indexSource, /<Image/);
 });
 
@@ -138,6 +140,18 @@ test("Pixel Pong has five fighters, new boosts, table pins and slime", () => {
   assert.match(staticPongSource, /function slimeOn\(/);
   assert.match(staticPongSource, /id="slimeScreen"/);
   assert.match(projectsSource, /Muse, Grok og Clawd/);
+});
+
+test("Pixel Pong works on phones", () => {
+  // phones get a preview + SPILA button that opens the full-screen game page (no inline scroll trap)
+  assert.match(playSource, /pointer: coarse/);
+  assert.match(playSource, /data-play=\{slug\}/);
+  assert.match(playSource, /Spila/);
+  // the game itself: touch drag, a SPIN button and a menu that never gets cut off
+  assert.match(staticPongSource, /id="spinBtn"/);
+  assert.match(staticPongSource, /class="h-touch"/);
+  assert.match(staticPongSource, /\.overlay > \.panel \{ margin: auto; \}/);
+  assert.match(staticPongSource, /function fitsView\(cam\)/);
 });
 
 test("Pixel Pong has an Air Hockey mode", () => {

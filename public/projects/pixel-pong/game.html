@@ -27,12 +27,14 @@
   }
   [hidden] { display: none !important; }
   html, body { height: 100%; background: var(--bg); }
-  body { margin: 0; color: var(--ink); font: 20px/1.25 "VT323", ui-monospace, Menlo, monospace; overflow: hidden; }
+  body { margin: 0; color: var(--ink); font: 20px/1.25 "VT323", ui-monospace, Menlo, monospace; overflow: hidden; overscroll-behavior: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+  button { touch-action: manipulation; }
   #app { position: fixed; inset: 0; overflow: hidden; }
   #scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
   body.playing #scene { cursor: none; }
 
-  .overlay { position: absolute; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center; padding: 16px; overflow: auto; }
+  .overlay { position: absolute; inset: 0; z-index: 5; display: flex; align-items: flex-start; justify-content: center; padding: 16px; overflow: auto; -webkit-overflow-scrolling: touch; }
+  .overlay > .panel { margin: auto; } /* centred when it fits, scrollable from the top when it doesn't */
   .panel {
     width: 100%; max-width: 720px; display: flex; flex-direction: column; align-items: center; gap: 18px; text-align: center;
     padding-block: 26px; padding-inline: clamp(16px, 4vw, 36px);
@@ -147,9 +149,36 @@
     .hud-btns { top: auto; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
   }
   @media (max-width: 560px) {
-    .card { width: 86px; }
     .who .lbl { display: none; }
   }
+  /* compact menu on phones (portrait and landscape) */
+  @media (max-width: 600px), (max-height: 540px) {
+    .panel { gap: 10px; padding-block: 14px; padding-inline: 12px; }
+    .title { font-size: 22px; }
+    .sub { font-size: 17px; }
+    .roster { gap: 5px; flex-wrap: nowrap; }
+    .card { width: 58px; padding: 6px 3px 5px; gap: 5px; }
+    .card .art { width: 38px; }
+    .card .nm { font-size: 6px; }
+    .pick-lbl, .vs { font-size: 9px; }
+    .mode { font-size: 9px; padding: 9px 11px; }
+    .pill { font-size: 9px; padding: 8px 10px; }
+    .btn { font-size: 12px; padding: 12px 18px; }
+    .hint { font-size: 16px; }
+  }
+  @media (max-height: 540px) and (orientation: landscape) {
+    .panel { max-width: 860px; }
+    .picks { grid-template-columns: 1fr auto 1fr; align-items: center; }
+  }
+  /* touch screens: on-screen SPIN button, pause/sound tucked under the scoreboard, touch wording */
+  .h-touch { display: none; }
+  body.touch .h-touch { display: inline; }
+  body.touch .h-mouse { display: none; }
+  #spinBtn { position: absolute; right: calc(16px + env(safe-area-inset-right, 0px)); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); width: 84px; height: 84px; border-radius: 50%; border: 3px solid var(--cyan); background: rgba(5, 9, 24, 0.7); color: var(--cyan); font: 12px var(--pix); pointer-events: auto; display: none; box-shadow: 0 0 22px rgba(67, 224, 255, 0.35); }
+  #spinBtn:active { background: rgba(67, 224, 255, 0.3); transform: scale(0.94); }
+  body.touch.mode-pong #spinBtn { display: block; }
+  body.touch .hud-btns { top: calc(66px + env(safe-area-inset-top, 0px)); bottom: auto; right: auto; left: 50%; transform: translateX(-50%); }
+  body.touch .first-to { display: none; }
   @media (prefers-reduced-motion: reduce) {
     .card { transition: none; }
     #overArt svg { animation: none; }
@@ -173,6 +202,7 @@
       <button id="btnMute" type="button">SOUND ON</button>
       <button id="btnPause" type="button">PAUSE</button>
     </div>
+    <button id="spinBtn" type="button" aria-label="Spin">SPIN</button>
     <div class="spin-hud">
       <div class="power" id="powerChip" hidden><span id="powerName">BIG PADDLE</span><b><em id="powerFill"></em></b></div>
       <div class="pips" id="spinPips" aria-label="Streak"><span id="pipsLbl">SPIN</span> <i></i><i></i><i></i></div>
@@ -202,8 +232,8 @@
         <button class="pill" id="dHard" type="button" role="radio" data-diff="hard" aria-checked="false">HARD</button>
       </div>
       <button class="btn" id="btnStart" type="button">START MATCH</button>
-      <p class="hint" id="hintHockey" hidden>Move the mouse to slide your mallet anywhere in your half (or <kbd>A</kbd> / <kbd>D</kbd>). Hit the character puck into the AI's goal. <strong>Three hard smashes in a row</strong> earn a boost: BIG MALLET, FIREBALL, TRIPLE PUCK or WIDE GOAL. Long rallies grow bumpers. <kbd>Space</kbd> pauses, <kbd>M</kbd> mutes.</p>
-      <p class="hint" id="hintPong">Move the mouse left and right to steer your paddle (or <kbd>A</kbd> / <kbd>D</kbd>). Where the ball hits your paddle sets its angle. <strong>Click or tap just as the ball reaches your paddle to spin it</strong>. Chain 3 spins for a boost: BIG PADDLE, SLOW-MO, TRIPLE BALL or FIREBALL. Long matches grow pins on the table. <kbd>Space</kbd> pauses, <kbd>M</kbd> mutes.</p>
+      <p class="hint" id="hintHockey" hidden><span class="h-mouse">Move the mouse to slide your mallet anywhere in your half (or <kbd>A</kbd> / <kbd>D</kbd>). Hit the character puck into the AI's goal. <strong>Three hard smashes in a row</strong> earn a boost: BIG MALLET, FIREBALL, TRIPLE PUCK or WIDE GOAL. Long rallies grow bumpers. <kbd>Space</kbd> pauses, <kbd>M</kbd> mutes.</span><span class="h-touch"><strong>Drag anywhere</strong> to slide your mallet around your half, and flick fast to smash. Three smashes in a row earn a boost: BIG MALLET, FIREBALL, TRIPLE PUCK or WIDE GOAL. Long rallies grow bumpers.</span></p>
+      <p class="hint" id="hintPong"><span class="h-mouse">Move the mouse left and right to steer your paddle (or <kbd>A</kbd> / <kbd>D</kbd>). Where the ball hits your paddle sets its angle. <strong>Click or tap just as the ball reaches your paddle to spin it</strong>. Chain 3 spins for a boost: BIG PADDLE, SLOW-MO, TRIPLE BALL or FIREBALL. Long matches grow pins on the table. <kbd>Space</kbd> pauses, <kbd>M</kbd> mutes.</span><span class="h-touch"><strong>Drag anywhere</strong> to steer your paddle. Tap <strong>SPIN</strong> just as the ball reaches you to spin it; 3 spins in a row earn a boost: BIG PADDLE, SLOW-MO, TRIPLE BALL or FIREBALL. Long rallies grow pins on the table.</span></p>
     </div>
   </div>
 
@@ -358,7 +388,8 @@
   // ---------------------------------------------------------------- three setup
   const canvas = $('#scene');
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  const COARSE = matchMedia('(pointer: coarse)').matches; // phones and tablets
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, COARSE ? 1.5 : 2));
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x070b1a);
   scene.fog = new THREE.Fog(0x070b1a, 22, 60);
@@ -1443,6 +1474,7 @@
     if (!hockey) puckSlots.forEach((sl) => { sl.group.visible = false; });
     $('#hintPong').hidden = hockey; $('#hintHockey').hidden = !hockey;
     $('#pipsLbl').textContent = hockey ? 'SMASH' : 'SPIN';
+    document.body.classList.toggle('mode-pong', !hockey); document.body.classList.toggle('mode-hockey', hockey);
     for (const el of document.querySelectorAll('.mode')) el.setAttribute('aria-checked', String(el.dataset.mode === gameMode));
   }
 
@@ -1903,13 +1935,39 @@
   }
 
   // ---------------------------------------------------------------- resize & input
+  // Wide screens keep the classic view. Taller screens (portrait phones, tablets) look down more
+  // steeply and move the camera to the closest distance where the whole table, both characters
+  // and room for the scoreboard fit, so the long table fills the tall screen.
+  const FIT_POINTS = [];
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) FIT_POINTS.push(new THREE.Vector3(sx * (HW + 0.3), 0, sz * (HL + 0.3)));
+  FIT_POINTS.push(new THREE.Vector3(0, 3.4, -9.3), new THREE.Vector3(0, 0.6, 8.7), new THREE.Vector3(0, -0.9, 8.7));
+  const fitTmp = new THREE.Vector3();
+  function fitsView(cam) {
+    cam.updateMatrixWorld();
+    return FIT_POINTS.every((pt) => {
+      fitTmp.copy(pt).project(cam);
+      return Math.abs(fitTmp.x) <= 0.96 && fitTmp.y >= -0.88 && fitTmp.y <= 0.62;
+    });
+  }
   function resize() {
     const w = window.innerWidth, h = window.innerHeight, a = w / h;
     renderer.setSize(w, h, false);
-    const k = a < 1 ? 1 + (1 - a) * 0.9 : 1;
-    camBase.pos.set(0, 7 * k, -1 + 17 * k);
-    const fov = a >= 1.35 ? 52 : Math.min(72, 52 * Math.sqrt(1.35 / a));
-    for (const cam of [camera, refCam]) { cam.aspect = a; cam.fov = fov; cam.updateProjectionMatrix(); }
+    if (a >= 1.35) {
+      camBase.pos.set(0, 7, 16); camBase.look.set(0, -0.5, -1);
+      for (const cam of [camera, refCam]) { cam.aspect = a; cam.fov = 52; cam.updateProjectionMatrix(); }
+    } else {
+      const k = clamp((1.35 - a) / 0.85, 0, 1);                // 0 = landscape-ish, 1 = tall phone
+      const el = (24 + 32 * k) * Math.PI / 180;                 // camera elevation: 24 deg -> 56 deg
+      camBase.look.set(0, -0.5 + 0.3 * k, -1 + 1.3 * k);
+      for (const cam of [camera, refCam]) { cam.aspect = a; cam.fov = 50; cam.updateProjectionMatrix(); }
+      let d = 6;
+      for (; d < 80; d += 0.25) {
+        refCam.position.set(0, camBase.look.y + d * Math.sin(el), camBase.look.z + d * Math.cos(el));
+        refCam.lookAt(camBase.look);
+        if (fitsView(refCam)) break;
+      }
+      camBase.pos.copy(refCam.position);
+    }
     refCam.position.copy(camBase.pos); refCam.lookAt(camBase.look); refCam.updateMatrixWorld();
   }
   window.addEventListener('resize', resize);
@@ -1927,7 +1985,51 @@
     // Air Hockey: the mallet goes where the pointer touches the table
     if (ray.ray.intersectPlane(tablePlane, hitPt)) { hk.aim.x = hitPt.x; hk.aim.z = hitPt.z; }
   }
-  window.addEventListener('pointermove', aimAt);
+  window.addEventListener('pointermove', (e) => { if (e.pointerType !== 'touch') aimAt(e); });
+
+  // Touch: drag anywhere. The paddle/mallet follows the finger's *movement*, so the thumb can rest
+  // low on the screen and never covers what it steers.
+  const TOUCH_GAIN = 1.35;
+  let drag = null; // { id, x, y }
+  const touchPt = new THREE.Vector3();
+  function tableAt(clientX, clientY, out) {
+    ndc.set((clientX / window.innerWidth) * 2 - 1, -(clientY / window.innerHeight) * 2 + 1);
+    ray.setFromCamera(ndc, refCam);
+    return ray.ray.intersectPlane(tablePlane, out);
+  }
+  function setTouch() {
+    if (document.body.classList.contains('touch')) return;
+    document.body.classList.add('touch');
+  }
+  if (COARSE) setTouch();
+  canvas.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'touch') return;
+    setTouch();
+    if (drag && drag.id !== e.pointerId) { tapSpin(); return; } // a second finger taps for spin
+    drag = { id: e.pointerId, x: e.clientX, y: e.clientY };
+    if (gameMode === 'hockey') { hk.aim.x = MP.x; hk.aim.z = MP.z; } // start from where the mallet is
+  });
+  window.addEventListener('pointermove', (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    if (gameMode === 'hockey') {
+      const a = tableAt(drag.x, drag.y, hitPt) && hitPt.clone();
+      const b = tableAt(e.clientX, e.clientY, touchPt);
+      if (a && b) {
+        hk.aim.x = clamp(hk.aim.x + (touchPt.x - a.x) * TOUCH_GAIN, -(HW - MP.r), HW - MP.r);
+        hk.aim.z = clamp(hk.aim.z + (touchPt.z - a.z) * TOUCH_GAIN, 0.3, HL - MP.r);
+      }
+    } else {
+      // pixels per table unit at the paddle's depth, so a drag moves the paddle about as far as the finger
+      fitTmp.set(0, PY, PZ).project(refCam); const x0 = fitTmp.x;
+      fitTmp.set(1, PY, PZ).project(refCam);
+      const pxPerUnit = Math.max(1, ((fitTmp.x - x0) * window.innerWidth) / 2);
+      targetX = clamp(targetX + ((e.clientX - drag.x) / pxPerUnit) * TOUCH_GAIN, -padLim(P), padLim(P));
+    }
+    drag.x = e.clientX; drag.y = e.clientY;
+  });
+  const endDrag = (e) => { if (drag && e.pointerId === drag.id) drag = null; };
+  window.addEventListener('pointerup', endDrag);
+  window.addEventListener('pointercancel', endDrag);
 
   // Spin: a click / trackpad tap / touch on the table (not on buttons), or Shift.
   function tapSpin() {
@@ -1935,10 +2037,8 @@
     spinTapAt = simTime;
     P.tapGlow = 1;
   }
-  canvas.addEventListener('pointerdown', (e) => {
-    if (e.pointerType !== 'mouse') aimAt(e);
-    if (e.pointerType !== 'mouse' || e.button === 0) tapSpin();
-  });
+  canvas.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'touch' && e.button === 0) tapSpin(); });
+  $('#spinBtn').addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); tapSpin(); });
 
   const keysDown = new Set();
   window.addEventListener('keydown', (e) => {
@@ -2059,6 +2159,17 @@
       // Live overrides for manual/visual checks, e.g. __pong.set({ spinP: 1, forceLevel: 3 }).
       set(opts = {}) { dbg.spinP = opts.spinP ?? null; dbg.forceLevel = opts.forceLevel || 0; dbg.forcePower = opts.forcePower || null; if (mode === 'game') P.isAI = !!opts.autoPlayer; },
       chars: () => [...ORDER],
+      state: () => ({ you: youKey, mode: gameMode, phase, px: P.x, mx: MP.x, mz: MP.z, spinTap: spinTapAt }),
+      mode(m) { setGameMode(m); startGame(); },
+      // where the table's corners land on screen (normalised -1..1) with the current camera
+      fit() {
+        let minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
+        FIT_POINTS.slice(0, 4).forEach((pt) => {
+          fitTmp.copy(pt).project(refCam);
+          minX = Math.min(minX, fitTmp.x); maxX = Math.max(maxX, fitTmp.x); minY = Math.min(minY, fitTmp.y); maxY = Math.max(maxY, fitTmp.y);
+        });
+        return { minX, maxX, minY, maxY, coverH: (maxY - minY) / 2, inside: minX >= -1 && maxX <= 1 && minY >= -1 && maxY <= 1 };
+      },
       tuneHockey(diff, values) { Object.assign(HDIFF[diff], values); return HDIFF[diff]; },
       parts: () => ({ pong: pongParts.visible && P.group.visible, hockey: hockeyParts.visible && MP.group.visible }),
       // Headless Air Hockey AI-vs-AI run.
