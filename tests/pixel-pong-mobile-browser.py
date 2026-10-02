@@ -77,6 +77,22 @@ def game_checks(p, browser, device, label):
     s1 = page.evaluate("__pong.state()")
     check(s1["mx"] - s0["mx"] > 0.5 and s0["mz"] - s1["mz"] > 0.5,
           f"{label}: dragging up-right slides the mallet right and forward ({s0['mx']:.2f},{s0['mz']:.2f} -> {s1['mx']:.2f},{s1['mz']:.2f})")
+
+    # --- Volleyball
+    page.evaluate("__pong.mode('volley')")
+    page.wait_for_timeout(300)
+    fit = page.evaluate("__pong.fit()")
+    check(fit["inside"], f"{label}: the whole volleyball court is on screen")
+    check(page.locator("#spinBtn").is_visible() and page.locator("#spinBtn").text_content() == "SPIKE", f"{label}: the button says SPIKE in Volleyball")
+    s0 = page.evaluate("__pong.state()")
+    touch_drag(cdp, vw * 0.5, vh * 0.85, vw * 0.5 + 60, vh * 0.85 - 70)
+    page.wait_for_timeout(500)
+    s1 = page.evaluate("__pong.state()")
+    check(s1["vx"] - s0["vx"] > 0.5 and s0["vz"] - s1["vz"] > 0.5,
+          f"{label}: dragging up-right runs your player right and toward the net ({s0['vx']:.2f},{s0['vz']:.2f} -> {s1['vx']:.2f},{s1['vz']:.2f})")
+    page.wait_for_function("__pong.state().phase === 'play'", timeout=15000)
+    page.locator("#spinBtn").tap()
+    check(page.evaluate("__pong.state().vJump") > 0, f"{label}: tapping SPIKE jumps")
     ctx.close()
 
 
