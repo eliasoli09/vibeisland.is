@@ -3,7 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, ArrowUpRight } from "lucide-react";
 import { projects } from "./projects";
-import { ProjectEmbed } from "./project-embed";
+import { ProjectPlay } from "./project-play";
 
 export const metadata: Metadata = {
   title: "Verkefni | Vibe Ísland",
@@ -71,7 +71,7 @@ export default function ProjectsPage() {
                   </div>
                   {project.playInline ? (
                     <p className="mt-6 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-mint">
-                      ▶ Spilaðu beint hér á síðunni
+                      ▶ Spilaðu beint hér, eða í fullum skjá í símanum
                     </p>
                   ) : null}
                 </div>
@@ -86,9 +86,16 @@ export default function ProjectsPage() {
               </div>
 
               {project.playInline ? (
-                <div className="relative h-[36rem] overflow-hidden border-t border-mint/15 bg-black lg:h-auto lg:min-h-[34rem] lg:border-l lg:border-t-0">
+                <div className="relative h-80 overflow-hidden border-t border-mint/15 bg-black md:h-[36rem] lg:h-auto lg:min-h-[34rem] lg:border-l lg:border-t-0">
                   <div className="absolute inset-0">
-                    <ProjectEmbed src={project.viewerPath} title={`${project.title} - spilaðu hér`} loading="lazy" />
+                    <ProjectPlay
+                      slug={project.slug}
+                      href={project.href}
+                      src={project.viewerPath}
+                      title={project.title}
+                      preview={project.preview}
+                      previewAlt={project.previewAlt}
+                    />
                   </div>
                 </div>
               ) : (

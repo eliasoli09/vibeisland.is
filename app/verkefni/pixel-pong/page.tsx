@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 export default function PixelPongPage() {
   return (
     <main lang="is" className="flex h-dvh flex-col bg-black text-white">
-      <header className="shrink-0 border-b border-mint/15 bg-black px-4 py-4 sm:px-6 lg:px-8">
+      <header className="shrink-0 border-b border-mint/15 bg-black px-4 py-2.5 sm:px-6 sm:py-4 lg:px-8">
         <div className="mx-auto flex max-w-[112rem] flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-5">
             <Link
@@ -24,14 +24,14 @@ export default function PixelPongPage() {
               <ArrowLeft className="size-4 transition group-hover:-translate-x-1" />
               Til baka í verkefni
             </Link>
-            <span className="hidden h-7 w-px bg-mint/20 sm:block" />
-            <div className="hidden sm:block">
+            <span className="h-7 w-px bg-mint/20" />
+            <div>
               <h1 className="text-lg font-semibold leading-none">{project.title}</h1>
-              <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.18em] text-mint/70">{project.status}</p>
+              <p className="mt-1 hidden font-mono text-[9px] uppercase tracking-[0.18em] text-mint/70 sm:block">{project.status}</p>
             </div>
           </div>
 
-          <p className="flex max-w-2xl items-start gap-3 text-xs leading-5 text-white/52 sm:text-right">
+          <p className="hidden max-w-2xl items-start gap-3 text-xs leading-5 text-white/52 sm:flex sm:text-right">
             <Mouse className="mt-0.5 size-4 shrink-0 text-mint" />
             <span>
               Veldu borðtennis eða lofthokkí. Hreyfðu músina til að stýra spaðanum eða kylfunni. Smelltu rétt þegar boltinn kemur að spaðanum til að gefa honum snúning, og þrír snúningar í röð gefa boost. <kbd>Bil</kbd> setur leikinn á pásu og <kbd>M</kbd> slekkur á hljóði.
@@ -40,7 +40,8 @@ export default function PixelPongPage() {
         </div>
       </header>
 
-      <section aria-label="Pixel Pong leikur" className="min-h-[520px] flex-1">
+      {/* on phones the game takes the whole screen below a slim header */}
+      <section aria-label="Pixel Pong leikur" className="min-h-0 flex-1 sm:min-h-[520px]">
         <ProjectEmbed src={project.viewerPath} title="Pixel Pong - Claude á móti Codex" />
       </section>
     </main>
