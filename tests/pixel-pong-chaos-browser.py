@@ -66,7 +66,8 @@ def main():
         # 3. TRIPLE BALL: two decoys spawn, never score, and always disappear.
         tri = page.evaluate("__pong.simPlayer(240, { tapAt: 0.15, forcePower: 'triple' })")
         print("triple:", {k: tri[k] for k in ("decoys", "decoyPops", "decoysLeft", "tripleShots", "tripleRet", "tripleMiss")})
-        check(tri["tripleShots"] >= 3 and tri["decoys"] == 2 * tri["tripleShots"], "each TRIPLE BALL shot spawns exactly 2 decoys")
+        # the AI can fire TRIPLE BALL too now, so count only your fakes here
+        check(tri["tripleShots"] >= 3 and tri["decoys"] - tri["aiDecoys"] == 2 * tri["tripleShots"], "each TRIPLE BALL shot spawns exactly 2 decoys")
         check(tri["decoyPops"] == tri["decoys"] and tri["decoysLeft"] == 0, "every decoy pops; none are left behind")
         check(tri["tripleMiss"] > 0, "decoys fool the AI sometimes")
 

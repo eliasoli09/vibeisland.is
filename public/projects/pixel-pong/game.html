@@ -126,6 +126,9 @@
   .power { display: flex; flex-direction: column; gap: 6px; min-width: 120px; padding: 7px 10px; font: 9px var(--pix); color: var(--pc, var(--cyan)); background: rgba(5, 9, 24, 0.82); border: 2px solid var(--pc, var(--cyan)); }
   .power b { display: block; height: 4px; background: #1a2550; }
   .power em { display: block; height: 100%; width: 100%; background: var(--pc, var(--cyan)); }
+  .ai-power { position: fixed; right: 12px; top: calc(56px + env(safe-area-inset-top, 0px)); }
+  @media (max-width: 720px) { .ai-power { top: calc(112px + env(safe-area-inset-top, 0px)); } }
+  body.touch .ai-power { top: calc(112px + env(safe-area-inset-top, 0px)); }
   #pop { position: absolute; left: 0; right: 0; bottom: 24%; z-index: 4; text-align: center; pointer-events: none; opacity: 0; font: clamp(12px, 2.6vw, 20px) var(--pix); text-shadow: 0 3px 0 rgba(0, 0, 0, 0.55); }
   #pop.show { animation: rise 0.85s ease-out forwards; }
   @keyframes rise {
@@ -182,7 +185,7 @@
   @media (max-width: 600px) { .shot-clock { bottom: calc(60px + env(safe-area-inset-bottom, 0px)); } } /* above the SMASH dots on phones */
   #spinBtn { position: absolute; right: calc(16px + env(safe-area-inset-right, 0px)); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); width: 84px; height: 84px; border-radius: 50%; border: 3px solid var(--cyan); background: rgba(5, 9, 24, 0.7); color: var(--cyan); font: 12px var(--pix); pointer-events: auto; display: none; box-shadow: 0 0 22px rgba(67, 224, 255, 0.35); }
   #spinBtn:active { background: rgba(67, 224, 255, 0.3); transform: scale(0.94); }
-  body.touch.mode-pong #spinBtn { display: block; }
+  body.touch.mode-pong.playing #spinBtn { display: block; } /* only while a match is running (not paused or over) */
   body.touch .hud-btns { top: calc(66px + env(safe-area-inset-top, 0px)); bottom: auto; right: auto; left: 50%; transform: translateX(-50%); }
   body.touch .first-to { display: none; }
   @media (prefers-reduced-motion: reduce) {
@@ -211,6 +214,7 @@
     <button id="spinBtn" type="button" aria-label="Spin">SPIN</button>
     <div class="shot-clock" id="shotClock" hidden aria-live="off"><span>SHOT CLOCK</span><b id="shotNum">7.0</b></div>
     <div class="spin-hud">
+      <div class="power ai-power" id="aiPowerChip" hidden><span id="aiPowerName">AI</span><b><em id="aiPowerFill"></em></b></div>
       <div class="power" id="powerChip" hidden><span id="powerName">BIG PADDLE</span><b><em id="powerFill"></em></b></div>
       <div class="pips" id="spinPips" aria-label="Streak"><span id="pipsLbl">SPIN</span> <i></i><i></i><i></i></div>
     </div>
@@ -239,7 +243,7 @@
         <button class="pill" id="dHard" type="button" role="radio" data-diff="hard" aria-checked="false">HARD</button>
       </div>
       <button class="btn" id="btnStart" type="button">START MATCH</button>
-      <p class="hint" id="hintHockey" hidden><span class="h-mouse">Move the mouse to slide your mallet anywhere in your half (or <kbd>A</kbd> / <kbd>D</kbd>). Hit the character puck into the AI's goal. <strong>Three hard smashes in a row</strong> earn a boost: BIG MALLET, FIREBALL, TRIPLE PUCK or WIDE GOAL. <strong>Goals grow</strong> every time the puck crosses the middle, and a <strong>shot clock</strong> (7 s, shorter every crossing) hands the puck over if you hold it too long. <kbd>Space</kbd> pauses, <kbd>M</kbd> mutes.</span><span class="h-touch"><strong>Drag anywhere</strong> to slide your mallet around your half, and flick fast to smash. Three smashes in a row earn a boost: BIG MALLET, FIREBALL, TRIPLE PUCK or WIDE GOAL. Goals grow every time the puck crosses the middle, and the shot clock hands the puck over if you hold it too long.</span></p>
+      <p class="hint" id="hintHockey" hidden><span class="h-mouse">Move the mouse to slide your mallet anywhere in your half (or <kbd>A</kbd> / <kbd>D</kbd>). Hit the character puck into the AI's goal. <strong>Three hard smashes in a row</strong> earn a boost: BIG MALLET, FIREBALL, TRIPLE PUCK or WIDE GOAL. <strong>Goals grow</strong> every time the puck crosses the middle, and a <strong>shot clock</strong> (10 s, shorter every crossing) hands the puck over if you hold it too long. <kbd>Space</kbd> pauses, <kbd>M</kbd> mutes.</span><span class="h-touch"><strong>Drag anywhere</strong> to slide your mallet around your half, and flick fast to smash. Three smashes in a row earn a boost: BIG MALLET, FIREBALL, TRIPLE PUCK or WIDE GOAL. Goals grow every time the puck crosses the middle, and the shot clock hands the puck over if you hold it too long.</span></p>
       <p class="hint" id="hintPong"><span class="h-mouse">Move the mouse left and right to steer your paddle (or <kbd>A</kbd> / <kbd>D</kbd>). Where the ball hits your paddle sets its angle. <strong>Click or tap just as the ball reaches your paddle to spin it</strong>. Chain 3 spins for a boost: BIG PADDLE, SLOW-MO, TRIPLE BALL or FIREBALL. Long matches grow pins on the table. <kbd>Space</kbd> pauses, <kbd>M</kbd> mutes.</span><span class="h-touch"><strong>Drag anywhere</strong> to steer your paddle. Tap <strong>SPIN</strong> just as the ball reaches you to spin it; 3 spins in a row earn a boost: BIG PADDLE, SLOW-MO, TRIPLE BALL or FIREBALL. Long rallies grow pins on the table.</span></p>
     </div>
   </div>
@@ -421,7 +425,7 @@
   const HK = {
     R_P: 0.45, R_M: 0.55, GOAL: 1.5, MAXV: 24, FIREV: 34, FRICTION: 0.35, E_MALLET: 0.85, E_RAIL: 0.9, SMASH: 15,
     GROW: 0.08, GOAL_MAX: 4.0,                       // both goals +8% per centre-line crossing, half-width capped at 4
-    CLOCK: 7, CLOCK_STEP: 0.5, CLOCK_MIN: 2,         // shot clock: 7 s, -0.5 s per crossing, never below 2 s
+    CLOCK: 10, CLOCK_STEP: 0.5, CLOCK_MIN: 2,        // shot clock: 10 s, -0.5 s per crossing, never below 2 s
   };
   const HDIFF = {
     easy:   { speed: 9,  react: 0.25, aim: 1.4, hesitate: 0.2,  realP: 0.34, notice: 0.7,  corner: 0.0, defErr: 1.6 },
@@ -433,7 +437,7 @@
     curve: [0, 5.5, 8, 11],                         // sideways acceleration per spin level
     color: [0xbfe6ff, 0x43e0ff, 0xb36bff, 0xff4fa3],
     css: ['#bfe6ff', '#43e0ff', '#b36bff', '#ff4fa3'],
-    aiChance: { easy: 0, normal: 0.2, hard: 0.4 },  // share of AI hits that spin
+    aiChance: { easy: 0.15, normal: 0.2, hard: 0.4 }, // share of AI hits that spin (every 3rd AI spin shot earns it a boost)
     readFrac: { easy: 0.8, normal: 0.68, hard: 0.58 }, // share of the flight before the AI notices a curve
     errPerLevel: 0.25,
   };
@@ -648,8 +652,11 @@
   const ball = { x: 0, z: 0, vx: 0, vz: 0, speed: 0, curve: 0, spinLvl: 0, spinAge: 0, spinFlight: 1, fire: false, tripled: false, track: null };
   let targetX = 0, keyDir = 0, shake = 0, time = 0;
   let simTime = 0, spinTapAt = -1, streak = 0;
-  const power = { type: null, t: 0 };
-  const dbg = { diff: null, spinP: null, forceLevel: 0, forcePower: null, stats: null }; // test hooks (?debug)
+  const power = { type: null, t: 0, fresh: false };   // your boost
+  const aiPower = { type: null, t: 0, fresh: false }; // the AI's boost (it earns them too)
+  let aiStreak = 0;                                   // AI spin shots (pong) / smashes in a row (hockey)
+  const powerOf = (owner) => (owner === 'ai' ? aiPower : power);
+  const dbg = { diff: null, spinP: null, forceLevel: 0, forcePower: null, forceAiPower: null, stats: null }; // test hooks (?debug)
   const pins = [];             // table pins: { x, z, mesh, mat, rise, flash }
   let rallyHits = 0, trips = 0;     // round trips in the current rally (two paddle hits = one)
   const sinkingPins = [];          // pins sliding back into the table after a point
@@ -701,12 +708,21 @@
     pips.querySelectorAll('i').forEach((el, i) => el.classList.toggle('on', i < n));
   }
   function updatePowerHUD() {
-    const chip = $('#powerChip');
-    chip.hidden = !power.type;
-    if (!power.type) return;
-    const pw = powers()[power.type];
-    $('#powerName').textContent = pw.name + (pw.shot ? ' - NEXT HIT' : '');
-    chip.style.setProperty('--pc', pw.css);
+    for (const [owner, chipId, nameId] of [['you', '#powerChip', '#powerName'], ['ai', '#aiPowerChip', '#aiPowerName']]) {
+      const pw = powerOf(owner), chip = $(chipId);
+      chip.hidden = !pw.type;
+      if (!pw.type) continue;
+      const def = powers()[pw.type];
+      $(nameId).textContent = (owner === 'ai' ? 'AI: ' : '') + def.name + (def.shot ? ' - NEXT HIT' : '');
+      chip.style.setProperty('--pc', def.css);
+    }
+  }
+  // timed boosts run down for both sides
+  function tickPowers(dt) {
+    for (const owner of ['you', 'ai']) {
+      const pw = powerOf(owner);
+      if (pw.type) { pw.t -= dt; if (pw.t <= 0) endPower(owner); }
+    }
   }
   function updateMuteBtn() { $('#btnMute').textContent = Sfx.muted ? 'SOUND OFF' : 'SOUND ON'; }
 
@@ -768,7 +784,7 @@
     mode = 'game'; paused = false;
     score[0] = score[1] = 0; updateHUD();
     P.isAI = false; P.x = 0; A.x = 0; targetX = 0;
-    streak = 0; updateSpinHUD(); endPower(); resetPins();
+    streak = 0; aiStreak = 0; updateSpinHUD(); endPower(); resetPins();
     MP.isAI = false; hkResetMallets();
     nearRig.loop = farRig.loop = false;
     assignChars();
@@ -781,7 +797,7 @@
   function toMenu() {
     mode = 'menu'; paused = false;
     P.isAI = true;
-    streak = 0; updateSpinHUD(); endPower(); resetPins();
+    streak = 0; aiStreak = 0; updateSpinHUD(); endPower(); resetPins();
     MP.isAI = true; hkResetMallets();
     nearRig.loop = farRig.loop = false;
     $('#menu').hidden = false; $('#over').hidden = true; $('#pauseMenu').hidden = true; $('#hud').hidden = true;
@@ -898,25 +914,33 @@
     const chance = dbg.spinP ?? SPIN.aiChance[curDiffKey()];
     if (Math.random() >= chance) return 0;
     const lvl = dbg.forceLevel || (Math.random() < 0.6 ? 1 : 2);
-    if (mode === 'game' && pad === A) popText('INCOMING SPIN', SPIN.css[lvl]);
+    if (mode === 'game' && pad === A) {
+      popText('INCOMING SPIN', SPIN.css[lvl]);
+      if (++aiStreak % 3 === 0) awardPower('ai'); // every 3rd AI spin shot earns it a boost
+    }
     return lvl;
   }
 
-  function awardPower() {
-    endPower();
-    const set = powers(), kinds = Object.keys(set);
-    power.type = dbg.forcePower && set[dbg.forcePower] ? dbg.forcePower : kinds[Math.floor(Math.random() * kinds.length)];
-    power.t = set[power.type].dur;
-    power.fresh = true; // a shot boost starts on the *next* hit, not the one that earned it
-    if (power.type === 'big') { if (gameMode === 'hockey') MP.r = HK.R_M * 1.5; else P.w = PW * 1.5; }
-    if (dbg.stats) dbg.stats.powers++;
-    showBanner(set[power.type].name + '!', set[power.type].css);
+  // Boosts belong to a side: 'you' (near) or 'ai' (far).
+  function awardPower(owner = 'you') {
+    endPower(owner);
+    const pw = powerOf(owner), ai = owner === 'ai';
+    const set = powers(), kinds = Object.keys(set), forced = ai ? dbg.forceAiPower : dbg.forcePower;
+    pw.type = forced && set[forced] ? forced : kinds[Math.floor(Math.random() * kinds.length)];
+    pw.t = set[pw.type].dur;
+    pw.fresh = true; // a shot boost starts on the *next* hit, not the one that earned it
+    if (pw.type === 'big') { if (gameMode === 'hockey') (ai ? MA : MP).r = HK.R_M * 1.5; else (ai ? A : P).w = PW * 1.5; }
+    if (dbg.stats) dbg.stats[ai ? 'aiPowers' : 'powers']++;
+    if (ai) showBanner(`${CHARS[farRig.key].name}: ${set[pw.type].name}`, 'var(--ai)');
+    else showBanner(set[pw.type].name + '!', set[pw.type].css);
     Sfx.power();
     updatePowerHUD();
   }
-  function endPower() {
-    power.type = null; power.t = 0; P.w = PW;
-    MP.r = HK.R_M;
+  function endPower(owner) {
+    if (!owner) { endPower('you'); endPower('ai'); return; } // no side given: end both
+    const pw = powerOf(owner);
+    pw.type = null; pw.t = 0; pw.fresh = false;
+    if (owner === 'ai') { A.w = PW; MA.r = HK.R_M; } else { P.w = PW; MP.r = HK.R_M; }
     updatePowerHUD();
   }
 
@@ -938,10 +962,13 @@
       ball.curve = dir * SPIN.curve[lvl];
       Sfx.spin(lvl);
     }
-    if (pad === P && !P.isAI && power.type && POWER[power.type].shot) {
-      if (power.fresh) power.fresh = false;
-      else if (power.type === 'fire') fireShot(D);
-      else if (power.type === 'triple') tripleShot();
+    // shot boosts: yours, or the AI's in a real match (never in the menu demo)
+    const owner = pad === P ? (P.isAI ? null : 'you') : (mode === 'game' ? 'ai' : null);
+    const pw = owner && powerOf(owner);
+    if (pw && pw.type && POWER[pw.type].shot) {
+      if (pw.fresh) pw.fresh = false;
+      else if (pw.type === 'fire') fireShot(D, owner);
+      else if (pw.type === 'triple') tripleShot(owner);
     }
     ball.spinFlight = (2 * FACE) / Math.abs(ball.vz);
     ball.launch = { x: ball.x, z: ball.z, vx: ball.vx, vz: ball.vz, speed: ball.speed, curve: 0 };
@@ -958,13 +985,16 @@
     if (++rallyHits % 2 === 0) { trips++; growPins(); }
   }
 
-  function fireShot(D) {
+  function fireShot(D, owner) {
     const k = Math.min(ball.speed * 1.6, D.max * 1.5) / ball.speed;
     ball.speed *= k; ball.vx *= k; ball.vz *= k;
     ball.fire = true;
-    if (dbg.stats) { dbg.stats.fireShots++; dbg.stats.fireSpeedUp = Math.min(dbg.stats.fireSpeedUp ?? k, k); }
-    popText('FIREBALL!', POWER.fire.css); Sfx.fire();
-    endPower();
+    if (dbg.stats) {
+      if (owner === 'ai') dbg.stats.aiFireShots++;
+      else { dbg.stats.fireShots++; dbg.stats.fireSpeedUp = Math.min(dbg.stats.fireSpeedUp ?? k, k); }
+    }
+    popText(owner === 'ai' ? 'INCOMING FIREBALL!' : 'FIREBALL!', POWER.fire.css); Sfx.fire();
+    endPower(owner);
   }
 
   // ---------------------------------------------------------------- TRIPLE BALL decoys
@@ -978,22 +1008,24 @@
     return { active: false, x: 0, z: 0, vx: 0, vz: 0, speed: 0, curve: 0, age: 0, mesh, glow, tr, hist: [] };
   }
   const decoys = [makeDecoy(), makeDecoy()];
-  function tripleShot() {
+  function tripleShot(owner) {
+    clearDecoys(); // fakes still flying from an earlier triple pop first (both sides can triple now)
     const heading = Math.atan2(ball.vx, Math.abs(ball.vz));
     decoys.forEach((d, i) => {
       const a = clamp(heading + (i ? 0.42 : -0.42), -0.9, 0.9);
       Object.assign(d, { active: true, x: ball.x, z: ball.z, speed: ball.speed, curve: ball.curve, age: 0, hist: [] });
       d.vx = Math.sin(a) * ball.speed;
       d.vz = Math.sign(ball.vz) * Math.cos(a) * ball.speed;
-      if (dbg.stats) dbg.stats.decoys++;
+      if (dbg.stats) { dbg.stats.decoys++; if (owner === 'ai') dbg.stats.aiDecoys++; }
     });
-    ball.tripled = true;
-    // the AI first chases one of the three, and only the real one some of the time
+    ball.tripled = owner !== 'ai'; // (stats: AI returns of your triple shots)
+    // an AI receiver first chases one of the three, and only the real one some of the time
+    const receiver = owner === 'ai' ? P : A;
     const realP = { easy: 0.34, normal: 0.45, hard: 0.6 }[curDiffKey()];
-    ball.track = Math.random() < realP ? null : decoys[Math.random() < 0.5 ? 0 : 1];
-    if (dbg.stats) dbg.stats.tripleShots++;
-    popText('TRIPLE BALL!', POWER.triple.css); Sfx.power();
-    endPower();
+    ball.track = receiver.isAI && Math.random() >= realP ? decoys[Math.random() < 0.5 ? 0 : 1] : null;
+    if (dbg.stats && owner !== 'ai') dbg.stats.tripleShots++;
+    popText(owner === 'ai' ? 'INCOMING TRIPLE BALL!' : 'TRIPLE BALL!', POWER.triple.css); Sfx.power();
+    endPower(owner);
   }
   function popDecoy(d, quiet) {
     d.active = false;
@@ -1358,7 +1390,7 @@
   function step(dt) {
     if (gameMode === 'hockey') { hkStep(dt); return; }
     simTime += dt;
-    if (power.type) { power.t -= dt; if (power.t <= 0) endPower(); }
+    tickPowers(dt);
     // player paddle
     if (P.isAI) updateAI(P, dt);
     else {
@@ -1372,7 +1404,10 @@
     if (phase === 'serve') { serveT -= dt; if (serveT <= 0) launch(); return; }
     // SLOW-MO only slows balls coming toward the player
     if (phase === 'play' || phase === 'point') {
-      const bdt = power.type === 'slow' && ball.vz > 0 ? dt * 0.65 : dt;
+      // SLOW-MO slows balls flying at whoever holds it
+      const slowed = (power.type === 'slow' && ball.vz > 0) || (aiPower.type === 'slow' && ball.vz < 0);
+      if (slowed && aiPower.type === 'slow' && dbg.stats) dbg.stats.aiSlowSteps++;
+      const bdt = slowed ? dt * 0.65 : dt;
       moveBall(bdt);
       updateDecoys(bdt);
     }
@@ -1398,7 +1433,11 @@
   };
   const powers = () => (gameMode === 'hockey' ? HPOWER : POWER);
   // Both goals grow with every centre-line crossing this point; WIDE GOAL stacks on the AI's goal.
-  const goalHalf = (sz) => Math.min(HK.GOAL_MAX, HK.GOAL * (1 + HK.GROW * hk.crossings) * (sz < 0 && power.type === 'wide' ? 1.6 : 1));
+  const goalHalf = (sz) => {
+    // WIDE GOAL widens the *opponent's* goal: yours stretches the AI's goal, the AI's stretches yours
+    const wide = (sz < 0 && power.type === 'wide') || (sz > 0 && aiPower.type === 'wide');
+    return Math.min(HK.GOAL_MAX, HK.GOAL * (1 + HK.GROW * hk.crossings) * (wide ? 1.6 : 1));
+  };
   const clockFor = (crossings) => Math.max(HK.CLOCK_MIN, HK.CLOCK - HK.CLOCK_STEP * crossings);
 
   const hk = {
@@ -1595,43 +1634,58 @@
     rig.pulse = 1; m.pulse = 1;
     burst(p.x, 0.3, p.z, CHARS[rig.key].hex, 10, -m.side);
     Sfx.hit(rig.key);
-    if (m === MP && !MP.isAI) {
-      if (power.type && HPOWER[power.type].shot) { // shot boosts fire on the hit after the one that earned them
-        if (power.fresh) power.fresh = false;
-        else if (power.type === 'fire') hkFire(p);
-        else if (power.type === 'triple') hkTriple(p);
+    // boosts: yours, or the AI's in a real match (never in the menu demo)
+    const owner = m === MP ? (MP.isAI ? null : 'you') : (mode === 'game' ? 'ai' : null);
+    if (owner) {
+      const pw = powerOf(owner);
+      if (pw.type && HPOWER[pw.type].shot) { // shot boosts fire on the hit after the one that earned them
+        if (pw.fresh) pw.fresh = false;
+        else if (pw.type === 'fire') hkFire(p, owner);
+        else if (pw.type === 'triple') hkTriple(p, owner);
       }
-      if (swing >= 5 && Math.hypot(p.vx, p.vz) >= HK.SMASH) { // a real swing that sends it flying
-        streak++;
-        if (dbg.stats) dbg.stats.smashes++;
-        const n = ((streak - 1) % 3) + 1;
-        popText(n > 1 ? `SMASH x${n}` : 'SMASH!', '#ffc34d');
-        if (streak % 3 === 0) awardPower();
-      } else if (streak) streak = 0;
-      updateSpinHUD();
+      const smash = swing >= 5 && Math.hypot(p.vx, p.vz) >= HK.SMASH; // a real swing that sends it flying
+      if (owner === 'you') {
+        if (smash) {
+          streak++;
+          if (dbg.stats) dbg.stats.smashes++;
+          const n = ((streak - 1) % 3) + 1;
+          popText(n > 1 ? `SMASH x${n}` : 'SMASH!', '#ffc34d');
+          if (streak % 3 === 0) awardPower('you');
+        } else if (streak) streak = 0;
+        updateSpinHUD();
+      } else if (smash) {
+        if (++aiStreak % 3 === 0) awardPower('ai'); // three AI smashes in a row
+      } else aiStreak = 0;
     }
     (m === MP ? MA : MP).think = 0; // the other side reacts right away
   }
-  function hkFire(p) {
+  function hkFire(p, owner) {
     // even a gentle touch becomes a blazing shot: 1.5x the hit, at least 28, at most 34
     const sp = Math.hypot(p.vx, p.vz) || 1, k = clamp(sp * 1.5, 28, HK.FIREV) / sp;
     p.vx *= k; p.vz *= k; p.fire = true;
-    if (dbg.stats) { dbg.stats.fireShots++; dbg.stats.fireSpeed = Math.max(dbg.stats.fireSpeed, sp * k); dbg.stats.fireMin = Math.min(dbg.stats.fireMin ?? Infinity, sp * k); }
-    popText('FIREBALL!', HPOWER.fire.css); Sfx.fire();
-    endPower();
+    if (dbg.stats) {
+      if (owner === 'ai') dbg.stats.aiFireShots++;
+      else { dbg.stats.fireShots++; dbg.stats.fireSpeed = Math.max(dbg.stats.fireSpeed, sp * k); dbg.stats.fireMin = Math.min(dbg.stats.fireMin ?? Infinity, sp * k); }
+    }
+    popText(owner === 'ai' ? 'INCOMING FIREBALL!' : 'FIREBALL!', HPOWER.fire.css); Sfx.fire();
+    endPower(owner);
   }
-  function hkTriple(p) {
+  function hkTriple(p, owner) {
+    hk.fakes.forEach((f) => { if (f.active) hkPopFake(f, true); }); // earlier fakes pop first
     hk.fakes.forEach((f, i) => {
       const a = i ? 0.4 : -0.4, c = Math.cos(a), s = Math.sin(a);
       Object.assign(f, { active: true, x: p.x, z: p.z, vx: p.vx * c - p.vz * s, vz: p.vx * s + p.vz * c, age: 0, fire: p.fire });
-      if (dbg.stats) dbg.stats.fakes++;
+      if (dbg.stats) { dbg.stats.fakes++; if (owner === 'ai') dbg.stats.aiFakes++; }
     });
-    // the AI first chases one of the three pucks, the real one only some of the time
-    const D = HDIFF[curDiffKey()];
-    MA.track = Math.random() < D.realP ? null : hk.fakes[Math.random() < 0.5 ? 0 : 1];
-    MA.trackSince = simTime;
-    popText('TRIPLE PUCK!', HPOWER.triple.css); Sfx.power();
-    endPower();
+    // an AI-driven receiver first chases one of the three pucks, the real one only some of the time
+    const victim = owner === 'ai' ? MP : MA;
+    if (victim.isAI || (victim === MP && dbg.autoPlayer)) {
+      const D = HDIFF[curDiffKey()];
+      victim.track = Math.random() < D.realP ? null : hk.fakes[Math.random() < 0.5 ? 0 : 1];
+      victim.trackSince = simTime;
+    }
+    popText(owner === 'ai' ? 'INCOMING TRIPLE PUCK!' : 'TRIPLE PUCK!', HPOWER.triple.css); Sfx.power();
+    endPower(owner);
   }
   function hkPopFake(f, quiet) {
     f.active = false;
@@ -1707,7 +1761,7 @@
   // ---------------------------------------------------------------- hockey step
   function hkStep(dt) {
     simTime += dt;
-    if (power.type) { power.t -= dt; if (power.t <= 0) endPower(); }
+    tickPowers(dt);
     hkMoveMallet(MP, dt); hkMoveMallet(MA, dt);
     const p = hk.puck;
     if (phase === 'serve') {
@@ -1753,7 +1807,7 @@
       // backup anti-stall (the shot clock normally ends a stall first)
       hk.slowT = Math.hypot(p.vx, p.vz) < 1.2 ? hk.slowT + dt : 0;
       if (dbg.stats) dbg.stats.maxSlow = Math.max(dbg.stats.maxSlow, hk.slowT);
-      if (hk.slowT > 9) {
+      if (hk.slowT > HK.CLOCK + 2) { // only if the shot clock somehow didn't end it (it must outlast the longest clock)
         popText('FACE-OFF', '#43e0ff');
         if (dbg.stats) dbg.stats.faceoffs++;
         serveDir = p.z >= 0 ? 1 : -1;
@@ -1856,6 +1910,7 @@
       pad.mat.emissiveIntensity = 0.35 + pad.pulse * 0.9 + pad.tapGlow * 0.7;
     }
     if (power.type) $('#powerFill').style.width = `${clamp(power.t / powers()[power.type].dur, 0, 1) * 100}%`;
+    if (aiPower.type) $('#aiPowerFill').style.width = `${clamp(aiPower.t / powers()[aiPower.type].dur, 0, 1) * 100}%`;
     const look = ball.fire ? 4 : ball.spinLvl; // 0-3 spin level, 4 = FIREBALL
     if (shownSpin !== look) {
       shownSpin = look;
@@ -2103,6 +2158,7 @@
       pinHits: 0, maxPins: 0, pinsAtTrip: [], pinRallies: 0, pinsAtServe: 0, slimes: { you: 0, ai: 0 }, slimeColors: { you: null, ai: null },
       maxSlow: 0, faceoffs: 0, maxPen: 0, puckKeys: {}, smashes: 0,
       growth: [], maxGoal: 0, serveGoal: [], violations: 0, violationLog: [],
+      aiPowers: 0, aiBigSeen: 0, aiSlowSteps: 0, aiFireShots: 0, aiDecoys: 0, aiFakes: 0, aiWideRatio: 0,
       fakes: 0, fakePops: 0, fakeGoals: 0, fireSpeed: 0, bigSeen: 0, wideSeen: 0,
     });
     const badBall = () => !Number.isFinite(ball.x) || !Number.isFinite(ball.z) || Math.abs(ball.x) > WL + 1e-6;
@@ -2136,8 +2192,8 @@
       },
       // Scripted player that tracks the ball and taps `tapAt` seconds before contact.
       simPlayer(seconds, opts = {}) {
-        if (!opts.resume) startGame(); // resume: keep playing the current match
-        dbg.diff = opts.diff || null; dbg.forcePower = opts.forcePower || null; dbg.stats = freshStats();
+        if (!opts.resume) { setGameMode('pong'); startGame(); } // resume: keep playing the current match
+        dbg.diff = opts.diff || null; dbg.forcePower = opts.forcePower || null; dbg.forceAiPower = opts.forceAiPower || null; dbg.stats = freshStats();
         let tapped = false, bad = 0;
         for (let i = 0, n = Math.round(seconds / STEP); i < n && phase !== 'over'; i++) {
           if (opts.idle) { /* stand still: the AI scores */ } else if (phase === 'play' && ball.vz > 0) {
@@ -2147,6 +2203,8 @@
           step(STEP);
           if (badBall()) bad++;
           dbg.stats.maxStreak = Math.max(dbg.stats.maxStreak, streak);
+          dbg.stats.aiBigSeen = Math.max(dbg.stats.aiBigSeen, A.w / PW);
+          if (opts.untilAiPower && aiPower.type) break; // stop while the AI holds a boost (for HUD checks)
         }
         const out = {
           ...dbg.stats, bad, score: [...score], streak, power: power.type,
@@ -2154,7 +2212,7 @@
         };
         if (!opts.keep) clearDecoys(); // count any still in flight so the books balance
         out.decoyPops = dbg.stats.decoyPops;
-        Object.assign(dbg, { diff: null, forcePower: null, stats: null });
+        Object.assign(dbg, { diff: null, forcePower: null, forceAiPower: null, stats: null });
         if (!opts.keep) toMenu();
         return out;
       },
@@ -2195,19 +2253,21 @@
       // Scripted Air Hockey player (driven by the hard AI but treated as you, so it earns boosts).
       hsimPlayer(seconds, opts = {}) {
         setGameMode('hockey'); startGame();
-        dbg.autoPlayer = !opts.idle; dbg.forcePower = opts.forcePower || null; dbg.stats = freshStats(); // idle: your mallet never moves
+        dbg.autoPlayer = !opts.idle; dbg.forcePower = opts.forcePower || null; dbg.forceAiPower = opts.forceAiPower || null; dbg.stats = freshStats(); // idle: your mallet never moves
         let bad = 0;
         for (let i = 0, n = Math.round(seconds / STEP); i < n && phase !== 'over'; i++) {
           step(STEP);
           const q = hk.puck;
           if (!Number.isFinite(q.x) || !Number.isFinite(q.z) || Math.abs(q.x) > HW || Math.abs(q.z) > HL + 1) bad++;
           dbg.stats.bigSeen = Math.max(dbg.stats.bigSeen, MP.r / HK.R_M);
+          dbg.stats.aiBigSeen = Math.max(dbg.stats.aiBigSeen, MA.r / HK.R_M);
+          dbg.stats.aiWideRatio = Math.max(dbg.stats.aiWideRatio, goalHalf(1) / goalHalf(-1)); // your goal vs the AI's
           dbg.stats.wideSeen = Math.max(dbg.stats.wideSeen, goalHalf(-1));
           dbg.stats.wideRatio = Math.max(dbg.stats.wideRatio || 1, goalHalf(-1) / goalHalf(1)); // AI goal vs your goal
         }
         hk.fakes.forEach((f) => { if (f.active) hkPopFake(f, true); });
         const out = { ...dbg.stats, bad, score: [...score] };
-        Object.assign(dbg, { autoPlayer: false, forcePower: null, stats: null });
+        Object.assign(dbg, { autoPlayer: false, forcePower: null, forceAiPower: null, stats: null });
         toMenu();
         return out;
       },
