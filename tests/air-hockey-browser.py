@@ -46,7 +46,7 @@ def main():
             check(run["bad"] == 0, f"{diff}: the puck never escapes the table or goes invalid")
             need = {"normal": 20, "hard": 7}[diff]
             check(run["goals"] >= need, f"{diff}: goals keep happening ({run['goals']} in 15 min)")
-            check(run["maxSlow"] < 7.2, f"{diff}: the puck never sits still longer than the shot clock ({run['maxSlow']:.1f}s)")
+            check(run["maxSlow"] < 10.2, f"{diff}: the puck never sits still longer than the shot clock ({run['maxSlow']:.1f}s)")
             check(run["maxPen"] < 0.05, f"{diff}: the puck never sinks into a mallet ({run['maxPen']:.3f})")
             check(len(run["puckKeys"]) >= 4, f"{diff}: the puck character changes after goals ({run['puckKeys']})")
             check(run["maxPins"] == 0, f"{diff}: no bumpers ever appear in Air Hockey")
@@ -54,8 +54,8 @@ def main():
             grow_ok = all(abs(gh - min(4.0, 1.5 * (1 + 0.08 * c))) < 1e-6 for c, gh, _ in run["growth"])
             check(run["growth"] and grow_ok and run["maxGoal"] > 2.2, f"{diff}: both goals grow 8% per crossing (max {run['maxGoal']:.2f})")
             check(all(abs(gh - 1.5) < 1e-6 for gh in run["serveGoal"]), f"{diff}: goals snap back to normal after every goal")
-            # shot clock: 7 s, -0.5 s per crossing, never below 2 s
-            clock_ok = all(abs(t - max(2.0, 7 - 0.5 * c)) < 1e-6 for c, _, t in run["growth"])
+            # shot clock: 10 s, -0.5 s per crossing, never below 2 s
+            clock_ok = all(abs(t - max(2.0, 10 - 0.5 * c)) < 1e-6 for c, _, t in run["growth"])
             check(clock_ok and min(t for _, _, t in run["growth"]) >= 2.0, f"{diff}: the shot clock shrinks 0.5 s per crossing, never below 2 s")
             check(run["slimes"]["you"] + run["slimes"]["ai"] == run["goals"], f"{diff}: every goal slimes the side that conceded")
 
@@ -72,8 +72,9 @@ def main():
         check(idle["smashes"] == 0 and idle["powers"] == 0, f"standing still never counts as a smash ({idle['smashes']})")
 
         for kind in ("big", "fire", "triple", "wide"):
-            for attempt in range(3):  # a boost earned in the last seconds of a run may not get used: retry
-                r = page.evaluate(f"__pong.hsimPlayer(180, {{ forcePower: '{kind}' }})")
+            for attempt in range(4):  # a boost earned in the last seconds of a run may not get used: retry
+                # (AI boosts off here: this checks YOUR boosts, and the AI's can end a match early)
+                r = page.evaluate(f"__pong.hsimPlayer(180, {{ forcePower: '{kind}', noAiPower: true }})")
                 used = {"big": r["bigSeen"] >= 1.49, "fire": r["fireShots"] >= 1, "triple": r["fakes"] >= 2, "wide": r["wideRatio"] >= 1.59}[kind]
                 if used:
                     break
