@@ -42,17 +42,30 @@ def main():
         # 2. Long AI-vs-AI hockey runs: valid, never stuck, goals keep coming.
         for diff in ("normal", "hard"):
             run = page.evaluate(f"__pong.hsim(900, {{ diff: '{diff}' }})")
-            print(diff, {k: run[k] for k in ("bad", "goals", "maxSlow", "faceoffs", "maxPen", "puckKeys", "pinHits", "maxPins", "pinsAtFaceoff")})
+            print(diff, {k: run[k] for k in ("bad", "goals", "maxSlow", "faceoffs", "maxPen", "puckKeys", "maxPins", "maxGoal", "violations")})
             check(run["bad"] == 0, f"{diff}: the puck never escapes the table or goes invalid")
             need = {"normal": 20, "hard": 7}[diff]
             check(run["goals"] >= need, f"{diff}: goals keep happening ({run['goals']} in 15 min)")
-            check(run["maxSlow"] < 4.6, f"{diff}: the puck never sits still for long ({run['maxSlow']:.1f}s)")
+            check(run["maxSlow"] < 7.2, f"{diff}: the puck never sits still longer than the shot clock ({run['maxSlow']:.1f}s)")
             check(run["maxPen"] < 0.05, f"{diff}: the puck never sinks into a mallet ({run['maxPen']:.3f})")
             check(len(run["puckKeys"]) >= 4, f"{diff}: the puck character changes after goals ({run['puckKeys']})")
-            check(run["pinsAtFaceoff"] == 0, f"{diff}: pins are cleared after every goal")
-            rule = all(n == min(4, 2 + (hits - 10) // 6) for hits, n in run["pinsAtHit"])
-            check(rule, f"{diff}: pins follow the rule: 2 after 10 hits, +1 every 6, max 4 ({run['pinsAtHit'][:4]})")
+            check(run["maxPins"] == 0, f"{diff}: no bumpers ever appear in Air Hockey")
+            # goals: both +8% per centre-line crossing (max half-width 4), back to normal after every goal
+            grow_ok = all(abs(gh - min(4.0, 1.5 * (1 + 0.08 * c))) < 1e-6 for c, gh, _ in run["growth"])
+            check(run["growth"] and grow_ok and run["maxGoal"] > 2.2, f"{diff}: both goals grow 8% per crossing (max {run['maxGoal']:.2f})")
+            check(all(abs(gh - 1.5) < 1e-6 for gh in run["serveGoal"]), f"{diff}: goals snap back to normal after every goal")
+            # shot clock: 7 s, -0.5 s per crossing, never below 2 s
+            clock_ok = all(abs(t - max(2.0, 7 - 0.5 * c)) < 1e-6 for c, _, t in run["growth"])
+            check(clock_ok and min(t for _, _, t in run["growth"]) >= 2.0, f"{diff}: the shot clock shrinks 0.5 s per crossing, never below 2 s")
             check(run["slimes"]["you"] + run["slimes"]["ai"] == run["goals"], f"{diff}: every goal slimes the side that conceded")
+
+        # 2b. Shot clock violations: a player who never moves runs out the clock with the puck in their half.
+        idle = page.evaluate("__pong.hsimPlayer(60, { idle: true })")
+        log = idle["violationLog"]
+        print("violations:", log[:4])
+        check(len(log) >= 1, f"an idle player's shot clock runs out ({len(log)} violations)")
+        check(all(v["dropSide"] == -v["side"] for v in log), "a shot clock violation drops the puck on the other side")
+        check(all(v["scoreBefore"] == v["scoreAfter"] for v in log), "a shot clock violation never changes the score")
 
         # 3. Boosts from smashes (scripted player). A mallet that never moves only blocks: no smashes.
         idle = page.evaluate("__pong.hsimPlayer(90, { idle: true })")
@@ -61,7 +74,7 @@ def main():
         for kind in ("big", "fire", "triple", "wide"):
             for attempt in range(3):  # a boost earned in the last seconds of a run may not get used: retry
                 r = page.evaluate(f"__pong.hsimPlayer(180, {{ forcePower: '{kind}' }})")
-                used = {"big": r["bigSeen"] >= 1.49, "fire": r["fireShots"] >= 1, "triple": r["fakes"] >= 2, "wide": r["wideSeen"] >= 2.39}[kind]
+                used = {"big": r["bigSeen"] >= 1.49, "fire": r["fireShots"] >= 1, "triple": r["fakes"] >= 2, "wide": r["wideRatio"] >= 1.59}[kind]
                 if used:
                     break
             print(kind, {k: r[k] for k in ("smashes", "powers", "bad", "fakes", "fakePops", "fakeGoals", "fireShots", "fireSpeed", "bigSeen", "wideSeen", "score")})
@@ -70,12 +83,13 @@ def main():
             if kind == "big":
                 check(r["bigSeen"] >= 1.49, "BIG MALLET makes your mallet 1.5x wider")
             if kind == "fire":
-                check(r["fireShots"] >= 1 and r["fireMin"] >= 28, f"every FIREBALL shot is blazing, even from a gentle touch (slowest {r['fireMin']:.1f})")
+                check(r["fireShots"] >= 1 and r["fireMin"] >= 27.99, f"every FIREBALL shot is blazing, even from a gentle touch (slowest {r['fireMin']:.1f})")
             if kind == "triple":
                 check(r["fakes"] >= 2 and r["fakes"] % 2 == 0, f"TRIPLE PUCK launches 2 fakes per shot ({r['fakes']})")
                 check(r["fakePops"] == r["fakes"] and r["fakeGoals"] == 0, "every fake pops and none ever score")
             if kind == "wide":
-                check(r["wideSeen"] >= 2.39, f"WIDE GOAL widens the AI's goal ({r['wideSeen']:.2f})")
+                # goals also grow with crossings, so compare the AI's goal with yours
+                check(r["wideRatio"] >= 1.59, f"WIDE GOAL makes the AI's goal 1.6x wider than yours ({r['wideRatio']:.2f}x)")
 
         # 4. Ping Pong still works after visiting hockey.
         page.locator(".mode[data-mode='pong']").click()

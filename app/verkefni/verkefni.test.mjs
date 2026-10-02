@@ -160,6 +160,11 @@ test("Pixel Pong has an Air Hockey mode", () => {
   assert.match(staticPongSource, /function hkIntegrate\(p, dt\)/);
   assert.match(staticPongSource, /'TRIPLE PUCK'/);
   assert.match(staticPongSource, /'WIDE GOAL'/);
+  // goals grow with every centre-line crossing and a shot clock hands the puck over
+  assert.match(staticPongSource, /id="shotClock"/);
+  assert.match(staticPongSource, /const clockFor = /);
+  assert.match(staticPongSource, /hkResetServe\(true\)/);
+  assert.doesNotMatch(staticPongSource, /function hkGrowPins/);
   assert.match(projectsSource, /lofthokkí/);
   assert.match(pongDetailSource, /lofthokkí/);
 });
