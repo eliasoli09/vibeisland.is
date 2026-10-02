@@ -32,7 +32,7 @@ export const projects: readonly Project[] = [
     slug: "pixel-pong",
     title: "Pixel Pong",
     description:
-      "Borðtennis og lofthokkí í þrívídd með fimm gervigreindar-karakterum: Claude, Codex, Muse, Grok og Clawd. Veldu leikham, þinn leikmann og andstæðing, safnaðu boostum, varastu pinnana á borðinu og forðastu slímið.",
+      "Borðtennis, lofthokkí og blak í þrívídd með fimm gervigreindar-karakterum: Claude, Codex, Muse, Grok og Clawd. Veldu leikham, þinn leikmann og andstæðing, safnaðu boostum, varastu pinnana á borðinu og forðastu slímið.",
     href: "/verkefni/pixel-pong",
     viewerPath: "/projects/pixel-pong/game.html",
     preview: "/projects/pixel-pong/preview.png",

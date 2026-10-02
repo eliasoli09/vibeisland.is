@@ -184,6 +184,18 @@ test("Pixel Pong has an Air Hockey mode", () => {
   assert.match(pongDetailSource, /lofthokkí/);
 });
 
+test("Pixel Pong has a Volleyball mode", () => {
+  assert.match(staticPongSource, /data-mode="volley"/);
+  assert.match(staticPongSource, /function vbStep\(dt\)/);
+  assert.match(staticPongSource, /function vbIntegrate\(b, dt\)/);
+  assert.match(staticPongSource, /id="hintVolley"/);
+  // tap to spike (the SPIN button becomes SPIKE on phones) and a landing marker
+  assert.match(staticPongSource, /'SPIKE' : 'SPIN'/);
+  assert.match(staticPongSource, /const landRing = /);
+  assert.match(projectsSource, /blak/);
+  assert.match(pongDetailSource, /blak/);
+});
+
 const auroraDetailSource = readIfPresent("./nordurljos/page.tsx");
 const staticAuroraUrl = fileUrl("../../public/projects/nordurljos/app.html");
 const staticAuroraSource = existsSync(staticAuroraUrl) ? readFileSync(staticAuroraUrl, "utf8") : "";

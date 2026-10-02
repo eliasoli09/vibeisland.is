@@ -1,7 +1,7 @@
 """Run with python3 tests/online-browser.py
 
 Two browsers play online through the real game server (Supabase Realtime on the islensk-fotbolti
-project; WebRTC when possible). Checks both modes, both transports, mirroring, input, scoring,
+project; WebRTC when possible). Checks all three modes, both transports, mirroring, input, scoring,
 slime and disconnects. Uses the static file (or PIXEL_PONG_URL).
 """
 import os
@@ -37,7 +37,9 @@ def match(browser, mode, transport):
     host.wait_for_selector("#onQR svg", timeout=15000)  # the QR library loads on demand
     check(host.locator("#onQR svg").count() == 1, f"{label}: the host gets a QR code and a link")
 
-    guest.goto(f"{link}&{flags}", wait_until="domcontentloaded")
+    # open the game itself with the room code (the website-page route is covered by site_join)
+    code = link.split("join=")[1][:4]
+    guest.goto(f"{BASE}?join={code}&{flags}", wait_until="domcontentloaded")
     guest.wait_for_function("Boolean(window.__pong)", timeout=30000)
     guest.wait_for_selector("#onJoin", state="visible", timeout=20000)
     check(guest.locator("#rosterJoin .card[data-char='claude']").is_disabled(), f"{label}: the friend can't pick the host's fighter")
@@ -57,9 +59,12 @@ def match(browser, mode, transport):
         check(host.evaluate("__pong.net().transport") == "relay", f"{label}: forced relay works through the game server")
 
     # the friend's movement reaches the host, mirrored
+    if mode == "volley":  # (the friend serves first and stands still until the serve)
+        guest.wait_for_function("__pong.net().phase === 'play'", timeout=10000)
     guest.evaluate("__pong.netAim(2.5, 5)")
     # (in hockey the puck can briefly knock the mallet aside on the host, so wait for it to settle there)
-    reached = "Math.abs(__pong.net().ma[0] + 2.5) < 0.6" if mode == "hockey" else "Math.abs(__pong.net().ax + 2.5) < 0.6"
+    reached = {"hockey": "Math.abs(__pong.net().ma[0] + 2.5) < 0.6", "volley": "Math.abs(__pong.net().va[0] + 2.5) < 0.6"}.get(
+        mode, "Math.abs(__pong.net().ax + 2.5) < 0.6")
     try:
         host.wait_for_function(reached, timeout=4000)
     except Exception:
@@ -67,20 +72,35 @@ def match(browser, mode, transport):
     h = host.evaluate("__pong.net()")
     if mode == "hockey":
         check(abs(h["ma"][0] + 2.5) < 0.6, f"{label}: the friend's mallet shows up mirrored on the host ({h['ma']})")
+    elif mode == "volley":
+        check(abs(h["va"][0] + 2.5) < 0.6 and h["va"][1] < 0, f"{label}: the friend's player runs mirrored on the host ({h['va']})")
     else:
         check(abs(h["ax"] + 2.5) < 0.6, f"{label}: the friend's paddle shows up mirrored on the host ({h['ax']:.2f})")
     # the game state reaches the friend, mirrored
     host.wait_for_timeout(500)
     h, g = host.evaluate("__pong.net()"), guest.evaluate("__pong.net()")
-    key = "puck" if mode == "hockey" else "ball"
-    check(abs(h[key][0] + g[key][0]) < 3 and abs(h[key][1] + g[key][1]) < 4,
-          f"{label}: the friend sees the same {key}, mirrored (host {h[key]}, friend {g[key]})")
+    if mode == "volley":
+        hb, gb = h["vball"], g["vball"]
+        check(abs(hb[0] + gb[0]) < 3 and abs(hb[2] + gb[2]) < 4 and abs(hb[1] - gb[1]) < 3,
+              f"{label}: the friend sees the same ball, mirrored (host {hb}, friend {gb})")
+    else:
+        key = "puck" if mode == "hockey" else "ball"
+        check(abs(h[key][0] + g[key][0]) < 3 and abs(h[key][1] + g[key][1]) < 4,
+              f"{label}: the friend sees the same {key}, mirrored (host {h[key]}, friend {g[key]})")
+    # the friend's SPIN / SPIKE taps reach the host
+    if mode != "hockey":
+        guest.wait_for_function("__pong.net().phase === 'play'", timeout=10000)
+        guest.keyboard.press("Shift")
+        cond = "__pong.net().vaJump > 0" if mode == "volley" else "__pong.net().spinA >= 0"
+        host.wait_for_function(cond, timeout=3000)
+        check(True, f"{label}: the friend's {'SPIKE jump' if mode == 'volley' else 'SPIN tap'} reaches the host")
 
     # scoring: the host scores; the friend sees the rival score and gets slimed
+    before = host.evaluate("__pong.net().score")  # (a real point may already have happened by now)
     host.evaluate("__pong.netForceScore(1)")
-    guest.wait_for_function("__pong.net().score[1] >= 1", timeout=5000)
+    guest.wait_for_function(f"__pong.net().score[1] >= {before[0] + 1}", timeout=5000)
     g = guest.evaluate("__pong.net()")
-    check(g["score"] == [0, 1] and g["slimeYou"], f"{label}: a point syncs and the friend gets slimed ({g['score']})")
+    check(g["score"][1] >= before[0] + 1 and g["slimeYou"], f"{label}: a point syncs and the friend gets slimed ({g['score']})")
 
     # the friend leaves: the host is told and gets the win
     gctx.close()
@@ -129,6 +149,8 @@ def main():
         match(browser, "hockey", "relay")
         match(browser, "hockey", "p2p")
         match(browser, "pong", "relay")
+        match(browser, "volley", "p2p")
+        match(browser, "volley", "relay")
         site = os.environ.get("SITE_URL")
         if site:
             site_join(p, browser, site)
