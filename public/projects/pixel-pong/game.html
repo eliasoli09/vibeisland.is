@@ -59,7 +59,6 @@
   .duo-note { margin: 0; color: var(--muted); font-size: 16px; text-align: center; max-width: 520px; }
   body.duo .who .mini { width: 54px; display: flex; gap: 3px; }
   body.duo .who .mini svg { width: calc(50% - 2px); }
-  body.duo #btnOnline { display: none; } /* online 2v2 rooms come next */
   .picks { width: 100%; display: grid; gap: 10px; justify-items: center; }
   .pick { display: grid; gap: 8px; justify-items: center; }
   .pick-lbl { font: 10px var(--pix); color: var(--muted); letter-spacing: 1px; }
@@ -187,6 +186,27 @@
   body.touch .h-mouse { display: none; }
   .qr svg { width: min(220px, 60vw); height: auto; display: block; background: #fff; border: 4px solid #fff; }
   .qr:empty { display: none; }
+  #onLobby { display: grid; gap: 10px; justify-items: center; width: 100%; }
+  #online.lobby .panel { gap: 10px; }
+  #online.lobby .qr svg { width: min(130px, 34vw); }
+  #online.lobby .code { font-size: 18px; }
+  #online.lobby #onLobby .card { width: 56px; padding: 5px 3px 4px; gap: 3px; }
+  #online.lobby #onLobby .card .art { width: 34px; height: 34px; }
+  #online.lobby #onLobby .card .nm { font-size: 8px; }
+  #online.lobby .qr svg { width: min(116px, 30vw); }
+  #onLobby[hidden] { display: none; }
+  .teams { display: flex; align-items: center; gap: 12px; }
+  .team { display: grid; gap: 6px; justify-items: center; }
+  .seat { appearance: none; cursor: pointer; width: 132px; min-height: 58px; display: grid; grid-template-columns: 36px 1fr; grid-template-rows: auto auto; align-items: center; column-gap: 8px; padding: 6px 8px; text-align: left; color: var(--ink); background: #0a1230; border: 2px solid var(--c, var(--edge)); font: inherit; }
+  .seat .art { grid-row: span 2; width: 36px; display: block; }
+  .seat .art svg { width: 100%; height: auto; display: block; }
+  .seat .nm { font: 10px var(--pix); }
+  .seat .tag { font: 8px var(--pix); color: var(--muted); }
+  .seat.me { box-shadow: 0 0 0 2px var(--c), 0 0 18px var(--c); }
+  .seat.me .tag { color: var(--c); }
+  .seat.empty { grid-template-columns: 1fr; text-align: center; border-style: dashed; color: var(--muted); }
+  .seat.empty:hover { color: var(--ink); border-color: var(--ink); }
+  .seat:disabled { cursor: default; }
   .code { font: 22px var(--pix); letter-spacing: 6px; color: var(--cyan); }
   .code:empty { display: none; }
   #onLink { font: 15px ui-monospace, Menlo, monospace; padding: 10px; width: min(320px, 70vw); color: var(--ink); background: #0a1230; border: 2px solid var(--edge); }
@@ -300,6 +320,16 @@
         <button class="btn ghost" id="onShare" type="button">SHARE</button>
       </div>
       <div class="pick" id="onPick" hidden><div class="roster" id="rosterJoin" role="group" aria-label="Your fighter"></div></div>
+      <div id="onLobby" hidden>
+        <div class="teams">
+          <div class="team"><span class="pick-lbl">TEAM 1</span><button class="seat" type="button" data-seat="0"></button><button class="seat" type="button" data-seat="1"></button></div>
+          <div class="vs">VS</div>
+          <div class="team"><span class="pick-lbl">TEAM 2</span><button class="seat" type="button" data-seat="2"></button><button class="seat" type="button" data-seat="3"></button></div>
+        </div>
+        <span class="pick-lbl">YOUR FIGHTER</span>
+        <div class="roster" id="rosterLobby" role="group" aria-label="Your fighter"></div>
+        <div class="row"><button class="btn ghost" id="onShuffle" type="button">SHUFFLE TEAMS</button><button class="btn" id="onStart" type="button">START</button></div>
+      </div>
       <button class="btn" id="onJoin" type="button" hidden>JOIN GAME</button>
       <button class="btn ghost" id="onCancel" type="button">CANCEL</button>
     </div>
@@ -477,9 +507,9 @@
     CLOCK: 10, CLOCK_STEP: 0.5, CLOCK_MIN: 2,        // shot clock: 10 s, -0.5 s per crossing, never below 2 s
   };
   const HDIFF = {
-    easy:   { speed: 9,  react: 0.25, aim: 1.4, hesitate: 0.2,  realP: 0.34, notice: 0.7,  corner: 0.0, defErr: 1.6 },
-    normal: { speed: 12, react: 0.15, aim: 0.9, hesitate: 0.1,  realP: 0.45, notice: 0.45, corner: 0.4, defErr: 2.0 },
-    hard:   { speed: 17, react: 0.08, aim: 0.5, hesitate: 0.04, realP: 0.6,  notice: 0.3,  corner: 0.7, defErr: 1.4 },
+    easy:   { speed: 9,  react: 0.25, aim: 1.4, hesitate: 0.2,  realP: 0.34, notice: 0.7,  corner: 0.0, defErr: 1.6, pass: 0.2 },
+    normal: { speed: 12, react: 0.15, aim: 0.9, hesitate: 0.1,  realP: 0.45, notice: 0.45, corner: 0.4, defErr: 2.0, pass: 0.4 },
+    hard:   { speed: 17, react: 0.08, aim: 0.5, hesitate: 0.04, realP: 0.6,  notice: 0.3,  corner: 0.7, defErr: 1.4, pass: 0.55 },
   };
   const SPIN = {
     window: 0.33,                                   // a tap counts if it lands this long before contact
@@ -851,7 +881,9 @@
     mode = 'game'; paused = false;
     score[0] = score[1] = 0; updateHUD();
     P.isAI = false; P.x = 0; A.x = duo ? -HW * 0.45 : 0; P2.x = A2.x = HW * 0.45; targetX = 0;
+    if (net.live && net.keys) { youKey = net.keys[0]; aiKey = net.keys[2]; } // online: the fighters everyone picked
     pickTeamKeys();
+    if (net.live && net.keys) { mateKey = net.keys[1] || mateKey; ai2Key = net.keys[3] || ai2Key; }
     streak = 0; aiStreak = 0; updateSpinHUD(); endPower(); resetPins();
     MP.isAI = false; hkResetMallets();
     VP.isAI = false; vbResetPlayers();
@@ -981,12 +1013,12 @@
   // ---------------------------------------------------------------- physics
   // Decides the spin level of a hit. Player: a timed tap; AI: a chance per difficulty.
   function spinLevelFor(pad) {
-    if (pad === A && net.role === 'host' && netLive()) { // online: your friend's timed SPIN tap (a little extra time for lag)
-      const timed = net.spinA >= 0 && simTime - net.spinA <= SPIN.window + 0.15;
-      net.spinA = -1;
-      if (!timed) { net.aStreak = 0; return 0; }
-      const lvl = Math.min(++net.aStreak, 3);
-      netEvent(['spin', -1, lvl]); popText('INCOMING SPIN', SPIN.css[lvl]);
+    if (pad.remote) { // online: a friend's timed SPIN tap (a little extra time for lag)
+      const r = pad.remote, timed = r.spinA >= 0 && simTime - r.spinA <= SPIN.window + 0.15;
+      r.spinA = -1;
+      if (!timed) { r.aStreak = 0; return 0; }
+      const lvl = Math.min(++r.aStreak, 3);
+      netEvent(['spin', pad.side, lvl]); popText(pad.side > 0 ? 'SPIN!' : 'INCOMING SPIN', SPIN.css[lvl]);
       return lvl;
     }
     if (pad === P && !P.isAI) {
@@ -1070,7 +1102,7 @@
     const rig = pad.rig;
     rig.pulse = 1;
     const key = padKey(pad);
-    netEvent(['h', pad.side]);
+    netEvent(['h', pad.slot]);
     burst(xc, ballY(ball.z), ball.z, CHARS[key].hex, 12, -pad.side);
     Sfx.hit(key);
     if (!REDUCED) shake = Math.max(shake, 0.12);
@@ -1503,9 +1535,10 @@
     // player paddle
     if (P.isAI) updateAI(P, dt);
     else humanPaddle(dt);
-    if (net.role === 'host' && netLive()) netMoveRemotePaddle(dt); // online: the far paddle is your friend
-    else updateAI(A, dt);
-    if (duo) { updateAI(P2, dt); updateAI(A2, dt); }
+    for (const q of duo ? [A, P2, A2] : [A]) {
+      if (q.remote) netMoveRemotePaddle(q, dt); // online: a friend's paddle
+      else updateAI(q, dt);
+    }
 
     if (phase === 'serve') { serveT -= dt; if (serveT <= 0) launch(); return; }
     // SLOW-MO only slows balls coming toward the player
@@ -1676,6 +1709,7 @@
     Object.assign(hk.puck, { x: rand(-0.6, 0.6), z: hk.side * 2.2, vx: 0, vz: 0, key, fire: false });
     hk.fakes.forEach((f) => { if (f.active) hkPopFake(f, true); });
     hk.hits = 0; hk.slowT = 0; MA.track = MP.track = MA2.track = MP2.track = null;
+    hkLead[1] = hkLead[-1] = null; hk.lastHitter = null; hk.passFrom = null;
     if (dbg.stats && !turnover) dbg.stats.serveGoal.push(goalHalf(1));
     if (dbg.stats) dbg.stats.puckKeys[key] = true;
     if (mode === 'game' && firstServe) showBanner('READY?', 'var(--ink)');
@@ -1756,8 +1790,31 @@
     p.fire = false;
     const rig = m.rig;
     rig.pulse = 1; m.pulse = 1;
-    if (dbg.stats) dbg.stats.hitsBy[m.slot] = (dbg.stats.hitsBy[m.slot] || 0) + 1;
-    netEvent(['h', m.side]);
+    if (dbg.stats) {
+      dbg.stats.hitsBy[m.slot] = (dbg.stats.hitsBy[m.slot] || 0) + 1;
+      if (hk.lastHitter && hk.lastHitter !== m && hk.lastHitter.side === m.side) dbg.stats.hkTeamTouches = (dbg.stats.hkTeamTouches || 0) + 1; // teammate to teammate
+    }
+    if (hk.passFrom) {
+      if (dbg.stats && m === hk.passFrom.mate) dbg.stats.hkPassDone = (dbg.stats.hkPassDone || 0) + 1;
+      const rcv = hk.passFrom.mate;
+      if (dbg.stats) (dbg.stats.passLog ||= []).push({ next: m === hk.passFrom ? 'passer' : m === rcv ? 'mate' : 'opp', dt: +(simTime - hk.passT).toFixed(2), ...hk.passLog, at: [+p.x.toFixed(1), +p.z.toFixed(1)], rcvNow: [+rcv.x.toFixed(1), +rcv.z.toFixed(1)], side: rcv.side });
+      hk.passFrom = null;
+    }
+    hk.lastHitter = m;
+    m.soft = false;
+    if (m.passing) {
+      // a controlled touch across to the spot in front of your teammate
+      const tx = m.mate.x - p.x, tz = m.side * VB_PASS_Z - p.z, L = Math.hypot(tx, tz) || 1;
+      p.vx = (tx / L) * HK_PASS_V; p.vz = (tz / L) * HK_PASS_V; p.fire = false;
+      hk.passFrom = m; hk.passT = simTime; hk.passTo = { x: m.mate.x, z: m.side * VB_PASS_Z };
+      m.think = 0; m.ghostUntil = simTime + 0.3; // and get out of the way (no second touch knocking the pass off line)
+      hk.passLog = { from: [+p.x.toFixed(1), +p.z.toFixed(1)], to: [+hk.passTo.x.toFixed(1), +hk.passTo.z.toFixed(1)], rcv0: [+m.mate.x.toFixed(1), +m.mate.z.toFixed(1)] };
+      m.passing = false;
+      hkLead[m.side] = m.mate; // the teammate takes it from here
+      if (dbg.stats) dbg.stats.hkPasses = (dbg.stats.hkPasses || 0) + 1;
+      if (mode === 'game') popText('PASS!', CHARS[m.rig.key].css);
+    }
+    netEvent(['h', m.slot]);
     burst(p.x, 0.3, p.z, CHARS[rig.key].hex, 10, -m.side);
     Sfx.hit(rig.key);
     // boosts: yours, or the AI's in a real match (never in the menu demo)
@@ -1851,23 +1908,28 @@
     const p = noticed ? hk.puck : m.track;
     const mine = p.z * s > 0.15, coming = p.vz * s > 0.8, speed = Math.hypot(p.vx, p.vz);
     const hurry = hk.side === s && hk.clock < 1.3; // shot clock about to run out: attack now
-    if (duo) {
-      // 2v2: the teammate nearer the puck plays it; the other one guards the goal
-      const dist = (q) => Math.hypot(q.x - p.x, q.z - p.z);
-      if (dist(m) > dist(m.mate) || (dist(m) === dist(m.mate) && m.lane > 0)) {
-        const px = coming ? hkPredictX(p, defZ) : p.x * 0.5, gh = goalHalf(s);
-        m.tx = clamp(px + rand(-1, 1) * D.aim * D.defErr * 0.5, -gh, gh); m.tz = defZ;
-        return;
-      }
+    if (duo && hk.passFrom === m && simTime - hk.passT < 1.5) { m.tx = m.x; m.tz = defZ; return; } // just passed: step back out of its way
+    if (duo && hk.passFrom === m.mate && simTime - hk.passT < 1.5 && (p.x - m.x) * p.vx < 0) {
+      m.tx = hk.passTo.x; m.tz = hk.passTo.z; m.think = 0.05; // a pass is coming: wait on the spot it's aimed at
+      return;
     }
+    if (duo && hkSupport(m, D, p, mine, coming)) return; // 2v2: the teammate who isn't leading supports
     if (mine && (!coming || speed < 6 || hurry)) {
-      // attack: line up behind the puck (goal side) and drive through it at the other goal
-      const gx = (Math.random() < 0.5 ? -1 : 1) * clamp(rand(D.corner, 1.25), 0, 1.25), gz = -s * HL; // aim for a corner of the goal
+      // attack: line up behind the puck (goal side) and drive through it at the other goal...
+      let gx = (Math.random() < 0.5 ? -1 : 1) * clamp(rand(D.corner, 1.25), 0, 1.25) * (HW / 5), gz = -s * HL; // aim for a corner of the goal
+      // ...or, in 2v2 from an awkward spot, slide it across to your teammate
+      if (duo && (m.planHit !== hk.hits || simTime > m.planT)) {
+        m.planHit = hk.hits; m.planT = simTime + 0.5;
+        const mate = m.mate, awkward = Math.abs(p.x) > HW * 0.45 || p.z * s > HL * 0.5;
+        const open = Math.sign(mate.x) !== Math.sign(p.x) && Math.abs(mate.x - p.x) > 3 && p.z * s > VB_PASS_Z + 0.5; // across and forward
+        m.passing = awkward && open && !hurry && Math.random() < D.pass;
+      }
+      if (duo && m.passing) { gx = m.mate.x; gz = s * VB_PASS_Z; } // to a spot just in front of your teammate
       let ux = gx - p.x, uz = gz - p.z;
       const L = Math.hypot(ux, uz) || 1; ux /= L; uz /= L;
       const back = HK.R_P + m.r + 0.35, bx = p.x - ux * back, bz = p.z - uz * back;
       if ((m.z - p.z) * s < 0.1) { m.tx = p.x + (Math.sign(m.x - p.x) || 1) * (back + 0.2); m.tz = bz + s * 0.6; } // go round it
-      else if (Math.hypot(m.x - bx, m.z - bz) < 0.4) { m.tx = p.x + ux * 1.5; m.tz = p.z + uz * 1.5; m.think = 0.22; } // strike
+      else if (Math.hypot(m.x - bx, m.z - bz) < 0.4) { const f = m.passing ? 0.8 : 1.5; m.tx = p.x + ux * f; m.tz = p.z + uz * f; m.think = 0.22; m.soft = m.passing; } // strike (a pass is gentler)
       else { m.tx = bx; m.tz = bz; }
     } else {
       // defend: stand where the puck will cross our defence line
@@ -1876,11 +1938,42 @@
       m.tx = clamp(px + rand(-1, 1) * D.aim * D.defErr, -lim, lim); m.tz = duo ? s * (HL - 3.6) : defZ; // (2v2: in front of the goalie)
     }
   }
+  // 2v2 teamwork. One teammate leads (plays the puck); it only changes when the other is clearly
+  // closer, so they don't keep swapping. The other supports: it guards the side of the goal the
+  // leader isn't covering, waits in an open spot for a pass or a rebound, or hangs back as goalie.
+  const hkLead = { 1: null, '-1': null };
+  const VB_PASS_Z = 2.2; // passes go across to here (this far from the centre line); the supporter waits just behind it
+  const HK_PASS_V = 11;  // pass speed
+  function hkTeamLead(s, p) {
+    const [a, b] = teamMallets(s), d = (q) => Math.hypot(q.x - p.x, q.z - p.z);
+    if (hk.passFrom && hk.passFrom.side === s && simTime - hk.passT < 1.5) return (hkLead[s] = hk.passFrom.mate); // a pass is on its way
+    let lead = hkLead[s];
+    if (lead !== a && lead !== b) lead = d(a) <= d(b) ? a : b;
+    const other = lead === a ? b : a;
+    if (d(other) + 1.0 < d(lead)) lead = other;
+    return (hkLead[s] = lead);
+  }
+  function hkSupport(m, D, p, mine, coming) {
+    const s = m.side, lead = hkTeamLead(s, p);
+    if (lead === m) return false;
+    const defZ = s * (HL - 1.8), gh = goalHalf(s), side = -(Math.sign(lead.x) || m.lane); // the other half from the leader
+    if (coming) {
+      // a shot coming: cover the goal, on the other side if the leader is already in the way
+      const px = hkPredictX(p, defZ), blocking = Math.abs(lead.x - px) < 1.4 && (lead.z - p.z) * s > 0;
+      m.tx = clamp((blocking ? px + (px >= lead.x ? 1.4 : -1.4) : px) + rand(-1, 1) * D.aim * 0.4, -gh, gh); m.tz = defZ;
+    } else if (mine) {
+      m.tx = side * HW * 0.42; m.tz = s * (VB_PASS_Z + 1); // we have it: get open for a pass or a rebound
+    } else {
+      m.tx = clamp(side * gh * 0.5, -gh, gh); m.tz = defZ; // it's in their half: hang back as goalie
+    }
+    m.passing = false;
+    return true;
+  }
   function hkMoveMallet(m, dt) {
     const auto = m.isAI || (m === MP && dbg.autoPlayer);
     let tx, tz, maxV;
-    if (auto) { hkAI(m); tx = m.tx; tz = m.tz; maxV = HDIFF[m === MP && dbg.autoPlayer ? 'hard' : curDiffKey()].speed; }
-    else if (m === MA && net.role === 'host' && netLive()) { tx = net.rx; tz = net.rz; maxV = 30; } // online: your friend's mallet
+    if (auto) { hkAI(m); tx = m.tx; tz = m.tz; maxV = HDIFF[m === MP && dbg.autoPlayer ? 'hard' : curDiffKey()].speed; if (m.soft) maxV = Math.min(maxV, 7); }
+    else if (m.remote) { tx = m.remote.rx; tz = m.remote.rz; maxV = 30; } // online: a friend's mallet
     else {
       if (keyDir) hk.aim.x = clamp(hk.aim.x + keyDir * 13 * dt, -HW, HW);
       tx = hk.aim.x; tz = hk.aim.z; maxV = 30;
@@ -1915,7 +2008,7 @@
     if (phase === 'play') {
       const ev = hkIntegrate(p, dt);
       if (ev.rail) Sfx.wall();
-      for (const m of hkMallets()) hkMalletContact(p, m);
+      for (const m of hkMallets()) if (!(simTime < m.ghostUntil)) hkMalletContact(p, m);
       // centre-line crossings (with a little slack so a wobbling puck doesn't count twice):
       // both goals grow and the shot clock for the new half gets shorter
       const side = p.z > 0.25 ? 1 : p.z < -0.25 ? -1 : hk.side;
@@ -2016,21 +2109,21 @@
     CW: 5, CL: 7.5, NET_H: 2.3, BR: 0.32, G: 13,
     REACH_H: 1.5, REACH_R: 1.05,                    // bump zone around (x, 1.5 + jump, z)
     APEX: 4.6,                                      // usual bump height
-    SPIKE_R: 1.3, SPIKE_HMIN: 1.8, SPIKE_HMAX: 4.6, SPIKE_NET: 4.2, SPIKE_SPEED: 17, // (AI spikes)
+    SPIKE_R: 1.3, SPIKE_HMIN: 1.8, SPIKE_HMAX: 4.6, SPIKE_NET: 4.2, SPIKE_SPEED: 14, // (AI spikes)
     // People spike with a much bigger reach, from anywhere in their half, and a tap stays armed a while:
     // the ring shows where the ball lands, so at spike height the ball is still ~2 m away from you.
     YOU_SPIKE_R: 2.4, YOU_HMIN: 1.4, YOU_HMAX: 6.5, SPIKE_WINDOW: 0.5,
     YOU_RING_R: 2.0,                                // ...or simply standing on (near) the landing ring
-    DIG_R: 0.8,                                     // a spike is only dug back if it comes almost straight at you
+    YOU_DIG_R: 1.15,                                // how close a spike must come for you to dig it back (AIs: VDIFF.dig)
     RUN: 9.5,                                       // your running speed
     K_STEP: 0.05, K_MAX: 2.0,                       // every touch makes the rally 5% faster, up to 2x...
     K_POINT: 0.03, K_START_MAX: 1.4,                // ...and every point played starts the next rally 3% faster (up to 1.4x)
     SET_Z: 2.0,                                     // 2v2: where a set comes down (this far from the net)
   };
   const VDIFF = {
-    easy:   { run: 6.0, react: 0.32, aim: 1.6, judge: 1.5, spikeP: 0.15, deep: 0.3 },
-    normal: { run: 7.4, react: 0.22, aim: 1.1, judge: 1.05, spikeP: 0.35, deep: 0.5 },
-    hard:   { run: 9.2, react: 0.12, aim: 0.6, judge: 0.55, spikeP: 0.6,  deep: 0.7 },
+    easy:   { run: 6.0, react: 0.32, aim: 1.6, judge: 1.5, spikeP: 0.15, deep: 0.3, dig: 0.8 },
+    normal: { run: 7.4, react: 0.22, aim: 1.1, judge: 1.05, spikeP: 0.35, deep: 0.5, dig: 1.0 },
+    hard:   { run: 9.2, react: 0.12, aim: 0.6, judge: 0.55, spikeP: 0.6,  deep: 0.7, dig: 1.2 },
   };
   // ball.k: how fast this rally runs (it speeds up with every touch). touches: in a row by side `last`.
   const vb = { ball: { x: 0, y: 2.6, z: 4, vx: 0, vy: 0, vz: 0, k: 1 }, last: 1, lastPlayer: null, touches: 0, touchId: 0, server: null, rot: { 1: 0, '-1': 0 }, spikes: [0, 0, 0, 0] };
@@ -2143,7 +2236,7 @@
     }
     const rig = p.rig;
     rig.pulse = 1;
-    netEvent(['h', p.side]);
+    netEvent(['h', p.slot]);
     burst(vb.ball.x, vb.ball.y, vb.ball.z, CHARS[rig.key].hex, kind === 'spike' ? 16 : 10, -p.side);
     Sfx.hit(rig.key);
     if (kind === 'spike') { vb.spikes[p.slot]++; Sfx.fire(); popText('SPIKE!', '#ff6a3d'); if (dbg.stats) dbg.stats[p.side > 0 ? 'vbYouSpikes' : 'vbAiSpikes']++; }
@@ -2189,13 +2282,15 @@
     const b = vb.ball;
     if (!vbSpikeReach(p)) return false;
     const aiAim = !vbIsPerson(p);
-    let tx = Math.sign(p.vx) * rand(2.5, VB.CW - 0.8); // a person running sideways spikes that way...
-    if (aiAim || Math.abs(p.vx) < 2) { // ...otherwise it goes into the biggest gap between the defenders
+    // a person spikes roughly straight ahead, or the way they're running
+    let tx = Math.abs(p.vx) >= 2 ? Math.sign(p.vx) * rand(2.5, VB.CW - 0.8) : rand(-1, 1) * (VB.CW - 1);
+    if (aiAim) { // the AI looks for the biggest gap between the defenders
       let best = -1;
       for (let i = 0; i < 8; i++) {
         const x = rand(-1, 1) * (VB.CW - 0.8), gap = Math.min(...teamPlayers(-p.side).map((o) => Math.abs(o.x - x)));
         if (gap > best) { best = gap; tx = x; }
       }
+      tx = clamp(tx + rand(-1, 1) * vbDiff(p).aim * (duo ? 2 : 1.2), -VB.CW - 0.5, VB.CW + 0.5); // (easier AIs aim worse, and can hit it out)
     }
     if (!vbSpikeLaunch(b, tx, -p.side * rand(2, 5.5))) {
       if (aiAim) return false;
@@ -2218,7 +2313,7 @@
     if (vb.touchId !== p.planFor) {
       p.planFor = vb.touchId;
       const spikeP = dbg.vSpikeP ?? D.spikeP;
-      p.wantSpike = setForMe ? Math.random() < Math.min(1, spikeP + 0.4) : vb.last !== p.side && Math.random() < spikeP;
+      p.wantSpike = setForMe ? Math.random() < Math.min(1, spikeP + 0.15) : vb.last !== p.side && Math.random() < spikeP;
       p.err = rand(-1, 1) * D.judge * (setForMe ? 0.4 : 1); // misjudging where it comes down (easier AIs more often)
     }
     p.think -= STEP;
@@ -2243,7 +2338,7 @@
     let tx, tz, maxV;
     const auto = p.isAI || (p === VP && dbg.autoPlayer);
     if (auto) { vbAI(p); tx = p.tx; tz = p.tz; maxV = vbDiff(p).run; }
-    else if (p === VA && net.role === 'host' && netLive()) { tx = net.rx; tz = net.rz; maxV = 30; } // online: your friend runs on their own screen
+    else if (p.remote) { tx = p.remote.rx; tz = p.remote.rz; maxV = 30; } // online: a friend runs on their own screen
     else {
       if (keyDir) hk.aim.x = clamp(p.x + keyDir * 0.6, -VB.CW - 1, VB.CW + 1);
       tx = hk.aim.x; tz = hk.aim.z; maxV = VB.RUN;
@@ -2296,7 +2391,11 @@
   }
   function vbStep(dt) {
     simTime += dt;
-    if (net.role === 'host' && netLive() && net.spinA >= 0) { VA.spikeAt = net.spinA; net.spinA = -1; if (VA.jumpT <= 0) VA.jumpT = 0.5; } // your friend tapped SPIKE
+    for (const p of vbPlayers()) { // online: a friend tapped SPIKE
+      if (!p.remote || p.remote.spinA < 0) continue;
+      p.spikeAt = p.remote.spinA; p.remote.spinA = -1;
+      if (p.jumpT <= 0) p.jumpT = 0.5;
+    }
     if (!dbg.vFreeze) for (const p of vbPlayers()) vbMovePlayer(p, dt); // (vFreeze: rule tests with nobody touching the ball)
     if (phase === 'serve') {
       const s = vb.server;
@@ -2312,14 +2411,14 @@
       for (const p of dbg.vFreeze ? [] : vbPlayers()) {
         const auto = p.isAI || (p === VP && dbg.autoPlayer);
         if (auto) { if (p.wantSpike && vbTrySpike(p)) p.wantSpike = false; continue; }
-        const win = p === VA ? VB.SPIKE_WINDOW + 0.15 : VB.SPIKE_WINDOW; // (VA is a person only online: forgive lag)
+        const win = p.remote ? VB.SPIKE_WINDOW + 0.15 : VB.SPIKE_WINDOW; // (online: forgive lag)
         if (p.spikeAt >= 0 && simTime - p.spikeAt <= win) { if (vbTrySpike(p)) p.spikeAt = -1; }
         else p.spikeAt = -1;
       }
       // bumps: get under a falling ball on your side
       for (const p of dbg.vFreeze ? [] : vbPlayers()) {
         if (p.cool > 0 || b.vy > 0 || b.z * p.side < -0.1 || !vbMayTouch(p)) continue;
-        const hard = Math.hypot(b.vx, b.vz) > 12, reach = hard ? VB.DIG_R : VB.REACH_R; // spikes are hard to dig
+        const hard = Math.hypot(b.vx, b.vz) > 11, reach = hard ? (vbIsPerson(p) ? VB.YOU_DIG_R : vbDiff(p).dig) : VB.REACH_R; // spikes are harder to dig
         if (Math.hypot(b.x - p.x, b.y - (VB.REACH_H + p.jy), b.z - p.z) < reach + VB.BR) {
           if (dbg.stats && vb.lastPlayer && vb.lastPlayer.side !== p.side && vb.lastKind === 'spike') dbg.stats.vbDigs = (dbg.stats.vbDigs || 0) + 1;
           vbBump(p);
@@ -2400,6 +2499,9 @@
     [[A, MA, VA], farRig, [A2, MA2, VA2], -1, 2], [[A2, MA2, VA2], farRig2, [A, MA, VA], 1, 3],
   ]) list.forEach((q, i) => Object.assign(q, { rig, mate: mate[i], lane, slot }));
   P2.isAI = MP2.isAI = VP2.isAI = A2.isAI = MA2.isAI = VA2.isAI = true;
+
+  // every mode's four players, in the host's order (0 you, 1 your teammate, 2-3 the other team)
+  const ENT_SETS = { pong: [P, P2, A, A2], hockey: [MP, MP2, MA, MA2], volley: [VP, VP2, VA, VA2] };
 
   // which pieces are on the table for this mode and team size
   function applyRoster() {
@@ -2720,30 +2822,46 @@
     Sfx.muted = !Sfx.muted; store.set('pp-muted', Sfx.muted ? '1' : '0'); updateMuteBtn(); Sfx.init();
   });
   $('#btnRematch').addEventListener('click', () => {
-    if (net.role === 'host') netHostStartMatch(aiKey);
+    if (net.role === 'host') netHostRestart();
     else if (net.role === 'guest') { netSend('rematch', {}, true); $('#overSub').textContent = 'Asked for a rematch...'; }
     else startGame();
   });
   $('#btnChange').addEventListener('click', () => { if (net.role) netLeave(); toMenu(); });
 
-  // ================================================================ ONLINE (2 players, 2 devices)
-  // The host's browser runs the real game. The friend (guest) sends its paddle/mallet and SPIN taps;
-  // the host sends back snapshots + events. Both see the match from their own end: the guest
-  // mirrors everything (x -> -x, z -> -z, near <-> far). Players find each other with a room code
-  // shared as a QR code / link. Transport: a direct WebRTC data channel when the network allows it,
-  // otherwise the Supabase Realtime channel relays everything (it also carries the handshake).
+  // ================================================================ ONLINE (2-4 players, one device each)
+  // The host's browser runs the real game. Friends (guests) send their own paddle / mallet / player
+  // position plus SPIN / SPIKE taps; the host sends back snapshots + events. Everyone sees the match
+  // from their own team's end: a guest on the other team mirrors everything (x -> -x, z -> -z), and
+  // every guest renumbers the players so that locally they are always the near main player.
+  // 1 v 1: a friend joins with the QR code / link, picks a fighter and the match starts.
+  // 2 v 2: a room for up to 4. Everyone takes a seat (two per team) and a fighter, the host can
+  // SHUFFLE the teams and presses START. Empty seats are played by the AI, and if someone leaves
+  // mid-match the AI takes over their player.
+  // Transport: a direct WebRTC data channel per guest when the network allows it, otherwise the
+  // Supabase Realtime channel relays everything (it also carries the handshake). Every message says
+  // who sent it (f) and who it's for (t: one id, a list of ids, or everyone).
   const NET_URL = 'https://imzqngcwykvqxzylhujf.supabase.co';
   const NET_KEY = 'sb_publishable_33PGYWKmqvdCDUkwRnthrQ_vgQiQsEE'; // public publishable key: only used for live game channels
   const NET_SHARED_POPS = new Set(['PINS!', '+1 PIN', 'FACE-OFF', 'SPIKE!', 'OUT!']);
   const pageParams = new URLSearchParams(location.search);
+  const makeId = () => Math.random().toString(36).slice(2, 10);
   const net = {
-    role: null, code: null, sb: null, ch: null, pc: null, dc: null, live: false, transport: 'relay',
+    role: null, id: makeId(), code: null, sb: null, ch: null, live: false, duo: false,
     forceRelay: pageParams.get('net') === 'relay', lastRecv: 0, nextSend: 0, nextPing: 0, rtt: 0.1,
-    events: [], hostKey: null, hostMode: null, info: null, rx: 0, rz: -6, ahist: [], spinA: -1, aStreak: 0,
-    snap: null, waitTimer: null, iceQueue: [],
+    events: [], info: null, snap: null, waitTimer: null,
+    peers: new Map(),                      // host: guest id -> peer
+    host: null,                            // guest: the host's peer
+    me: { ent: 2, flip: true, swap: false }, // guest: which player you are in the host's game
+    seats: [null, null, null, null],       // 2v2 room: { id, char } per seat; seats 0-1 are team 1, 2-3 team 2
+    keys: null,                            // this match's fighters, in local order (you, mate, rival, rival 2)
   };
   const netLive = () => net.live && mode === 'game';
   function netEvent(e) { if (net.role === 'host' && netLive()) net.events.push(e); }
+  const makePeer = (id) => ({ id, pc: null, dc: null, dcc: null, transport: 'relay', iceQueue: [], lastRecv: performance.now(), rx: 0, rz: -6, spinA: -1, aStreak: 0, ent: 2, flip: true, swap: false, char: null });
+  const netTransport = () => {
+    const list = net.role === 'host' ? [...net.peers.values()] : net.host ? [net.host] : [];
+    return list.length && list.every((p) => p.transport === 'p2p') ? 'p2p' : 'relay';
+  };
 
   function loadScript(src) {
     return new Promise((resolve, reject) => {
@@ -2764,17 +2882,31 @@
   }
 
   // ---------------------------------------------------------------- transport
-  function netSend(k, d, reliable) {
-    const msg = JSON.stringify({ k, d });
-    const dc = reliable ? net.dcc : net.dc;
-    if (net.transport === 'p2p' && dc && dc.readyState === 'open') { try { dc.send(msg); return; } catch (e) { /* fall back */ } }
-    if (net.ch) net.ch.send({ type: 'broadcast', event: 'm', payload: { k, d } });
+  // To one peer (`to`), or to everyone you talk to: the host's guests, or a guest's host.
+  function netSend(k, d, reliable, to) {
+    const targets = net.role === 'host' ? (to ? [net.peers.get(to)].filter(Boolean) : [...net.peers.values()]) : (net.host ? [net.host] : []);
+    if (!targets.length) { if (!to) netBroadcast(k, d); return; } // (a guest that hasn't found its host yet)
+    const msg = JSON.stringify({ k, d, f: net.id });
+    const relay = [];
+    for (const p of targets) {
+      const dc = reliable ? p.dcc : p.dc;
+      if (p.transport === 'p2p' && dc && dc.readyState === 'open') { try { dc.send(msg); continue; } catch (e) { /* relay it */ } }
+      relay.push(p.id);
+    }
+    if (relay.length && net.ch) net.ch.send({ type: 'broadcast', event: 'm', payload: { k, d, f: net.id, t: relay } });
+  }
+  // To everyone on the channel, including people who are only just joining.
+  function netBroadcast(k, d) { if (net.ch) net.ch.send({ type: 'broadcast', event: 'm', payload: { k, d, f: net.id } }); }
+  function netOnMessage(m) {
+    if (!m || m.f === net.id) return;
+    if (m.t && (Array.isArray(m.t) ? !m.t.includes(net.id) : m.t !== net.id)) return; // for someone else
+    netRecv(m.k, m.d, m.f);
   }
   async function netOpen(code) {
     const sb = await netClient();
     net.code = code;
     net.ch = sb.channel('pixelpong:' + code, { config: { broadcast: { self: false } } });
-    net.ch.on('broadcast', { event: 'm' }, ({ payload }) => netRecv(payload.k, payload.d));
+    net.ch.on('broadcast', { event: 'm' }, ({ payload }) => netOnMessage(payload));
     await new Promise((resolve, reject) => {
       const t = setTimeout(() => reject(new Error('timeout')), 12000);
       net.ch.subscribe((status) => {
@@ -2783,64 +2915,76 @@
       });
     });
   }
-  function netAttachDc(dc) {
+  function netAttachDc(peer, dc) {
     const reliable = dc.label === 'ctl';
-    if (reliable) net.dcc = dc; else net.dc = dc;
-    dc.onopen = () => { if (!reliable) { net.transport = 'p2p'; updateNetBadge(); } };
-    dc.onclose = () => { if (!reliable) { net.transport = 'relay'; updateNetBadge(); } };
-    dc.onmessage = (e) => { try { const { k, d } = JSON.parse(e.data); netRecv(k, d); } catch (err) { /* ignore bad packets */ } };
+    if (reliable) peer.dcc = dc; else peer.dc = dc;
+    dc.onopen = () => { if (!reliable) { peer.transport = 'p2p'; updateNetBadge(); } };
+    dc.onclose = () => { if (!reliable) { peer.transport = 'relay'; updateNetBadge(); } };
+    dc.onmessage = (e) => { try { netOnMessage(JSON.parse(e.data)); } catch (err) { /* ignore bad packets */ } };
   }
-  function netPeer() {
+  function netPeer(peer) {
     if (net.forceRelay || !window.RTCPeerConnection) return null;
     const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] });
-    pc.onicecandidate = (e) => { if (e.candidate) netSend('ice', e.candidate.toJSON()); };
-    pc.ondatachannel = (e) => netAttachDc(e.channel);
-    net.pc = pc;
+    pc.onicecandidate = (e) => { if (e.candidate) netSend('ice', e.candidate.toJSON(), false, net.role === 'host' ? peer.id : undefined); };
+    pc.ondatachannel = (e) => netAttachDc(peer, e.channel);
+    peer.pc = pc;
     return pc;
   }
-  async function netStartP2P() { // host side
-    const pc = netPeer();
+  async function netStartP2P(peer) { // host side, one connection per guest
+    const pc = netPeer(peer);
     if (!pc) return;
-    netAttachDc(pc.createDataChannel('game', { ordered: false, maxRetransmits: 0 }));
-    netAttachDc(pc.createDataChannel('ctl'));
+    netAttachDc(peer, pc.createDataChannel('game', { ordered: false, maxRetransmits: 0 }));
+    netAttachDc(peer, pc.createDataChannel('ctl'));
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
-    netSend('offer', pc.localDescription.toJSON());
+    netSend('offer', pc.localDescription.toJSON(), false, peer.id);
   }
-  async function netOnSignal(k, d) {
+  async function netOnSignal(k, d, from) {
+    const peer = net.role === 'host' ? net.peers.get(from) : net.host;
+    if (!peer) return;
     try {
       if (k === 'offer') {
-        const pc = netPeer();
+        try { if (peer.pc) peer.pc.close(); } catch (e) { /* gone */ }
+        const pc = netPeer(peer);
         if (!pc) return;
         await pc.setRemoteDescription(d);
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
         netSend('answer', pc.localDescription.toJSON());
-        for (const c of net.iceQueue.splice(0)) await pc.addIceCandidate(c);
-      } else if (k === 'answer' && net.pc) {
-        await net.pc.setRemoteDescription(d);
-        for (const c of net.iceQueue.splice(0)) await net.pc.addIceCandidate(c);
+        for (const c of peer.iceQueue.splice(0)) await pc.addIceCandidate(c);
+      } else if (k === 'answer' && peer.pc) {
+        await peer.pc.setRemoteDescription(d);
+        for (const c of peer.iceQueue.splice(0)) await peer.pc.addIceCandidate(c);
       } else if (k === 'ice') {
-        if (net.pc && net.pc.remoteDescription) await net.pc.addIceCandidate(d);
-        else net.iceQueue.push(d);
+        if (peer.pc && peer.pc.remoteDescription) await peer.pc.addIceCandidate(d);
+        else peer.iceQueue.push(d);
       }
     } catch (e) { /* direct connection failed: the relay keeps working */ }
   }
 
   // ---------------------------------------------------------------- messages
-  function netRecv(k, d) {
+  function netRecv(k, d, from) {
     net.lastRecv = performance.now();
-    if (k === 'offer' || k === 'answer' || k === 'ice') { netOnSignal(k, d); return; }
+    if (k === 'offer' || k === 'answer' || k === 'ice') { netOnSignal(k, d, from); return; }
     if (net.role === 'host') {
-      if (k === 'hi') netSend('info', { mode: gameMode, host: youKey }, true);
-      else if (k === 'join') netHostStartMatch(d.char);
-      else if (k === 'i') { net.rx = -d[0]; net.rz = -(d[1] ?? 6); } // guest input, mirrored into the host's frame
-      else if (k === 'spin') net.spinA = simTime;
-      else if (k === 'ping') netSend('pong', d);
-      else if (k === 'rematch' && phase === 'over') netHostStartMatch(aiKey);
-      else if (k === 'bye') netOpponentLeft();
+      const peer = net.peers.get(from);
+      if (peer) peer.lastRecv = performance.now();
+      if (k === 'hi') netHostHi(from, d);
+      else if (k === 'join') netHostJoin(from, d);
+      else if (k === 'want') netHostWant(from, d);
+      else if (!peer) return;
+      else if (k === 'i') { const s = peer.flip ? -1 : 1; peer.rx = s * d[0]; peer.rz = s * (d[1] ?? 6); } // into the host's frame
+      else if (k === 'spin') peer.spinA = simTime;
+      else if (k === 'ping') netSend('pong', d, false, from);
+      else if (k === 'rematch' && phase === 'over') netHostRestart();
+      else if (k === 'bye') netPeerLeft(peer);
     } else if (net.role === 'guest') {
+      if (net.host && from !== net.host.id) return; // only the host talks to guests
+      if (!net.host && (k === 'info' || k === 'lobby' || k === 'full')) net.host = makePeer(from);
+      if (!net.host) return;
       if (k === 'info') { net.info = d; netGuestShowPick(); }
+      else if (k === 'lobby') netGuestLobby(d);
+      else if (k === 'full') { if (!net.live) showOnline('This game is full. Ask your friend to start a new one.'); }
       else if (k === 'start') netGuestStartMatch(d);
       else if (k === 's') net.snap = d;
       else if (k === 'e') d.forEach(netGuestEvent);
@@ -2853,17 +2997,25 @@
   async function netHost() {
     netReset();
     net.role = 'host';
+    net.duo = duo;
     showOnline('Creating a game...');
     try { await netOpen(makeCode()); } catch (e) { showOnline('Could not reach the game server. Check your connection and try again.'); return; }
     const link = joinLink(net.code);
-    showOnline('Scan the code or send the link to a friend. Waiting for them to join...');
+    showOnline(duo ? 'Up to 3 friends can join with the code or the link. Empty seats are played by the AI.' : 'Scan the code or send the link to a friend. Waiting for them to join...');
     $('#onCode').textContent = net.code;
     $('#onLink').value = link;
     $('#onLinkRow').hidden = false;
     $('#onShare').hidden = !navigator.share;
     renderQR(link);
+    if (duo) { net.seats = [{ id: net.id, char: youKey }, null, null, null]; showLobby(); }
     clearInterval(net.waitTimer);
-    net.waitTimer = setInterval(() => { if (!net.live) netSend('info', { mode: gameMode, host: youKey }, true); }, 1000);
+    net.waitTimer = setInterval(() => {
+      if (net.live) return;
+      if (!net.duo) { netBroadcast('info', { mode: gameMode, host: youKey, duo: false }); return; }
+      // the room: drop people who went quiet, and keep everyone's view of the seats fresh
+      for (const p of [...net.peers.values()]) if (performance.now() - p.lastRecv > 6000) netPeerLeft(p);
+      netBroadcastLobby();
+    }, 1000);
   }
   async function renderQR(link) {
     try {
@@ -2872,13 +3024,89 @@
       $('#onQR').innerHTML = qr.createSvgTag({ cellSize: 5, margin: 3, scalable: true });
     } catch (e) { $('#onQR').innerHTML = ''; }
   }
-  function netHostStartMatch(guestChar) {
+  function netHostHi(from, d) {
+    if (!net.duo) {
+      if (net.live && !net.peers.has(from)) netSend('full', {}, true, from); // (a 1v1 room has one friend)
+      else netBroadcast('info', { mode: gameMode, host: youKey, duo: false });
+      return;
+    }
+    if (net.seats.some((s) => s && s.id === from)) { net.peers.get(from).lastRecv = performance.now(); return; } // (keep-alive)
+    const free = net.seats.indexOf(null);
+    if (net.live || free < 0) { netBroadcast('full', {}); return; }
+    const taken = net.seats.filter(Boolean).map((s) => s.char);
+    const char = CHARS[d && d.char] && !taken.includes(d.char) ? d.char : ORDER.find((k) => !taken.includes(k));
+    net.seats[free] = { id: from, char };
+    net.peers.set(from, makePeer(from));
+    netBroadcastLobby();
+  }
+  // 1 v 1: the friend picked a fighter
+  function netHostJoin(from, d) {
+    if (net.duo || (net.live && !net.peers.has(from))) return;
+    if (!net.peers.has(from)) net.peers.set(from, makePeer(from));
+    netHostStartMatch(d.char);
+  }
+  // 2 v 2 room: someone wants another seat or fighter
+  function netHostWant(from, d) {
+    if (!net.duo || net.live) return;
+    const at = net.seats.findIndex((s) => s && s.id === from);
+    if (at < 0) return;
+    if (Number.isInteger(d.seat) && d.seat >= 0 && d.seat < 4 && !net.seats[d.seat]) { net.seats[d.seat] = net.seats[at]; net.seats[at] = null; }
+    if (CHARS[d.char] && !net.seats.some((s) => s && s.id !== from && s.char === d.char)) {
+      net.seats.find((s) => s && s.id === from).char = d.char;
+      if (from === net.id) youKey = d.char;
+    }
+    netBroadcastLobby();
+  }
+  // Random teams, spread out: people are dealt alternately to the two teams.
+  function netShuffle() {
+    const people = net.seats.filter(Boolean).sort(() => Math.random() - 0.5);
+    const order = Math.random() < 0.5 ? [0, 2, 1, 3] : [2, 0, 3, 1];
+    net.seats = [null, null, null, null];
+    people.forEach((s, i) => { net.seats[order[i]] = s; });
+    netBroadcastLobby();
+  }
+  function netBroadcastLobby() {
+    netBroadcast('lobby', { mode: gameMode, seats: net.seats, host: net.id });
+    renderLobby();
+  }
+  function netHostStartMatch(guestChar) { // 1 v 1
     clearInterval(net.waitTimer);
+    const peer = [...net.peers.values()][0];
+    if (!peer) return;
     if (!CHARS[guestChar] || guestChar === youKey) guestChar = ORDER.find((k) => k !== youKey);
     aiKey = guestChar;
-    netSend('start', { mode: gameMode, host: youKey, guest: guestChar }, true);
+    Object.assign(peer, { ent: 2, flip: true, swap: false, char: guestChar });
+    net.keys = [youKey, null, guestChar, null];
+    netSend('start', { mode: gameMode, duo: false, keys: net.keys, ent: 2, flip: true, swap: false }, true, peer.id);
     netBeginMatch();
-    if (!net.pc) netStartP2P();
+    if (!peer.pc) netStartP2P(peer);
+  }
+  // 2 v 2: your team is the near one; you are its main player and your teammate the second.
+  function netHostStartDuo() {
+    if (net.seats.filter(Boolean).length < 2) return;
+    clearInterval(net.waitTimer);
+    const mySeat = net.seats.findIndex((s) => s && s.id === net.id), myTeam = mySeat >> 1;
+    const entOf = (seat) => ((seat >> 1) === myTeam ? (seat === mySeat ? 0 : 1) : 2 + (seat & 1));
+    const keys = [null, null, null, null];
+    net.seats.forEach((s, i) => { if (s) keys[entOf(i)] = s.char; });
+    const free = ORDER.filter((k) => !keys.includes(k)).sort(() => Math.random() - 0.5);
+    for (let i = 0; i < 4; i++) if (!keys[i]) keys[i] = free.pop(); // the AIs get the fighters nobody picked
+    net.keys = keys;
+    net.seats.forEach((s, i) => {
+      const peer = s && net.peers.get(s.id);
+      if (!peer) return;
+      Object.assign(peer, { ent: entOf(i), flip: entOf(i) >= 2, swap: (entOf(i) & 1) === 1, char: s.char });
+      netSend('start', { mode: gameMode, duo: true, keys, ent: peer.ent, flip: peer.flip, swap: peer.swap }, true, peer.id);
+    });
+    netBeginMatch();
+    for (const peer of net.peers.values()) if (!peer.pc) netStartP2P(peer);
+  }
+  function netHostRestart() {
+    if (net.duo) {
+      clearInterval(net.waitTimer);
+      for (const peer of net.peers.values()) netSend('start', { mode: gameMode, duo: true, keys: net.keys, ent: peer.ent, flip: peer.flip, swap: peer.swap }, true, peer.id);
+      netBeginMatch();
+    } else netHostStartMatch(aiKey);
   }
 
   // ---------------------------------------------------------------- guest
@@ -2887,14 +3115,20 @@
     net.role = 'guest';
     showOnline('Joining game ' + code + '...');
     try { await netOpen(code); } catch (e) { showOnline('Could not reach the game server. Check your connection and try again.'); return; }
-    netSend('hi', {}, true);
+    netSend('hi', { char: youKey }, true);
     clearInterval(net.waitTimer);
-    net.waitTimer = setInterval(() => { if (!net.info) netSend('hi', {}, true); }, 1500);
+    // ask until the host answers; in a 2v2 room this also tells the host you're still there
+    net.waitTimer = setInterval(() => {
+      if (net.live) return;
+      if (!net.info || net.duo) netSend('hi', { char: youKey }, true);
+      if (net.host && performance.now() - net.lastRecv > 8000) { netLeave(false); showOnline('Lost the game. Ask your friend to keep their game open and try again.'); }
+    }, 1500);
     showOnline('Looking for game ' + code + '... (ask your friend to keep their game open)');
   }
   function netGuestShowPick() {
     if (net.live) return;
     clearInterval(net.waitTimer);
+    net.waitTimer = null;
     const host = net.info.host;
     if (youKey === host) youKey = ORDER.find((k) => k !== host);
     showOnline(`${CHARS[host].name} wants to play ${{ hockey: 'AIR HOCKEY', volley: 'VOLLEYBALL' }[net.info.mode] || 'PING PONG'}. Pick your fighter:`);
@@ -2902,9 +3136,23 @@
     roster.innerHTML = ORDER.map((k) => `<button class="card" type="button" data-char="${k}" style="--c:${CHARS[k].css}" aria-pressed="${k === youKey}" ${k === host ? 'disabled' : ''}><span class="art">${gridSVG(CHARS[k])}</span><span class="nm">${CHARS[k].name}</span></button>`).join('');
     $('#onPick').hidden = false; $('#onJoin').hidden = false;
   }
+  function netGuestLobby(d) {
+    if (net.live) return;
+    net.duo = true;
+    net.seats = d.seats;
+    const me = d.seats.find((s) => s && s.id === net.id);
+    if (me) youKey = me.char;
+    if ($('#onLobby').hidden) showOnline(`${MODE_NAMES[d.mode] || 'PING PONG'} 2 V 2: take a seat and pick a fighter. The host starts the match.`);
+    showLobby();
+  }
+  // Which of my players is the host's player hi (and back): my team is always the near one, me its main player.
+  function localIdx(hi) { let team = hi >> 1, pos = hi & 1; if (net.me.flip) team ^= 1; if (team === 0 && net.me.swap) pos ^= 1; return team * 2 + pos; }
+  function hostIdxOf(li) { let team = li >> 1, pos = li & 1; if (team === 0 && net.me.swap) pos ^= 1; if (net.me.flip) team ^= 1; return team * 2 + pos; }
   function netGuestStartMatch(d) {
-    youKey = d.guest; aiKey = d.host;
-    setGameMode(d.mode); setDuo(false); // (online is 1v1 for now)
+    net.me = { ent: d.ent, flip: d.flip, swap: d.swap };
+    net.keys = [0, 1, 2, 3].map((li) => d.keys[hostIdxOf(li)]);
+    setGameMode(d.mode); setDuo(!!d.duo);
+    net.duo = !!d.duo;
     net.snap = null;
     netBeginMatch();
   }
@@ -2913,35 +3161,54 @@
   function netBeginMatch() {
     net.live = true;
     net.lastRecv = performance.now();
-    net.aStreak = 0; net.spinA = -1; net.ahist = []; net.events = [];
+    net.events = [];
+    for (const p of net.peers.values()) { p.lastRecv = performance.now(); p.spinA = -1; p.aStreak = 0; }
     $('#online').hidden = true;
     startGame();
-    A.isAI = false; MA.isAI = false; VA.isAI = false; // the far side is a person now
-    $('#lblAi').textContent = 'RIVAL';
+    // the host's friends play their players; everyone else is the AI
+    for (const list of Object.values(ENT_SETS)) list.forEach((q, i) => {
+      q.remote = net.role === 'host' ? [...net.peers.values()].find((p) => p.ent === i) || null : null;
+      q.hist = [];
+      if (i > 0) q.isAI = !q.remote;
+    });
+    $('#lblAi').textContent = net.duo ? 'RIVALS' : 'RIVAL';
     $('#btnPause').hidden = true; // an online match can't be paused
     document.body.classList.add('online'); // no boosts online, so no streak dots either
     updateNetBadge();
   }
+  // Someone left. In the lobby they lose their seat; mid-match the AI takes over their player.
+  function netPeerLeft(peer) {
+    try { if (peer.pc) peer.pc.close(); } catch (e) { /* gone */ }
+    net.peers.delete(peer.id);
+    const seat = net.seats.findIndex((s) => s && s.id === peer.id);
+    if (seat >= 0) net.seats[seat] = null;
+    if (!net.live) { if (net.duo) netBroadcastLobby(); return; }
+    if (!net.peers.size) { netOpponentLeft(); return; }
+    for (const list of Object.values(ENT_SETS)) for (const q of list) if (q.remote === peer) { q.remote = null; q.isAI = true; }
+    const text = `${CHARS[net.keys[peer.ent]].name} LEFT - AI PLAYS`;
+    popText(text, '#43e0ff'); netEvent(['pop', text, '#43e0ff']);
+  }
   function netOpponentLeft() {
     if (!net.role) return;
-    const wasLive = net.live && phase !== 'over';
+    const wasLive = net.live && phase !== 'over', hostGone = net.role === 'guest' && net.duo;
     netLeave(false);
-    if (!wasLive) { showOnline('Your friend left.'); return; }
+    if (!wasLive) { showOnline(hostGone ? 'The host left.' : 'Your friend left.'); return; }
     phase = 'over';
     $('#overArt').innerHTML = gridSVG(CHARS[youKey]);
-    $('#overTitle').textContent = 'OPPONENT LEFT';
+    $('#overTitle').textContent = hostGone ? 'HOST LEFT' : 'OPPONENT LEFT';
     $('#overTitle').style.color = 'var(--ink)';
-    $('#overSub').textContent = 'Your friend disconnected, so the win is yours.';
+    $('#overSub').textContent = hostGone ? 'The game ended because the host disconnected.' : 'Your friend disconnected, so the win is yours.';
     $('#btnRematch').hidden = true;
     $('#over').hidden = false;
     document.body.classList.remove('playing');
   }
   function netReset() {
     clearInterval(net.waitTimer);
-    try { if (net.pc) net.pc.close(); } catch (e) { /* already closed */ }
+    for (const p of [...net.peers.values(), net.host]) { try { if (p && p.pc) p.pc.close(); } catch (e) { /* already closed */ } }
     try { if (net.ch && net.sb) net.sb.removeChannel(net.ch); } catch (e) { /* already gone */ }
-    Object.assign(net, { role: null, code: null, ch: null, pc: null, dc: null, dcc: null, live: false, transport: 'relay', info: null, snap: null, events: [], iceQueue: [] });
-    A.isAI = true; MA.isAI = true; VA.isAI = true;
+    Object.assign(net, { role: null, code: null, ch: null, live: false, duo: false, info: null, snap: null, events: [], host: null, keys: null, seats: [null, null, null, null], me: { ent: 2, flip: true, swap: false } });
+    net.peers.clear();
+    for (const list of Object.values(ENT_SETS)) list.forEach((q, i) => { q.remote = null; q.hist = []; if (i > 0) q.isAI = true; });
     $('#lblAi').textContent = 'AI';
     $('#btnRematch').hidden = false; $('#btnPause').hidden = false;
     document.body.classList.remove('online');
@@ -2953,35 +3220,37 @@
   }
   window.addEventListener('pagehide', () => { if (net.role) netSend('bye', {}, true); });
 
-  // ---------------------------------------------------------------- host: remote paddle + snapshots
-  // The guest's paddle follows its reported position; a short history lets the host forgive lag
-  // when deciding whether the guest reached the ball.
-  function netMoveRemotePaddle(dt) {
-    const prev = A.x;
-    A.x += (clamp(net.rx, -padLim(A), padLim(A)) - A.x) * Math.min(1, dt * 22);
-    A.vx = (A.x - prev) / dt;
-    net.ahist.push([simTime, A.x]);
-    while (net.ahist.length && net.ahist[0][0] < simTime - 0.15) net.ahist.shift();
+  // ---------------------------------------------------------------- host: remote players + snapshots
+  // A friend's paddle follows its reported position; a short history lets the host forgive lag
+  // when deciding whether they reached the ball.
+  function netMoveRemotePaddle(pad, dt) {
+    const prev = pad.x;
+    pad.x += (clamp(pad.remote.rx, -padLim(pad), padLim(pad)) - pad.x) * Math.min(1, dt * 22);
+    pad.vx = (pad.x - prev) / dt;
+    pad.hist.push([simTime, pad.x]);
+    while (pad.hist.length && pad.hist[0][0] < simTime - 0.15) pad.hist.shift();
   }
-  const reachX = (pad, xc) => (pad === A && net.role === 'host' && netLive() && net.ahist.length
-    ? Math.min(...net.ahist.map((h) => Math.abs(xc - h[1])))
+  const reachX = (pad, xc) => (pad.remote && pad.hist && pad.hist.length
+    ? Math.min(...pad.hist.map((h) => Math.abs(xc - h[1])))
     : Math.abs(xc - pad.x));
   const r3 = (v) => Math.round(v * 1000) / 1000;
+  const MODE_NAMES = { pong: 'PING PONG', hockey: 'AIR HOCKEY', volley: 'VOLLEYBALL' };
   function netSnapshot() {
     const s = { m: gameMode, ph: phase, sc: [...score], st: r3(serveT) };
+    const on = (i) => duo || i % 2 === 0;
     if (gameMode === 'hockey') {
       const q = hk.puck;
       s.h = [r3(q.x), r3(q.z), r3(q.vx), r3(q.vz), ORDER.indexOf(q.key), q.fire ? 1 : 0];
-      s.mp = [r3(MP.x), r3(MP.z), r3(MP.r)]; s.ma = [r3(MA.x), r3(MA.z), r3(MA.r)];
+      s.e = ENT_SETS.hockey.map((m, i) => (on(i) ? [r3(m.x), r3(m.z), r3(m.r)] : 0));
       s.k = [hk.crossings, hk.side, r3(hk.clock)];
       s.f = hk.fakes.map((f) => (f.active ? [r3(f.x), r3(f.z)] : 0));
     } else if (gameMode === 'volley') {
       const b = vb.ball;
-      s.v = [r3(b.x), r3(b.y), r3(b.z), r3(b.vx), r3(b.vy), r3(b.vz), vb.last, vb.server === VA ? -1 : 1, r3(b.k)];
-      s.vp = [r3(VP.x), r3(VP.z), r3(VP.jy)]; s.va = [r3(VA.x), r3(VA.z), r3(VA.jy)];
+      s.v = [r3(b.x), r3(b.y), r3(b.z), r3(b.vx), r3(b.vy), r3(b.vz), vb.last, vb.server ? vb.server.slot : 0, r3(b.k)];
+      s.e = ENT_SETS.volley.map((p, i) => (on(i) ? [r3(p.x), r3(p.z), r3(p.jy)] : 0));
     } else {
       s.b = [r3(ball.x), r3(ball.z), r3(ball.vx), r3(ball.vz), r3(ball.speed), r3(ball.curve), ball.spinLvl, ball.fire ? 1 : 0];
-      s.p = [r3(P.x), r3(P.w)]; s.a = [r3(A.x), r3(A.w)];
+      s.e = ENT_SETS.pong.map((p, i) => (on(i) ? [r3(p.x), r3(p.w)] : 0));
       s.d = decoys.map((d) => (d.active ? [r3(d.x), r3(d.z)] : 0));
       s.n = pins.map((q) => [r3(q.x), r3(q.z)]);
     }
@@ -2990,22 +3259,23 @@
   function netHostTick() {
     if (net.role !== 'host' || !netLive()) return;
     const now = performance.now();
-    if (now - net.lastRecv > 5000) { netOpponentLeft(); return; }
+    for (const peer of [...net.peers.values()]) if (now - peer.lastRecv > 5000) netPeerLeft(peer);
+    if (net.role !== 'host' || !netLive()) return;
     if (simTime < net.nextSend) return;
-    net.nextSend = simTime + (net.transport === 'p2p' ? 1 / 30 : 1 / 20);
+    net.nextSend = simTime + (netTransport() === 'p2p' ? 1 / 30 : net.duo ? 1 / 15 : 1 / 20);
     netSend('s', netSnapshot());
     if (net.events.length) { netSend('e', net.events, true); net.events = []; }
   }
 
-  // ---------------------------------------------------------------- guest: own paddle, mirrored world
+  // ---------------------------------------------------------------- guest: own player, the host's world
   function netGuestStep(dt) {
     simTime += dt;
     const now = performance.now();
     if (now - net.lastRecv > 5000) { netOpponentLeft(); return; }
-    // your own paddle/mallet moves instantly from your input
+    // your own paddle/mallet/player moves instantly from your input
     if (gameMode === 'hockey') hkMoveMallet(MP, dt); else if (gameMode === 'volley') vbMovePlayer(VP, dt); else humanPaddle(dt);
     if (simTime >= net.nextSend) {
-      net.nextSend = simTime + (net.transport === 'p2p' ? 1 / 30 : 1 / 20);
+      net.nextSend = simTime + (netTransport() === 'p2p' ? 1 / 30 : net.duo ? 1 / 15 : 1 / 20);
       netSend('i', gameMode === 'hockey' ? [r3(MP.x), r3(MP.z)] : gameMode === 'volley' ? [r3(VP.x), r3(VP.z)] : [r3(P.x)]);
     }
     if (now > net.nextPing) { net.nextPing = now + 2000; netSend('ping', now, true); }
@@ -3019,47 +3289,49 @@
   }
   function netApplySnapshot(s) {
     if (s.m !== gameMode) return;
+    const g = net.me.flip ? -1 : 1; // the other team mirrors the table
     phase = s.ph === 'over' ? phase : s.ph;
     serveT = s.st;
-    if (s.sc[1] !== score[0] || s.sc[0] !== score[1]) { score[0] = s.sc[1]; score[1] = s.sc[0]; updateHUD(); }
+    const sc = net.me.flip ? [s.sc[1], s.sc[0]] : s.sc;
+    if (sc[0] !== score[0] || sc[1] !== score[1]) { score[0] = sc[0]; score[1] = sc[1]; updateHUD(); }
     const lag = clamp(net.rtt / 2, 0, 0.15); // the snapshot is this old: run it forward that far
+    const list = ENT_SETS[gameMode];
+    // everyone else's players (yours moves from your own input)
+    s.e.forEach((e, hi) => {
+      if (!e) return;
+      const li = localIdx(hi), q = list[li];
+      if (gameMode === 'pong') { q.w = e[1]; if (li) { const px = q.x; q.x += (g * e[0] - q.x) * 0.6; q.vx = (q.x - px) * 20; } return; }
+      if (gameMode === 'hockey') q.r = e[2];
+      if (gameMode === 'volley' && li) q.jy = e[2];
+      if (li) { const px = q.x, pz = q.z; q.x += (g * e[0] - q.x) * 0.6; q.z += (g * e[1] - q.z) * 0.6; q.vx = (q.x - px) * 20; q.vz = (q.z - pz) * 20; }
+    });
     if (gameMode === 'hockey') {
       const q = hk.puck;
-      Object.assign(q, { x: -s.h[0], z: -s.h[1], vx: -s.h[2], vz: -s.h[3], key: ORDER[s.h[4]] || q.key, fire: !!s.h[5] });
+      Object.assign(q, { x: g * s.h[0], z: g * s.h[1], vx: g * s.h[2], vz: g * s.h[3], key: ORDER[s.h[4]] || q.key, fire: !!s.h[5] });
       if (phase === 'play') for (let t = 0; t < lag; t += STEP) hkIntegrate(q, STEP);
-      // the host's near mallet is the far one here
-      const px = MA.x, pz = MA.z;
-      MA.x += (-s.mp[0] - MA.x) * 0.6; MA.z += (-s.mp[1] - MA.z) * 0.6; MA.r = s.mp[2];
-      MA.vx = (MA.x - px) * 20; MA.vz = (MA.z - pz) * 20;
-      MP.r = s.ma[2];
-      hk.crossings = s.k[0]; hk.side = -s.k[1]; hk.clock = s.k[2];
-      s.f.forEach((f, i) => { const g = hk.fakes[i]; g.active = !!f; if (f) { g.x = -f[0]; g.z = -f[1]; } });
+      hk.crossings = s.k[0]; hk.side = g * s.k[1]; hk.clock = s.k[2];
+      s.f.forEach((f, i) => { const fk = hk.fakes[i]; fk.active = !!f; if (f) { fk.x = g * f[0]; fk.z = g * f[1]; } });
     } else if (gameMode === 'volley') {
       const b = vb.ball;
-      Object.assign(b, { x: -s.v[0], y: s.v[1], z: -s.v[2], vx: -s.v[3], vy: s.v[4], vz: -s.v[5], k: s.v[8] || 1 });
+      Object.assign(b, { x: g * s.v[0], y: s.v[1], z: g * s.v[2], vx: g * s.v[3], vy: s.v[4], vz: g * s.v[5], k: s.v[8] || 1 });
       if (phase === 'play') for (let t = 0; t < lag && b.y > VB.BR; t += STEP) vbIntegrate(b, STEP);
-      vb.last = -s.v[6]; vb.server = s.v[7] > 0 ? VA : VP;
-      const px = VA.x, pz = VA.z;
-      VA.x += (-s.vp[0] - VA.x) * 0.6; VA.z += (-s.vp[1] - VA.z) * 0.6; VA.jy = s.vp[2];
-      VA.vx = (VA.x - px) * 20; VA.vz = (VA.z - pz) * 20;
+      vb.last = g * s.v[6]; vb.server = list[localIdx(s.v[7])];
       // you serve from where the host put you
-      if (phase === 'serve' && vb.server === VP) { VP.x = hk.aim.x = -s.va[0]; VP.z = hk.aim.z = -s.va[1]; }
+      const mine = s.e[net.me.ent];
+      if (phase === 'serve' && vb.server === VP && mine) { VP.x = hk.aim.x = g * mine[0]; VP.z = hk.aim.z = g * mine[1]; }
     } else {
-      Object.assign(ball, { x: -s.b[0], z: -s.b[1], vx: -s.b[2], vz: -s.b[3], speed: s.b[4], curve: -s.b[5], spinLvl: s.b[6], fire: !!s.b[7] });
+      Object.assign(ball, { x: g * s.b[0], z: g * s.b[1], vx: g * s.b[2], vz: g * s.b[3], speed: s.b[4], curve: g * s.b[5], spinLvl: s.b[6], fire: !!s.b[7] });
       if (phase === 'play' || phase === 'point') for (let t = 0; t < lag; t += STEP) integrate(ball, STEP);
-      const prev = A.x;
-      A.x += (-s.p[0] - A.x) * 0.6; A.w = s.p[1]; A.vx = (A.x - prev) * 20;
-      P.w = s.a[1];
-      s.d.forEach((d, i) => { const g = decoys[i]; g.active = !!d; if (d) { g.x = -d[0]; g.z = -d[1]; } });
-      netGuestPins(s.n);
+      s.d.forEach((d, i) => { const dk = decoys[i]; dk.active = !!d; if (d) { dk.x = g * d[0]; dk.z = g * d[1]; } });
+      netGuestPins(s.n, g);
     }
   }
-  function netGuestPins(list) {
+  function netGuestPins(list, g) {
     const key = (q) => `${q[0]},${q[1]}`;
-    const want = new Set(list.map((q) => key([-q[0], -q[1]])));
+    const want = new Set(list.map((q) => key([g * q[0], g * q[1]])));
     for (let i = pins.length - 1; i >= 0; i--) if (!want.has(key([pins[i].x, pins[i].z]))) { pins[i].sink = 0; sinkingPins.push(pins[i]); pins.splice(i, 1); }
     for (const q of list) {
-      const x = -q[0], z = -q[1];
+      const x = g * q[0], z = g * q[1];
       if (pins.some((p) => p.x === x && p.z === z)) continue;
       const vis = takePinMesh();
       if (!vis) break;
@@ -3068,17 +3340,17 @@
     }
   }
   function netGuestEvent(e) {
-    const [k, ...a] = e;
+    const [k, ...a] = e, g = net.me.flip ? -1 : 1;
     if (k === 's' && Sfx[a[0]]) Sfx[a[0]](...a[1]);
-    else if (k === 'b') burst(-a[0], a[1], -a[2], a[3], a[4], -a[5]);
-    else if (k === 'h') { const rig = a[0] > 0 ? farRig : nearRig; rig.pulse = 1; (a[0] > 0 ? (gameMode === 'hockey' ? MA : A) : (gameMode === 'hockey' ? MP : P)).pulse = 1; }
-    else if (k === 'score') scorePoint(-a[0]);
+    else if (k === 'b') burst(g * a[0], a[1], g * a[2], a[3], a[4], g * a[5]);
+    else if (k === 'h') { const li = localIdx(a[0]); RIGS[li].pulse = 1; ENT_SETS[gameMode][li].pulse = 1; }
+    else if (k === 'score') scorePoint(g * a[0]);
     else if (k === 'over') gameOver();
-    else if (k === 'spin') popText(a[0] < 0 ? (a[1] > 1 ? `SPIN x${a[1]}` : 'SPIN!') : 'INCOMING SPIN', SPIN.css[a[1]]);
+    else if (k === 'spin') popText(g * a[0] > 0 ? (a[1] > 1 ? `SPIN x${a[1]}` : 'SPIN!') : 'INCOMING SPIN', SPIN.css[a[1]]);
     else if (k === 'pop') popText(a[0], a[1]);
     else if (k === 'banner') showBanner(a[0], a[1]);
   }
-  // the host's sounds play on the guest too
+  // the host's sounds play on the guests too
   for (const name of Object.keys(Sfx)) {
     if (typeof Sfx[name] !== 'function' || ['init', 'tone', 'good', 'bad', 'win', 'lose', 'bucket', 'splat'].includes(name)) continue;
     const original = Sfx[name];
@@ -3090,13 +3362,40 @@
     $('#online').hidden = false;
     $('#menu').hidden = true;
     $('#onStatus').textContent = status;
-    $('#onPick').hidden = true; $('#onJoin').hidden = true;
+    $('#onPick').hidden = true; $('#onJoin').hidden = true; $('#onLobby').hidden = true; $('#online').classList.remove('lobby');
     if (net.role !== 'host') { $('#onLinkRow').hidden = true; $('#onQR').innerHTML = ''; $('#onCode').textContent = ''; }
+  }
+  function showLobby() { $('#onLobby').hidden = false; $('#online').classList.add('lobby'); renderLobby(); }
+  // The 2v2 room: four seats in two teams, and the fighters.
+  function renderLobby() {
+    if ($('#onLobby').hidden) return;
+    const hostId = net.role === 'host' ? net.id : net.host && net.host.id;
+    const mine = net.seats.findIndex((s) => s && s.id === net.id);
+    for (const el of document.querySelectorAll('#onLobby .seat')) {
+      const i = +el.dataset.seat, s = net.seats[i];
+      el.style.setProperty('--c', s ? CHARS[s.char].css : 'var(--edge)');
+      el.classList.toggle('me', i === mine);
+      el.classList.toggle('empty', !s);
+      el.disabled = !!s;
+      el.innerHTML = s
+        ? `<span class="art">${gridSVG(CHARS[s.char])}</span><span class="nm">${CHARS[s.char].name}</span><span class="tag">${i === mine ? 'YOU' : s.id === hostId ? 'HOST' : 'FRIEND'}</span>`
+        : '<span class="nm">AI</span><span class="tag">TAP TO SIT</span>';
+    }
+    const taken = net.seats.filter((s) => s && s.id !== net.id).map((s) => s.char);
+    $('#rosterLobby').innerHTML = ORDER.map((k) => `<button class="card" type="button" data-char="${k}" style="--c:${CHARS[k].css}" aria-pressed="${mine >= 0 && net.seats[mine].char === k}" ${taken.includes(k) ? 'disabled' : ''}><span class="art">${gridSVG(CHARS[k])}</span><span class="nm">${CHARS[k].name}</span></button>`).join('');
+    const people = net.seats.filter(Boolean).length, host = net.role === 'host';
+    $('#onShuffle').hidden = $('#onStart').hidden = !host;
+    $('#onStart').disabled = people < 2;
+    $('#onStart').textContent = people < 2 ? 'WAITING FOR FRIENDS' : `START (${people} PLAYERS${people < 4 ? ` + ${4 - people} AI` : ''})`;
+  }
+  function lobbyWant(d) {
+    if (net.role === 'host') netHostWant(net.id, d);
+    else netSend('want', d, true);
   }
   function updateNetBadge() {
     const b = $('#netBadge');
     b.hidden = !net.live;
-    b.textContent = net.transport === 'p2p' ? 'ONLINE - DIRECT' : 'ONLINE - RELAY';
+    b.textContent = netTransport() === 'p2p' ? 'ONLINE - DIRECT' : 'ONLINE - RELAY';
   }
   $('#btnOnline').addEventListener('click', () => { Sfx.init(); if (document.activeElement) document.activeElement.blur(); netHost(); });
   $('#onCancel').addEventListener('click', () => { netLeave(); $('#online').hidden = true; toMenu(); });
@@ -3114,6 +3413,13 @@
     for (const c of document.querySelectorAll('#rosterJoin .card')) c.setAttribute('aria-pressed', String(c.dataset.char === youKey));
   });
   $('#onJoin').addEventListener('click', () => { Sfx.init(); netSend('join', { char: youKey }, true); showOnline('Starting...'); });
+  $('#onLobby').addEventListener('click', (e) => {
+    const seat = e.target.closest('.seat'), card = e.target.closest('#rosterLobby .card');
+    if (seat && !seat.disabled) lobbyWant({ seat: +seat.dataset.seat });
+    else if (card && !card.disabled) lobbyWant({ char: card.dataset.char });
+  });
+  $('#onShuffle').addEventListener('click', () => { if (net.role === 'host' && !net.live) netShuffle(); });
+  $('#onStart').addEventListener('click', () => { Sfx.init(); if (net.role === 'host' && !net.live) netHostStartDuo(); });
 
   // ---------------------------------------------------------------- boot
   buildRosters();
@@ -3158,7 +3464,7 @@
         for (const p of vbPlayers()) if (p.side * p.z < 0.59 || Math.abs(p.x) > VB.CW + 1.01) bad++; // nobody leaves their half
         rally = phase === 'play' ? rally + STEP : 0; maxRally = Math.max(maxRally, rally);
         if (before === 'play' && phase === 'point') {
-          points++; log.push({ x: b.x, z: b.z, last, you: score[0] - sc[0], ai: score[1] - sc[1] }); if (predicted && predicted.at && predicted.id === vb.touchId) landErr.push(Math.hypot(predicted.at.x - b.x, predicted.at.z - b.z)); predicted = null; }
+          points++; log.push({ x: b.x, z: b.z, last, kind: vb.lastKind, you: score[0] - sc[0], ai: score[1] - sc[1] }); if (predicted && predicted.at && predicted.id === vb.touchId) landErr.push(Math.hypot(predicted.at.x - b.x, predicted.at.z - b.z)); predicted = null; }
       }
       return { log, bad, points, maxRally, minNetY, crossUnder, maxHeight, taps: st.taps, landErr: landErr.length ? Math.max(...landErr) : 0, score: [...score], ...dbg.stats };
     }
@@ -3221,9 +3527,11 @@
       chars: () => [...ORDER],
       // online test hooks
       net: () => ({
-        role: net.role, live: net.live, transport: net.transport, mode: gameMode, phase, score: [...score], you: youKey, rival: aiKey,
+        role: net.role, live: net.live, transport: netTransport(), duo, id: net.id, peers: net.peers.size, seats: net.seats, me: net.me,
+        keys: [youKey, mateKey, aiKey, ai2Key], ents: ENT_SETS[gameMode].map((q) => [q.x, q.z ?? 0]), ai: ENT_SETS[gameMode].map((q) => q.isAI),
+        remote: ENT_SETS[gameMode].map((q) => !!q.remote), spikes: [...vb.spikes], mode: gameMode, phase, score: [...score], you: youKey, rival: aiKey,
         ball: [ball.x, ball.z], puck: [hk.puck.x, hk.puck.z], px: P.x, ax: A.x, mp: [MP.x, MP.z], ma: [MA.x, MA.z],
-        vball: [vb.ball.x, vb.ball.y, vb.ball.z], vp: [VP.x, VP.z], va: [VA.x, VA.z], vaJump: VA.jumpT, spinA: net.spinA,
+        vball: [vb.ball.x, vb.ball.y, vb.ball.z], vp: [VP.x, VP.z], va: [VA.x, VA.z], vaJump: VA.jumpT, spinA: Math.max(-1, ...[...net.peers.values()].map((p) => p.spinA)),
         slimeYou: slimes.get(nearRig).t >= 0, slimeAi: slimes.get(farRig).t >= 0, over: !$('#over').hidden, overTitle: $('#overTitle').textContent,
       }),
       netAim(x, z) { targetX = x; hk.aim.x = x; hk.aim.z = z; },
@@ -3317,6 +3625,16 @@
           if (!Number.isFinite(q.x) || !Number.isFinite(q.z) || Math.abs(q.x) > HW || Math.abs(q.z) > HL + 1) bad++;
           if (before === 'play' && phase === 'point') goals++;
           dbg.stats.maxPins = Math.max(dbg.stats.maxPins, pins.length);
+          if (duo && phase === 'play') {
+            dbg.stats.hkPlay = (dbg.stats.hkPlay || 0) + 1;
+            for (const [a, b] of [[MP, MP2], [MA, MA2]]) {
+              if (Math.hypot(a.x - b.x, a.z - b.z) < 1.6) dbg.stats.hkBunched = (dbg.stats.hkBunched || 0) + 1; // teammates on top of each other
+              const near = (m) => Math.hypot(m.x - q.x, m.z - q.z) < 2.2;
+              if (q.z * a.side > 0 && near(a) && near(b)) dbg.stats.hkBothChase = (dbg.stats.hkBothChase || 0) + 1; // both going for the puck
+              const gl = (m) => Math.abs(m.z - m.side * (HL - 1.8)) < 1.6; // somebody near our goal
+              if (q.z * a.side > 0 && q.vz * a.side > 4 && !gl(a) && !gl(b)) dbg.stats.hkOpenGoal = (dbg.stats.hkOpenGoal || 0) + 1; // a shot coming with nobody home
+            }
+          }
         }
         const out = { bad, goals, ...dbg.stats, puckKeys: Object.keys(dbg.stats.puckKeys) };
         Object.assign(dbg, { diff: null, stats: null });
