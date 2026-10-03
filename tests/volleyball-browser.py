@@ -86,6 +86,14 @@ def main():
         print("spiker:", {k: spike[k] for k in ("taps", "vbYouSpikes", "score")})
         check(spike["vbYouSpikes"] >= 3 and spike["vbYouSpikes"] >= spike["taps"] * 0.6, f"a well-timed tap near the net spikes ({spike['vbYouSpikes']}/{spike['taps']} taps)")
         check(spike["score"][0] >= 3, f"spikes win points ({spike['score']})")
+        # like a person: stand on the landing ring the game shows, tap once as the ball comes down (with sloppy timing)
+        taps = spikes = digs = 0
+        for _ in range(2):
+            r = page.evaluate("__pong.vsimPlayer(300, { realistic: true })")
+            taps += r["taps"]; spikes += r["vbYouSpikes"]; digs += r.get("vbDigs", 0)
+            check(r["bad"] == 0 and r["crossUnder"] == 0, "spikes and drives from anywhere in your half stay valid and clear the net")
+        check(taps >= 10 and spikes >= 0.8 * taps, f"standing on the ring and tapping as the ball comes down spikes ({spikes}/{taps} taps)")
+        check(digs <= 0.7 * spikes, f"most of your spikes aren't simply dug back ({digs} of {spikes} dug)")
         idle = page.evaluate("__pong.vsimPlayer(120, { idle: true })")
         check(idle["score"] == [0, 7], f"standing still loses 0-7 ({idle['score']})")
         info = page.evaluate("__pong.slimeInfo('you')")

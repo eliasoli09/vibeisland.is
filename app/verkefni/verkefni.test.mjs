@@ -184,6 +184,15 @@ test("Pixel Pong has an Air Hockey mode", () => {
   assert.match(pongDetailSource, /lofthokkí/);
 });
 
+test("Pixel Pong has 2 v 2 teams", () => {
+  assert.match(staticPongSource, /data-duo="1"/);
+  assert.match(staticPongSource, /function setDuo\(on\)/);
+  assert.match(staticPongSource, /const nearRig2 = /);
+  assert.match(staticPongSource, /K_POINT: /); // Volleyball speeds up as the match goes on
+  assert.match(projectsSource, /tveir á móti tveimur/);
+  assert.match(pongDetailSource, /tveir á móti tveimur/);
+});
+
 test("Pixel Pong has a Volleyball mode", () => {
   assert.match(staticPongSource, /data-mode="volley"/);
   assert.match(staticPongSource, /function vbStep\(dt\)/);
