@@ -42,7 +42,7 @@ def main():
         info = page.evaluate("__pong.duoInfo()")
         check(page.locator("#size2").get_attribute("aria-checked") == "true" and page.locator("#duoNote").is_visible(), "a 2 V 2 switch in the menu explains the teams")
         check(info["duo"] and info["HW"] == 10 and info["CW"] == 10, f"2 v 2 makes the table and court twice as wide ({info['HW']}, {info['CW']})")
-        check(not page.locator("#btnOnline").is_visible(), "online play stays 1 v 1 for now (the button hides in 2 v 2)")
+        check(page.locator("#btnOnline").is_visible(), "PLAY ONLINE opens a 2 v 2 room (see tests/online-rooms-browser.py)")
         page.locator("#btnStart").click()
         page.wait_for_timeout(400)
         info = page.evaluate("__pong.duoInfo()")
@@ -82,6 +82,14 @@ def main():
         check(r["bad"] == 0 and r["goals"] >= 5, f"the puck stays on the wide rink and goals happen ({r['goals']})")
         everyone_played(r["hitsBy"], "hockey")
         check(all(abs(g - 3.0) < 1e-9 for g in r["serveGoal"]) and 3 < r["maxGoal"] <= 8 + 1e-9, f"goals start twice as wide (3.0) and still grow ({r['maxGoal']:.2f})")
+        # teamwork: AI teammates don't crowd each other, split the work, and pass to each other
+        passes = done = bunched = play = 0
+        for diff in ("normal", "hard"):
+            t = page.evaluate(f"__pong.hsim(400, {{ duo: true, diff: '{diff}' }})")
+            passes += t.get("hkPasses", 0); done += t.get("hkPassDone", 0); bunched += t.get("hkBunched", 0); play += t["hkPlay"]
+            check(t["bad"] == 0, f"hockey {diff}: passing never breaks the puck")
+        check(bunched / play < 0.12, f"hockey: AI teammates rarely crowd each other ({100 * bunched / play:.1f}% of the time)")
+        check(passes >= 4 and done >= 0.5 * passes, f"hockey: AI teammates pass, and most passes reach the teammate ({done}/{passes})")
         me = page.evaluate("__pong.hsimPlayer(150, { duo: true, noAiPower: true })")
         check(me["bad"] == 0 and me["score"][0] >= 1, f"your team scores in 2 v 2 Air Hockey ({me['score']})")
 
