@@ -93,6 +93,35 @@ def game_checks(p, browser, device, label):
     page.wait_for_function("__pong.state().phase === 'play'", timeout=15000)
     page.locator("#spinBtn").tap()
     check(page.evaluate("__pong.state().vJump") > 0, f"{label}: tapping SPIKE jumps")
+    # stand on the landing ring: the SPIKE button lights up while the ball is in reach
+    follow = """(() => { const v = __pong.vball(); if (v.phase === 'play' && v.last === -1 && v.ringAt) __pong.netAim(v.ringAt[0], v.ringAt[1]); return v; })()"""
+    page.evaluate("__pong.mode('volley')")
+    page.wait_for_function(f"{follow}.ready && document.querySelector('#spinBtn').classList.contains('ready')", timeout=20000, polling=50)
+    check(True, f"{label}: the SPIKE button glows while the ball is in reach")
+    # and a tap on SPIKE as the ball comes over the net (a tap stays armed for a moment) spikes it
+    spiked = False
+    for _ in range(4):
+        page.evaluate("__pong.mode('volley')")
+        try:
+            page.wait_for_function(f"(v => v.phase === 'play' && v.last === -1 && v.z > 0)({follow})", timeout=20000, polling=30)
+        except Exception:
+            continue
+        # (the button's own touch handler, fired directly: a Playwright tap takes up to a second in headless landscape)
+        page.evaluate("document.querySelector('#spinBtn').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerType: 'touch' }))")
+        try:
+            page.wait_for_function("__pong.vball().spikes[0] > 0", timeout=2500)
+            spiked = True
+            break
+        except Exception:
+            pass
+    check(spiked, f"{label}: tapping SPIKE as the ball comes over spikes it")
+
+    # --- 2 v 2: the double-width table still fits the screen
+    for m in ("pong", "hockey", "volley"):
+        page.evaluate(f"__pong.mode('{m}', true)")
+        page.wait_for_timeout(200)
+        check(page.evaluate("__pong.fit()")["inside"], f"{label}: the whole 2 v 2 {m} table fits on screen")
+    page.evaluate("__pong.mode('pong')")
     ctx.close()
 
 

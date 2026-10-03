@@ -52,6 +52,14 @@
   .mode { appearance: none; cursor: pointer; font: 11px var(--pix); padding: 11px 16px; background: transparent; color: var(--muted); border: 0; }
   .mode:hover { color: var(--ink); }
   .mode[aria-checked="true"] { background: var(--edge); color: var(--ink); }
+  .sizes { display: flex; gap: 6px; }
+  .tsize { appearance: none; cursor: pointer; font: 10px var(--pix); padding: 8px 14px; background: transparent; color: var(--muted); border: 2px solid var(--edge); border-radius: 999px; }
+  .tsize:hover { color: var(--ink); }
+  .tsize[aria-checked="true"] { border-color: var(--you); color: var(--ink); }
+  .duo-note { margin: 0; color: var(--muted); font-size: 16px; text-align: center; max-width: 520px; }
+  body.duo .who .mini { width: 54px; display: flex; gap: 3px; }
+  body.duo .who .mini svg { width: calc(50% - 2px); }
+  body.duo #btnOnline { display: none; } /* online 2v2 rooms come next */
   .picks { width: 100%; display: grid; gap: 10px; justify-items: center; }
   .pick { display: grid; gap: 8px; justify-items: center; }
   .pick-lbl { font: 10px var(--pix); color: var(--muted); letter-spacing: 1px; }
@@ -193,6 +201,8 @@
   @media (max-width: 600px) { .shot-clock { bottom: calc(60px + env(safe-area-inset-bottom, 0px)); } } /* above the SMASH dots on phones */
   #spinBtn { position: absolute; right: calc(16px + env(safe-area-inset-right, 0px)); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); width: 84px; height: 84px; border-radius: 50%; border: 3px solid var(--cyan); background: rgba(5, 9, 24, 0.7); color: var(--cyan); font: 12px var(--pix); pointer-events: auto; display: none; box-shadow: 0 0 22px rgba(67, 224, 255, 0.35); }
   #spinBtn:active { background: rgba(67, 224, 255, 0.3); transform: scale(0.94); }
+  #spinBtn.ready { border-color: #ff6a3d; color: #fff; background: rgba(255, 106, 61, 0.55); box-shadow: 0 0 34px rgba(255, 106, 61, 0.9); animation: spikePulse 0.35s ease-in-out infinite alternate; }
+  @keyframes spikePulse { to { transform: scale(1.08); } }
   body.touch.mode-pong.playing #spinBtn, body.touch.mode-volley.playing #spinBtn { display: block; } /* only while a match is running (not paused or over) */
   body.mode-volley #spinPips { display: none; } /* no boosts in Volleyball */
   body.touch .hud-btns { top: calc(66px + env(safe-area-inset-top, 0px)); bottom: auto; right: auto; left: 50%; transform: translateX(-50%); }
@@ -242,7 +252,12 @@
         <button class="mode" id="modeHockey" type="button" role="radio" data-mode="hockey" aria-checked="false">AIR HOCKEY</button>
         <button class="mode" id="modeVolley" type="button" role="radio" data-mode="volley" aria-checked="false">VOLLEYBALL</button>
       </div>
+      <div class="sizes" role="radiogroup" aria-label="Team size">
+        <button class="tsize" id="size1" type="button" role="radio" data-duo="0" aria-checked="true">1 V 1</button>
+        <button class="tsize" id="size2" type="button" role="radio" data-duo="1" aria-checked="false">2 V 2</button>
+      </div>
       <p class="sub">Pick your fighter and who you want to beat.</p>
+      <p class="duo-note" id="duoNote" hidden>2 v 2: you and an AI teammate against two AIs, on a table twice as wide. The other two fighters are picked at random.</p>
       <div class="picks">
         <div class="pick"><span class="pick-lbl">YOU</span><div class="roster" id="rosterYou" role="group" aria-label="Your fighter"></div></div>
         <div class="vs">VS</div>
@@ -258,7 +273,7 @@
         <button class="btn ghost" id="btnOnline" type="button">PLAY ONLINE</button>
       </div>
       <p class="hint" id="hintHockey" hidden><span class="h-mouse">Move the mouse to slide your mallet anywhere in your half (or <kbd>A</kbd> / <kbd>D</kbd>). Hit the character puck into the AI's goal. <strong>Three hard smashes in a row</strong> earn a boost: BIG MALLET, FIREBALL, TRIPLE PUCK or WIDE GOAL. <strong>Goals grow</strong> every time the puck crosses the middle, and a <strong>shot clock</strong> (10 s, shorter every crossing) hands the puck over if you hold it too long. <kbd>Space</kbd> pauses, <kbd>M</kbd> mutes.</span><span class="h-touch"><strong>Drag anywhere</strong> to slide your mallet around your half, and flick fast to smash. Three smashes in a row earn a boost: BIG MALLET, FIREBALL, TRIPLE PUCK or WIDE GOAL. Goals grow every time the puck crosses the middle, and the shot clock hands the puck over if you hold it too long.</span></p>
-      <p class="hint" id="hintVolley" hidden><span class="h-mouse">You are the player: <strong>move the mouse</strong> to run around your half (or <kbd>A</kbd> / <kbd>D</kbd>). The glowing ring shows where the ball will land. Get under it and you <strong>bump it back automatically</strong>; run left or right as you hit it to aim. When the ball is high near the net, <strong>click to jump and SPIKE</strong>. A ball that lands in a court scores for the other side; out scores against whoever touched it last. First to 7. <kbd>Space</kbd> pauses, <kbd>M</kbd> mutes.</span><span class="h-touch"><strong>Drag anywhere</strong> to run around your half. The glowing ring shows where the ball will land: get under it and you bump it back automatically. When the ball is high near the net, tap <strong>SPIKE</strong> to jump and smash it down. First to 7.</span></p>
+      <p class="hint" id="hintVolley" hidden><span class="h-mouse">You are the player: <strong>move the mouse</strong> to run around your half (or <kbd>A</kbd> / <kbd>D</kbd>). The glowing ring shows where the ball will land. Get under it and you <strong>bump it back automatically</strong>; run left or right as you hit it to aim. When an <strong>orange ring lights up under you</strong>, the ball is in reach: <strong>click to jump and SPIKE</strong> it. In 2 v 2 your first touch sets the ball up for your teammate. Rallies get faster with every touch. In = point for the other side, out = point against whoever touched it last. First to 7. <kbd>Space</kbd> pauses, <kbd>M</kbd> mutes.</span><span class="h-touch"><strong>Drag anywhere</strong> to run around your half. The glowing ring shows where the ball will land: get under it and you bump it back automatically. When the <strong>SPIKE</strong> button glows orange, tap it to jump and smash the ball. In 2 v 2 your first touch sets the ball up for your teammate. Rallies get faster with every touch. First to 7.</span></p>
       <p class="hint" id="hintPong"><span class="h-mouse">Move the mouse left and right to steer your paddle (or <kbd>A</kbd> / <kbd>D</kbd>). Where the ball hits your paddle sets its angle. <strong>Click or tap just as the ball reaches your paddle to spin it</strong>. Chain 3 spins for a boost: BIG PADDLE, SLOW-MO, TRIPLE BALL or FIREBALL. Long matches grow pins on the table. <kbd>Space</kbd> pauses, <kbd>M</kbd> mutes.</span><span class="h-touch"><strong>Drag anywhere</strong> to steer your paddle. Tap <strong>SPIN</strong> just as the ball reaches you to spin it; 3 spins in a row earn a boost: BIG PADDLE, SLOW-MO, TRIPLE BALL or FIREBALL. Long rallies grow pins on the table.</span></p>
     </div>
   </div>
@@ -442,8 +457,10 @@
   const camBase = { pos: new THREE.Vector3(0, 7, 16), look: new THREE.Vector3(0, -0.5, -1) };
 
   // Court constants
-  const HW = 5, HL = 8, PZ = 7.7, PW = 2.2, PH = 1.1, PD = 0.24, R = 0.22, PY = 0.75, HOP = 0.95, WIN = 7;
-  const WL = HW - R;                 // ball-centre x limit
+  const HL = 8, PZ = 7.7, PW = 2.2, PH = 1.1, PD = 0.24, R = 0.22, PY = 0.75, HOP = 0.95, WIN = 7;
+  let HW = 5;                        // half width: doubles in 2v2 (see setDuo)
+  let WL = HW - R;                   // ball-centre x limit
+  let duo = false;                   // 2v2: two players per side
   const FACE = PZ - PD / 2 - R;      // ball-centre z at paddle contact
   const DIFF = {
     easy:   { speed: 7.5,  react: 0.28, aim: 0.65, missP: 0.22, serve: 9,    max: 18 },
@@ -512,25 +529,26 @@
     new THREE.BoxGeometry(HW * 2 + 0.4, 0.3, HL * 2 + 0.4),
     new THREE.MeshStandardMaterial({ color: 0x10245a, roughness: 0.7, metalness: 0.05 }) // matte: a glossy top mirrored the lights as a fake ball
   );
-  top.position.y = -0.15; table.add(top);
+  const wide = new THREE.Group(); table.add(wide); // built 10 wide; stretched sideways in 2v2 (setDuo)
+  top.position.y = -0.15; wide.add(top);
   const lineMat = new THREE.MeshBasicMaterial({ color: 0xa8d8ff });
-  const addLine = (w, d, x, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, 0.02, d), lineMat); m.position.set(x, 0.01, z); table.add(m); return m; };
-  const pongParts = new THREE.Group(); table.add(pongParts); // net + centre stripe (hidden in Air Hockey)
+  const addLine = (w, d, x, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, 0.02, d), lineMat); m.position.set(x, 0.01, z); wide.add(m); return m; };
+  const pongParts = new THREE.Group(); wide.add(pongParts); // net + centre stripe (hidden in Air Hockey)
   addLine(0.07, HL * 2, -(HW - 0.035), 0); addLine(0.07, HL * 2, HW - 0.035, 0);
   addLine(HW * 2, 0.07, 0, -(HL - 0.035)); addLine(HW * 2, 0.07, 0, HL - 0.035);
   pongParts.add(addLine(0.05, HL * 2, 0, 0));
   const railMat = new THREE.MeshStandardMaterial({ color: 0x7cc4ff, emissive: 0x3a7bd5, emissiveIntensity: 0.8, transparent: true, opacity: 0.5, depthWrite: false });
   for (const s of [-1, 1]) {
     const rail = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.34, HL * 2), railMat);
-    rail.position.set(s * (HW + 0.07), 0.17, 0); table.add(rail);
+    rail.position.set(s * (HW + 0.07), 0.17, 0); wide.add(rail);
   }
   const legMat = new THREE.MeshStandardMaterial({ color: 0x0a1330, roughness: 0.6 });
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
     const leg = new THREE.Mesh(new THREE.BoxGeometry(0.3, 2.7, 0.3), legMat);
-    leg.position.set(sx * (HW - 0.6), -1.65, sz * (HL - 1.2)); table.add(leg);
+    leg.position.set(sx * (HW - 0.6), -1.65, sz * (HL - 1.2)); wide.add(leg);
   }
   // Net
-  (() => {
+  const pongNetTex = (() => {
     const c = document.createElement('canvas'); c.width = c.height = 32;
     const g = c.getContext('2d'); g.strokeStyle = 'rgba(220,235,255,0.9)'; g.lineWidth = 3; g.strokeRect(0, 0, 32, 32);
     const tex = new THREE.CanvasTexture(c); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(HW * 2 / 0.22, 0.55 / 0.22);
@@ -543,6 +561,7 @@
       const post = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.62, 0.1), new THREE.MeshStandardMaterial({ color: 0x6fa8ff, emissive: 0x2a5bc0 }));
       post.position.set(s * (HW + 0.2), 0.31, 0); pongParts.add(post);
     }
+    return tex;
   })();
 
   // ---------------------------------------------------------------- voxel models
@@ -586,6 +605,12 @@
   }
   const nearRig = makeRig(0.85); nearRig.outer.position.set(0, -0.75, 8.7);
   const farRig = makeRig(1.3);   farRig.outer.position.set(0, 0.05, -9.3);
+  // 2v2: your teammate and the second opponent
+  const nearRig2 = makeRig(0.85); nearRig2.outer.position.set(0, -0.75, 8.7);
+  const farRig2 = makeRig(1.3);   farRig2.outer.position.set(0, 0.05, -9.3);
+  const RIGS = [nearRig, nearRig2, farRig, farRig2];
+  nearRig.side = nearRig2.side = 1; farRig.side = farRig2.side = -1;
+  const teamRigs = (side) => (side > 0 ? (duo ? [nearRig, nearRig2] : [nearRig]) : (duo ? [farRig, farRig2] : [farRig]));
 
   // ---------------------------------------------------------------- paddles & ball
   function makePaddle(side) {
@@ -600,6 +625,9 @@
   }
   const P = makePaddle(1);   // near (player)
   const A = makePaddle(-1);  // far (AI)
+  const P2 = makePaddle(1);  // 2v2: your teammate
+  const A2 = makePaddle(-1); // 2v2: the second opponent
+  const sidePads = (s) => (s > 0 ? (duo ? [P, P2] : [P]) : (duo ? [A, A2] : [A]));
 
   const ballMesh = new THREE.Mesh(new THREE.SphereGeometry(R, 24, 16), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.65 }));
   scene.add(ballMesh);
@@ -674,6 +702,7 @@
   if (!CHARS[youKey]) youKey = 'claude';
   let aiKey = store.get('pp-opp', 'codex');
   if (!CHARS[aiKey] || aiKey === youKey) aiKey = ORDER.find((k) => k !== youKey);
+  let mateKey = 'muse', ai2Key = 'grok'; // 2v2: random fighters for your teammate and the second opponent
   let diffKey = store.get('pp-diff', 'normal');
   if (!DIFF[diffKey]) diffKey = 'normal';
 
@@ -697,19 +726,23 @@
   const curDiffKey = () => dbg.diff || (mode === 'menu' ? 'normal' : diffKey);
   const curDiff = () => DIFF[curDiffKey()];
   const padLim = (pad) => HW - pad.w / 2;
-  const padKey = (pad) => (pad === P ? nearRig.key : farRig.key);
+  const padKey = (pad) => pad.rig.key;
+  // 2v2: the two other fighters are random (and never the same as anyone else's)
+  function pickTeamKeys() {
+    const rest = ORDER.filter((k) => k !== youKey && k !== aiKey).sort(() => Math.random() - 0.5);
+    mateKey = rest[0]; ai2Key = rest[1];
+  }
+  const teamName = (side) => teamRigs(side).map((r) => CHARS[r.key].name).join(' & ');
 
   function assignChars() {
-    nearRig.inner.remove(...Object.values(MODELS));
-    farRig.inner.remove(...Object.values(MODELS));
-    nearRig.inner.add(MODELS[youKey]); nearRig.key = youKey;
-    farRig.inner.add(MODELS[aiKey]); farRig.key = aiKey;
-    // keep the near character's head below the paddle so it never hides it
-    const youDef = CHARS[youKey];
-    nearRig.outer.position.y = 0.4 - youDef.grid.length * youDef.voxel * nearRig.scale;
-    nearRig.pedMat.color.setHex(CHARS[youKey].hex);
-    farRig.pedMat.color.setHex(CHARS[aiKey].hex);
-    for (const [pad, key] of [[P, youKey], [A, aiKey]]) {
+    for (const rig of RIGS) rig.inner.remove(...Object.values(MODELS));
+    for (const [rig, key] of [[nearRig, youKey], [farRig, aiKey], [nearRig2, mateKey], [farRig2, ai2Key]]) {
+      rig.inner.add(MODELS[key]); rig.key = key;
+      rig.pedMat.color.setHex(CHARS[key].hex);
+    }
+    // keep the near characters' heads below the paddles so they never hide them
+    for (const rig of [nearRig, nearRig2]) rig.outer.position.y = 0.4 - CHARS[rig.key].grid.length * CHARS[rig.key].voxel * rig.scale;
+    for (const [pad, key] of [[P, youKey], [A, aiKey], [P2, mateKey], [A2, ai2Key]]) {
       pad.mat.color.setHex(CHARS[key].hex); pad.mat.emissive.setHex(CHARS[key].hex); pad.edgeMat.color.setHex(CHARS[key].hex);
     }
     nearLight.color.setHex(CHARS[youKey].hex);
@@ -717,8 +750,8 @@
     const root = document.documentElement.style;
     root.setProperty('--you', CHARS[youKey].css);
     root.setProperty('--ai', CHARS[aiKey].css);
-    $('#miniYou').innerHTML = gridSVG(CHARS[youKey]);
-    $('#miniAi').innerHTML = gridSVG(CHARS[aiKey]);
+    $('#miniYou').innerHTML = teamRigs(1).map((r) => gridSVG(CHARS[r.key])).join('');
+    $('#miniAi').innerHTML = teamRigs(-1).map((r) => gridSVG(CHARS[r.key])).join('');
   }
 
   // ---------------------------------------------------------------- UI helpers
@@ -808,8 +841,7 @@
     ball.vx = Math.sin(ang) * ball.speed;
     ball.vz = serveDir * Math.cos(ang) * ball.speed;
     phase = 'play';
-    const receiver = serveDir > 0 ? P : A;
-    receiver.err = rollErr(receiver); receiver.think = 0;
+    for (const q of sidePads(serveDir)) { q.err = rollErr(q); q.think = 0; }
     if (mode === 'game' && score[0] + score[1] === 0) showBanner('GO!', 'var(--you)');
   }
 
@@ -818,11 +850,12 @@
     if (document.activeElement) document.activeElement.blur();
     mode = 'game'; paused = false;
     score[0] = score[1] = 0; updateHUD();
-    P.isAI = false; P.x = 0; A.x = 0; targetX = 0;
+    P.isAI = false; P.x = 0; A.x = duo ? -HW * 0.45 : 0; P2.x = A2.x = HW * 0.45; targetX = 0;
+    pickTeamKeys();
     streak = 0; aiStreak = 0; updateSpinHUD(); endPower(); resetPins();
     MP.isAI = false; hkResetMallets();
     VP.isAI = false; vbResetPlayers();
-    nearRig.loop = farRig.loop = false;
+    for (const rig of RIGS) rig.loop = false;
     assignChars();
     $('#menu').hidden = true; $('#over').hidden = true; $('#pauseMenu').hidden = true; $('#hud').hidden = false;
     document.body.classList.add('playing');
@@ -833,10 +866,11 @@
   function toMenu() {
     mode = 'menu'; paused = false;
     P.isAI = true;
+    pickTeamKeys();
     streak = 0; aiStreak = 0; updateSpinHUD(); endPower(); resetPins();
     MP.isAI = true; hkResetMallets();
     VP.isAI = true; vbResetPlayers();
-    nearRig.loop = farRig.loop = false;
+    for (const rig of RIGS) rig.loop = false;
     $('#menu').hidden = false; $('#over').hidden = true; $('#pauseMenu').hidden = true; $('#hud').hidden = true;
     document.body.classList.remove('playing');
     refreshMenu(); assignChars();
@@ -858,11 +892,11 @@
     phase = 'point';
     pointT = 1.2;
     serveDir = -winSide; // serve toward whoever lost the point
-    const winRig = winSide > 0 ? nearRig : farRig, loseRig = winSide > 0 ? farRig : nearRig;
-    winRig.jumpT = 0.7; loseRig.shakeT = 0.8;
+    const winRigs = teamRigs(winSide), loseRigs = teamRigs(-winSide);
+    winRigs.forEach((r) => { r.jumpT = 0.7; }); loseRigs.forEach((r) => { r.shakeT = 0.8; });
     clearPins();
-    // the loser gets slimed in the winner's colour (and you also get it on screen)
-    slimeOn(loseRig, CHARS[winRig.key], mode === 'game' && winSide < 0);
+    // the losers get slimed in the winner's colour (and you also get it on screen)
+    loseRigs.forEach((r, i) => slimeOn(r, CHARS[winRigs[i % winRigs.length].key], mode === 'game' && winSide < 0 && i === 0));
     if (mode !== 'game') { pointT = 0.9; return; }
     const youScored = winSide > 0;
     if (!youScored && streak) { streak = 0; updateSpinHUD(); }
@@ -871,7 +905,7 @@
     shake = REDUCED ? 0 : 0.5;
     const finished = score[0] >= WIN || score[1] >= WIN;
     if (!finished) {
-      showBanner(youScored ? 'POINT!' : CHARS[farRig.key].name + ' SCORES', youScored ? 'var(--you)' : 'var(--ai)');
+      showBanner(youScored ? 'POINT!' : teamName(-1) + (duo ? ' SCORE' : ' SCORES'), youScored ? 'var(--you)' : 'var(--ai)');
       youScored ? Sfx.good() : Sfx.bad();
     }
   }
@@ -882,17 +916,17 @@
     endPower();
     const youWon = score[0] > score[1];
     const winKey = youWon ? nearRig.key : farRig.key;
-    (youWon ? nearRig : farRig).loop = true;
-    (youWon ? farRig : nearRig).shakeT = 1.2;
-    $('#overArt').innerHTML = gridSVG(CHARS[winKey]);
-    $('#overTitle').textContent = CHARS[winKey].name + ' WINS!';
+    teamRigs(youWon ? 1 : -1).forEach((r) => { r.loop = true; });
+    teamRigs(youWon ? -1 : 1).forEach((r) => { r.shakeT = 1.2; });
+    $('#overArt').innerHTML = teamRigs(youWon ? 1 : -1).map((r) => gridSVG(CHARS[r.key])).join('');
+    $('#overTitle').textContent = teamName(youWon ? 1 : -1) + (duo ? ' WIN!' : ' WINS!');
     $('#overTitle').style.color = CHARS[winKey].css;
     const rival = CHARS[farRig.key].name;
     $('#overSub').textContent = net.live
       ? (youWon ? `You beat ${rival} ${score[0]}–${score[1]} online!` : `${rival} won ${score[1]}–${score[0]}. Rematch?`)
       : youWon
-        ? `You beat the AI ${score[0]}–${score[1]} on ${diffKey.toUpperCase()}.`
-        : `The AI took it ${score[1]}–${score[0]}. Run it back?`;
+        ? `${duo ? 'Your team beat the AIs' : 'You beat the AI'} ${score[0]}–${score[1]} on ${diffKey.toUpperCase()}.`
+        : `${duo ? 'The AIs' : 'The AI'} took it ${score[1]}–${score[0]}. Run it back?`;
     $('#btnRematch').style.background = CHARS[youKey].css;
     $('#over').hidden = false;
     document.body.classList.remove('playing');
@@ -930,7 +964,13 @@
     if (pad.think <= 0) {
       pad.think = D.react;
       const incoming = phase === 'play' && ball.vz * pad.side > 0;
-      pad.target = incoming ? predictX(pad.side * FACE) + pad.err : ball.x * 0.25;
+      if (!duo) pad.target = incoming ? predictX(pad.side * FACE) + pad.err : ball.x * 0.25;
+      else {
+        // 2v2: whoever is closer to where the ball is going takes it; the other covers the other half
+        const mate = pad.mate, px = incoming ? predictX(pad.side * FACE) : 0;
+        const cover = (Math.abs(mate.x) < 0.3 ? pad.lane : -Math.sign(mate.x)) * HW * 0.45;
+        pad.target = incoming && Math.abs(px - pad.x) <= Math.abs(px - mate.x) ? px + pad.err : cover;
+      }
     }
     const want = clamp((pad.target - pad.x) * 8, -D.speed, D.speed);
     const prev = pad.x;
@@ -965,7 +1005,7 @@
     const chance = dbg.spinP ?? SPIN.aiChance[curDiffKey()];
     if (Math.random() >= chance) return 0;
     const lvl = dbg.forceLevel || (Math.random() < 0.6 ? 1 : 2);
-    if (mode === 'game' && pad === A) {
+    if (mode === 'game' && pad.side < 0) {
       popText('INCOMING SPIN', SPIN.css[lvl]);
       if (++aiStreak % 3 === 0) awardPower('ai'); // every 3rd AI spin shot earns it a boost
     }
@@ -982,9 +1022,9 @@
     pw.type = forced && set[forced] ? forced : kinds[Math.floor(Math.random() * kinds.length)];
     pw.t = set[pw.type].dur;
     pw.fresh = true; // a shot boost starts on the *next* hit, not the one that earned it
-    if (pw.type === 'big') { if (gameMode === 'hockey') (ai ? MA : MP).r = HK.R_M * 1.5; else (ai ? A : P).w = PW * 1.5; }
+    if (pw.type === 'big') { if (gameMode === 'hockey') teamMallets(ai ? -1 : 1).forEach((m) => { m.r = HK.R_M * 1.5; }); else sidePads(ai ? -1 : 1).forEach((q) => { q.w = PW * 1.5; }); }
     if (dbg.stats) dbg.stats[ai ? 'aiPowers' : 'powers']++;
-    if (ai) showBanner(`${CHARS[farRig.key].name}: ${set[pw.type].name}`, 'var(--ai)');
+    if (ai) showBanner(`${teamName(-1)}: ${set[pw.type].name}`, 'var(--ai)');
     else showBanner(set[pw.type].name + '!', set[pw.type].css);
     Sfx.power();
     updatePowerHUD();
@@ -993,7 +1033,7 @@
     if (!owner) { endPower('you'); endPower('ai'); return; } // no side given: end both
     const pw = powerOf(owner);
     pw.type = null; pw.t = 0; pw.fresh = false;
-    if (owner === 'ai') { A.w = PW; MA.r = HK.R_M; } else { P.w = PW; MP.r = HK.R_M; }
+    for (const q of owner === 'ai' ? [A, A2, MA, MA2] : [P, P2, MP, MP2]) { if (q.w) q.w = PW; if (q.r) q.r = HK.R_M; }
     updatePowerHUD();
   }
 
@@ -1006,7 +1046,7 @@
     ball.vx = Math.sin(ang) * ball.speed;
     ball.vz = -pad.side * Math.cos(ang) * ball.speed;
     const lvl = spinLevelFor(pad);
-    const opp = pad === P ? A : P;
+    const opp = sidePads(-pad.side).reduce((a, b) => (Math.abs(b.x - ball.x) < Math.abs(a.x - ball.x) ? b : a)); // the nearest opponent
     ball.spinLvl = lvl; ball.spinAge = 0; ball.curve = 0;
     ball.spinFlight = (2 * FACE) / Math.abs(ball.vz); // rough time to reach the other paddle
     if (lvl) {
@@ -1016,7 +1056,7 @@
       Sfx.spin(lvl);
     }
     // shot boosts: yours, or the AI's in a real match (never in the menu demo)
-    const owner = pad === P ? (P.isAI ? null : 'you') : (mode === 'game' ? 'ai' : null);
+    const owner = pad.side > 0 ? (P.isAI ? null : 'you') : (mode === 'game' ? 'ai' : null); // boosts belong to the team
     const pw = owner && powerOf(owner);
     if (pw && pw.type && POWER[pw.type].shot) {
       if (pw.fresh) pw.fresh = false;
@@ -1027,15 +1067,15 @@
     ball.launch = { x: ball.x, z: ball.z, vx: ball.vx, vz: ball.vz, speed: ball.speed, curve: 0 };
     if (dbg.stats) dbg.straightX = simulateTo({ ...ball.launch }, -pad.side * FACE);
     pad.pulse = 1;
-    const rig = pad === P ? nearRig : farRig;
+    const rig = pad.rig;
     rig.pulse = 1;
     const key = padKey(pad);
     netEvent(['h', pad.side]);
     burst(xc, ballY(ball.z), ball.z, CHARS[key].hex, 12, -pad.side);
     Sfx.hit(key);
     if (!REDUCED) shake = Math.max(shake, 0.12);
-    const receiver = pad === P ? A : P;
-    receiver.err = rollErr(receiver); receiver.think = 0;
+    for (const q of sidePads(-pad.side)) { q.err = rollErr(q); q.think = 0; }
+    if (dbg.stats) dbg.stats.hitsBy[pad.slot] = (dbg.stats.hitsBy[pad.slot] || 0) + 1;
     if (++rallyHits % 2 === 0) { trips++; growPins(); }
   }
 
@@ -1074,9 +1114,9 @@
     });
     ball.tripled = owner !== 'ai'; // (stats: AI returns of your triple shots)
     // an AI receiver first chases one of the three, and only the real one some of the time
-    const receiver = owner === 'ai' ? P : A;
+    const receiver = sidePads(owner === 'ai' ? 1 : -1).find((q) => q.isAI);
     const realP = { easy: 0.34, normal: 0.45, hard: 0.6 }[curDiffKey()];
-    ball.track = receiver.isAI && Math.random() >= realP ? decoys[Math.random() < 0.5 ? 0 : 1] : null;
+    ball.track = receiver && Math.random() >= realP ? decoys[Math.random() < 0.5 ? 0 : 1] : null;
     if (dbg.stats && owner !== 'ai') dbg.stats.tripleShots++;
     popText(owner === 'ai' ? 'INCOMING TRIPLE BALL!' : 'TRIPLE BALL!', POWER.triple.css); Sfx.power();
     endPower(owner);
@@ -1132,7 +1172,7 @@
   }
   function addPin() {
     for (let i = 0; i < 80; i++) {
-      const x = rand(-3.2, 3.2), z = rand(-3.6, 3.6);
+      const x = rand(-1, 1) * (HW - 1.8), z = rand(-3.6, 3.6);
       if (Math.hypot(x, z) < 1.5 || Math.abs(z) < 0.6) continue;          // keep the serve spot and net clear
       if (pins.some((p) => Math.hypot(p.x - x, p.z - z) < 2)) continue;   // never pinch the ball between pins
       if (Math.hypot(ball.x - x, ball.z - z) < 1.6) continue;            // don't grow under the ball
@@ -1229,7 +1269,7 @@
     rig.inner.add(group);
     return { rig, group, mat, coatMat, clip, coat, coats: {}, fit: null, stream, drips, splash, puddle, bucket, t: -1, maxCover: 0, dims: null, dd: [], sp: [] };
   }
-  const slimes = new Map([[nearRig, makeSlime(nearRig)], [farRig, makeSlime(farRig)]]);
+  const slimes = new Map(RIGS.map((r) => [r, makeSlime(r)]));
   function charDims(def) {
     const rows = def.grid.length, cols = def.grid[0].length, s = def.voxel;
     let depth = def.depth;
@@ -1274,7 +1314,7 @@
       el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
     }
     if (dbg.stats) {
-      const who = rig === nearRig ? 'you' : 'ai';
+      const who = rig === nearRig || rig === nearRig2 ? 'you' : 'ai';
       dbg.stats.slimes[who]++; dbg.stats.slimeColors[who] = winnerDef.css;
     }
   }
@@ -1421,16 +1461,19 @@
     if (Math.abs(ball.z) <= HL && Math.sign(Math.abs(pz) - HL / 2) !== Math.sign(Math.abs(ball.z) - HL / 2)) Sfx.bounce();
     if (phase !== 'play') return;
     // paddle contact via plane crossing (no tunneling)
-    for (const pad of [P, A]) {
-      const plane = pad.side * FACE;
-      const crossed = pad.side > 0 ? (ball.vz > 0 && pz <= plane && ball.z >= plane) : (ball.vz < 0 && pz >= plane && ball.z <= plane);
+    for (const side of [1, -1]) {
+      const plane = side * FACE;
+      const crossed = side > 0 ? (ball.vz > 0 && pz <= plane && ball.z >= plane) : (ball.vz < 0 && pz >= plane && ball.z <= plane);
       if (!crossed) continue;
       const t = (plane - pz) / (ball.z - pz || 1);
       const xc = clamp(px + (ball.x - px) * t, -WL, WL);
       const lvl = ball.spinLvl;
       if (dbg.stats && dbg.straightX !== undefined) { dbg.stats.bend[lvl] += Math.abs(xc - dbg.straightX); dbg.stats.bendN[lvl]++; }
-      if (dbg.stats && ball.tripled && pad === A) dbg.stats[Math.abs(xc - pad.x) <= pad.w / 2 + R * 0.8 ? 'tripleRet' : 'tripleMiss']++;
-      if (reachX(pad, xc) <= pad.w / 2 + R * 0.8) {
+      // 2v2: teammates' paddles can overlap; the closest one in reach plays it
+      let pad = null, best = Infinity;
+      for (const q of sidePads(side)) { const r = reachX(q, xc); if (r <= q.w / 2 + R * 0.8 && r < best) { best = r; pad = q; } }
+      if (dbg.stats && ball.tripled && side < 0) dbg.stats[pad ? 'tripleRet' : 'tripleMiss']++;
+      if (pad) {
         if (dbg.stats) dbg.stats.ret[lvl]++;
         ball.z = plane - (ball.z - plane);
         ball.x = xc;
@@ -1462,6 +1505,7 @@
     else humanPaddle(dt);
     if (net.role === 'host' && netLive()) netMoveRemotePaddle(dt); // online: the far paddle is your friend
     else updateAI(A, dt);
+    if (duo) { updateAI(P2, dt); updateAI(A2, dt); }
 
     if (phase === 'serve') { serveT -= dt; if (serveT <= 0) launch(); return; }
     // SLOW-MO only slows balls coming toward the player
@@ -1499,7 +1543,7 @@
   const goalHalf = (sz) => {
     // WIDE GOAL widens the *opponent's* goal: yours stretches the AI's goal, the AI's stretches yours
     const wide = (sz < 0 && power.type === 'wide') || (sz > 0 && aiPower.type === 'wide');
-    return Math.min(HK.GOAL_MAX, HK.GOAL * (1 + HK.GROW * hk.crossings) * (wide ? 1.6 : 1));
+    return (HW / 5) * Math.min(HK.GOAL_MAX, HK.GOAL * (1 + HK.GROW * hk.crossings) * (wide ? 1.6 : 1)); // 2v2: twice as wide
   };
   const clockFor = (crossings) => Math.max(HK.CLOCK_MIN, HK.CLOCK - HK.CLOCK_STEP * crossings);
 
@@ -1512,10 +1556,12 @@
 
   // ---------------------------------------------------------------- hockey table parts
   const hockeyParts = new THREE.Group(); table.add(hockeyParts);
+  let hkCentre = null; // stretched sideways in 2v2
   (() => {
     const glow = new THREE.MeshBasicMaterial({ color: 0xa8d8ff, side: THREE.DoubleSide });
     const centre = new THREE.Mesh(new THREE.BoxGeometry(HW * 2, 0.02, 0.07), glow);
     centre.position.y = 0.012; hockeyParts.add(centre);
+    hkCentre = centre;
     const circle = new THREE.Mesh(new THREE.RingGeometry(1.45, 1.53, 64), glow);
     circle.rotation.x = -Math.PI / 2; circle.position.y = 0.013; hockeyParts.add(circle);
     for (const sz of [-1, 1]) {
@@ -1561,6 +1607,10 @@
   }
   const MP = makeMallet(1);  // you (near)
   const MA = makeMallet(-1); // AI (far)
+  const MP2 = makeMallet(1);  // 2v2: your teammate
+  const MA2 = makeMallet(-1); // 2v2: the second opponent
+  const teamMallets = (s) => (s > 0 ? (duo ? [MP, MP2] : [MP]) : (duo ? [MA, MA2] : [MA]));
+  const hkMallets = () => (duo ? [MP, MP2, MA, MA2] : [MP, MA]);
   function makePuckSlot() {
     const group = new THREE.Group(), holder = new THREE.Group();
     const discMat = new THREE.MeshStandardMaterial({ color: 0xeaf4ff, emissive: 0x9fd3ff, emissiveIntensity: 0.6, roughness: 0.3 });
@@ -1587,13 +1637,12 @@
     const hockey = gameMode === 'hockey', volley = gameMode === 'volley', pong = gameMode === 'pong';
     table.visible = !volley; court.visible = volley;
     pongParts.visible = pong; hockeyParts.visible = hockey;
-    P.group.visible = A.group.visible = pong;
-    MP.group.visible = MA.group.visible = hockey;
+    applyRoster();
     if (!hockey) puckSlots.forEach((sl) => { sl.group.visible = false; });
-    if (!volley) landRing.visible = false;
+    if (!volley) { landRing.visible = false; spikeRing.visible = false; $('#spinBtn').classList.remove('ready'); spikeReady = false; }
     // Volleyball: the characters are the players, so both are life-size; otherwise they watch from the ends
-    nearRig.scale = volley ? 1 : 0.85; farRig.scale = volley ? 1 : 1.3;
-    if (!volley) { nearRig.outer.position.set(0, nearRig.outer.position.y, 8.7); farRig.outer.position.set(0, 0.05, -9.3); }
+    nearRig.scale = nearRig2.scale = volley ? 1 : 0.85; farRig.scale = farRig2.scale = volley ? 1 : 1.3;
+    if (!volley) for (const rig of RIGS) rig.outer.position.set(rig.x, rig.side > 0 ? rig.outer.position.y : 0.05, rig.side * (rig.side > 0 ? 8.7 : 9.3));
     ballMesh.scale.setScalar(1); shownSpin = -1; // the pong ball looks after its own size/colour again
     $('#hintPong').hidden = !pong; $('#hintHockey').hidden = !hockey; $('#hintVolley').hidden = !volley;
     $('#pipsLbl').textContent = hockey ? 'SMASH' : 'SPIN';
@@ -1605,7 +1654,10 @@
   }
 
   function hkResetMallets() {
-    for (const m of [MP, MA]) Object.assign(m, { x: 0, z: m.side * 6, vx: 0, vz: 0, r: HK.R_M, tx: 0, tz: m.side * 6, think: 0, track: null, lastHit: -1 });
+    for (const m of [MP, MA, MP2, MA2]) {
+      const x = duo ? m.lane * HW * 0.4 : 0;
+      Object.assign(m, { x, z: m.side * 6, vx: 0, vz: 0, r: HK.R_M, tx: x, tz: m.side * 6, think: 0, track: null, lastHit: -1 });
+    }
     hk.aim.x = 0; hk.aim.z = 6;
   }
   // The side that conceded gets the next puck: a new random character drops in on their side.
@@ -1623,7 +1675,7 @@
     hk.clock = clockFor(hk.crossings);
     Object.assign(hk.puck, { x: rand(-0.6, 0.6), z: hk.side * 2.2, vx: 0, vz: 0, key, fire: false });
     hk.fakes.forEach((f) => { if (f.active) hkPopFake(f, true); });
-    hk.hits = 0; hk.slowT = 0; MA.track = MP.track = null;
+    hk.hits = 0; hk.slowT = 0; MA.track = MP.track = MA2.track = MP2.track = null;
     if (dbg.stats && !turnover) dbg.stats.serveGoal.push(goalHalf(1));
     if (dbg.stats) dbg.stats.puckKeys[key] = true;
     if (mode === 'game' && firstServe) showBanner('READY?', 'var(--ink)');
@@ -1702,13 +1754,14 @@
   function hkHit(p, m, swing) {
     hk.hits++;
     p.fire = false;
-    const rig = m === MP ? nearRig : farRig;
+    const rig = m.rig;
     rig.pulse = 1; m.pulse = 1;
+    if (dbg.stats) dbg.stats.hitsBy[m.slot] = (dbg.stats.hitsBy[m.slot] || 0) + 1;
     netEvent(['h', m.side]);
     burst(p.x, 0.3, p.z, CHARS[rig.key].hex, 10, -m.side);
     Sfx.hit(rig.key);
     // boosts: yours, or the AI's in a real match (never in the menu demo)
-    const owner = m === MP ? (MP.isAI ? null : 'you') : (mode === 'game' ? 'ai' : null);
+    const owner = m.side > 0 ? (MP.isAI ? null : 'you') : (mode === 'game' ? 'ai' : null); // boosts belong to the team
     if (owner) {
       const pw = powerOf(owner);
       if (pw.type && HPOWER[pw.type].shot) { // shot boosts fire on the hit after the one that earned them
@@ -1717,7 +1770,8 @@
         else if (pw.type === 'triple') hkTriple(p, owner);
       }
       const smash = swing >= 5 && Math.hypot(p.vx, p.vz) >= HK.SMASH; // a real swing that sends it flying
-      if (owner === 'you') {
+      if (owner === 'you' && m !== MP) { /* your AI teammate's hits don't touch your smash streak */ }
+      else if (owner === 'you') {
         if (smash) {
           streak++;
           if (dbg.stats) dbg.stats.smashes++;
@@ -1730,7 +1784,7 @@
         if (++aiStreak % 3 === 0) awardPower('ai'); // three AI smashes in a row
       } else aiStreak = 0;
     }
-    (m === MP ? MA : MP).think = 0; // the other side reacts right away
+    for (const o of teamMallets(-m.side)) o.think = 0; // the other side reacts right away
   }
   function hkFire(p, owner) {
     // even a gentle touch becomes a blazing shot: 1.5x the hit, at least 28, at most 34
@@ -1751,8 +1805,8 @@
       if (dbg.stats) { dbg.stats.fakes++; if (owner === 'ai') dbg.stats.aiFakes++; }
     });
     // an AI-driven receiver first chases one of the three pucks, the real one only some of the time
-    const victim = owner === 'ai' ? MP : MA;
-    if (victim.isAI || (victim === MP && dbg.autoPlayer)) {
+    for (const victim of teamMallets(owner === 'ai' ? 1 : -1)) {
+      if (!(victim.isAI || (victim === MP && dbg.autoPlayer))) continue;
       const D = HDIFF[curDiffKey()];
       victim.track = Math.random() < D.realP ? null : hk.fakes[Math.random() < 0.5 ? 0 : 1];
       victim.trackSince = simTime;
@@ -1792,11 +1846,20 @@
     m.think = D.react;
     if (Math.random() < D.hesitate) { m.think = D.react * 3; return; } // a moment of hesitation
     const s = m.side, defZ = s * (HL - 1.8);
-    if (phase !== 'play') { m.tx = 0; m.tz = defZ; return; }
+    if (phase !== 'play') { m.tx = duo ? m.lane * HW * 0.4 : 0; m.tz = defZ; return; }
     const noticed = !m.track || !m.track.active || simTime - m.trackSince > D.notice;
     const p = noticed ? hk.puck : m.track;
     const mine = p.z * s > 0.15, coming = p.vz * s > 0.8, speed = Math.hypot(p.vx, p.vz);
     const hurry = hk.side === s && hk.clock < 1.3; // shot clock about to run out: attack now
+    if (duo) {
+      // 2v2: the teammate nearer the puck plays it; the other one guards the goal
+      const dist = (q) => Math.hypot(q.x - p.x, q.z - p.z);
+      if (dist(m) > dist(m.mate) || (dist(m) === dist(m.mate) && m.lane > 0)) {
+        const px = coming ? hkPredictX(p, defZ) : p.x * 0.5, gh = goalHalf(s);
+        m.tx = clamp(px + rand(-1, 1) * D.aim * D.defErr * 0.5, -gh, gh); m.tz = defZ;
+        return;
+      }
+    }
     if (mine && (!coming || speed < 6 || hurry)) {
       // attack: line up behind the puck (goal side) and drive through it at the other goal
       const gx = (Math.random() < 0.5 ? -1 : 1) * clamp(rand(D.corner, 1.25), 0, 1.25), gz = -s * HL; // aim for a corner of the goal
@@ -1809,7 +1872,8 @@
     } else {
       // defend: stand where the puck will cross our defence line
       const px = coming ? hkPredictX(p, defZ) : p.x * 0.5;
-      m.tx = clamp(px + rand(-1, 1) * D.aim * D.defErr, -2.4, 2.4); m.tz = defZ;
+      const lim = 2.4 * (HW / 5);
+      m.tx = clamp(px + rand(-1, 1) * D.aim * D.defErr, -lim, lim); m.tz = duo ? s * (HL - 3.6) : defZ; // (2v2: in front of the goalie)
     }
   }
   function hkMoveMallet(m, dt) {
@@ -1836,11 +1900,11 @@
   function hkStep(dt) {
     simTime += dt;
     tickPowers(dt);
-    hkMoveMallet(MP, dt); hkMoveMallet(MA, dt);
+    for (const m of hkMallets()) hkMoveMallet(m, dt);
     const p = hk.puck;
     if (phase === 'serve') {
       // the puck is dropping in: mallets can't shove it yet
-      for (const m of [MP, MA]) {
+      for (const m of hkMallets()) {
         const dx = m.x - p.x, dz = m.z - p.z, min = HK.R_P + m.r, d = Math.hypot(dx, dz);
         if (d < min) { m.x = p.x + (d > 1e-6 ? dx / d : 0) * min; m.z = p.z + (d > 1e-6 ? dz / d : m.side) * min; hkClampMallet(m); }
       }
@@ -1851,7 +1915,7 @@
     if (phase === 'play') {
       const ev = hkIntegrate(p, dt);
       if (ev.rail) Sfx.wall();
-      hkMalletContact(p, MP); hkMalletContact(p, MA);
+      for (const m of hkMallets()) hkMalletContact(p, m);
       // centre-line crossings (with a little slack so a wobbling puck doesn't count twice):
       // both goals grow and the shot clock for the new half gets shorter
       const side = p.z > 0.25 ? 1 : p.z < -0.25 ? -1 : hk.side;
@@ -1901,13 +1965,13 @@
 
   // ---------------------------------------------------------------- hockey visuals
   function hkRender(dt) {
-    for (const m of [MP, MA]) {
+    for (const m of hkMallets()) {
       m.pulse = Math.max(0, m.pulse - dt * 4);
       m.group.position.set(m.x, 0, m.z);
       m.disc.scale.set(m.r, 1, m.r);
       m.mat.emissiveIntensity = 0.35 + m.pulse * 0.9;
-      m.mat.color.setHex(CHARS[(m === MP ? nearRig : farRig).key].hex);
-      m.mat.emissive.setHex(CHARS[(m === MP ? nearRig : farRig).key].hex);
+      m.mat.color.setHex(CHARS[m.rig.key].hex);
+      m.mat.emissive.setHex(CHARS[m.rig.key].hex);
     }
     setGoalWidth(-1, goalHalf(-1)); setGoalWidth(1, goalHalf(1));
     hk.flash = Math.max(0, hk.flash - dt * 3);
@@ -1952,22 +2016,36 @@
     CW: 5, CL: 7.5, NET_H: 2.3, BR: 0.32, G: 13,
     REACH_H: 1.5, REACH_R: 1.05,                    // bump zone around (x, 1.5 + jump, z)
     APEX: 4.6,                                      // usual bump height
-    SPIKE_R: 1.3, SPIKE_HMIN: 1.8, SPIKE_HMAX: 4.6, SPIKE_NET: 4.2, SPIKE_SPEED: 17, SPIKE_WINDOW: 0.22,
+    SPIKE_R: 1.3, SPIKE_HMIN: 1.8, SPIKE_HMAX: 4.6, SPIKE_NET: 4.2, SPIKE_SPEED: 17, // (AI spikes)
+    // People spike with a much bigger reach, from anywhere in their half, and a tap stays armed a while:
+    // the ring shows where the ball lands, so at spike height the ball is still ~2 m away from you.
+    YOU_SPIKE_R: 2.4, YOU_HMIN: 1.4, YOU_HMAX: 6.5, SPIKE_WINDOW: 0.5,
+    YOU_RING_R: 2.0,                                // ...or simply standing on (near) the landing ring
     DIG_R: 0.8,                                     // a spike is only dug back if it comes almost straight at you
     RUN: 9.5,                                       // your running speed
+    K_STEP: 0.05, K_MAX: 2.0,                       // every touch makes the rally 5% faster, up to 2x...
+    K_POINT: 0.03, K_START_MAX: 1.4,                // ...and every point played starts the next rally 3% faster (up to 1.4x)
+    SET_Z: 2.0,                                     // 2v2: where a set comes down (this far from the net)
   };
   const VDIFF = {
     easy:   { run: 6.0, react: 0.32, aim: 1.6, judge: 1.5, spikeP: 0.15, deep: 0.3 },
     normal: { run: 7.4, react: 0.22, aim: 1.1, judge: 1.05, spikeP: 0.35, deep: 0.5 },
     hard:   { run: 9.2, react: 0.12, aim: 0.6, judge: 0.55, spikeP: 0.6,  deep: 0.7 },
   };
-  const vb = { ball: { x: 0, y: 2.6, z: 4, vx: 0, vy: 0, vz: 0 }, last: 1, touchId: 0, server: null };
+  // ball.k: how fast this rally runs (it speeds up with every touch). touches: in a row by side `last`.
+  const vb = { ball: { x: 0, y: 2.6, z: 4, vx: 0, vy: 0, vz: 0, k: 1 }, last: 1, lastPlayer: null, touches: 0, touchId: 0, server: null, rot: { 1: 0, '-1': 0 }, spikes: [0, 0, 0, 0] };
   const makePlayer = (side) => ({ side, x: 0, z: side * 4.5, vx: 0, vz: 0, jy: 0, jumpT: 0, cool: 0, spikeAt: -1, isAI: side < 0, think: 0, tx: 0, tz: side * 4.5, err: 0, planFor: -1, wantSpike: false, pulse: 0 });
   const VP = makePlayer(1);   // you (near)
   const VA = makePlayer(-1);  // the AI or your online friend (far)
+  const VP2 = makePlayer(1);  // 2v2: your teammate
+  const VA2 = makePlayer(-1); // 2v2: the second opponent
+  const teamPlayers = (s) => (s > 0 ? (duo ? [VP, VP2] : [VP]) : (duo ? [VA, VA2] : [VA]));
+  const vbPlayers = () => (duo ? [VP, VP2, VA, VA2] : [VP, VA]);
+  const vbBallColor = new THREE.Color();
 
   // ---------------------------------------------------------------- court
   const court = new THREE.Group(); court.visible = false; scene.add(court);
+  let courtNetTex = null; // (2v2 stretches the court sideways)
   (() => {
     const floor = new THREE.Mesh(new THREE.BoxGeometry(VB.CW * 2 + 4, 0.3, VB.CL * 2 + 5), new THREE.MeshStandardMaterial({ color: 0x10245a, roughness: 0.8 }));
     floor.position.y = -0.15; court.add(floor);
@@ -1981,6 +2059,7 @@
     const c = document.createElement('canvas'); c.width = c.height = 32;
     const g = c.getContext('2d'); g.strokeStyle = 'rgba(220,235,255,0.9)'; g.lineWidth = 3; g.strokeRect(0, 0, 32, 32);
     const tex = new THREE.CanvasTexture(c); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set((VB.CW * 2 + 0.8) / 0.25, (VB.NET_H - 1.3) / 0.25);
+    courtNetTex = tex;
     const net = new THREE.Mesh(new THREE.PlaneGeometry(VB.CW * 2 + 0.8, VB.NET_H - 1.3), new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false }));
     net.position.set(0, (VB.NET_H + 1.3) / 2, 0); court.add(net);
     const band = new THREE.Mesh(new THREE.BoxGeometry(VB.CW * 2 + 0.8, 0.09, 0.08), new THREE.MeshBasicMaterial({ color: 0xeaf4ff }));
@@ -1993,10 +2072,15 @@
   // where the ball will land: a glowing ring in the colour of the side it's coming down on
   const landRing = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.6, 40), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false }));
   landRing.rotation.x = -Math.PI / 2; landRing.position.y = 0.03; landRing.visible = false; scene.add(landRing);
+  // lights up under you when a tap would spike
+  const spikeRing = new THREE.Mesh(new THREE.RingGeometry(0.75, 0.95, 40), new THREE.MeshBasicMaterial({ color: 0xff6a3d, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false }));
+  spikeRing.rotation.x = -Math.PI / 2; spikeRing.position.y = 0.04; spikeRing.visible = false; scene.add(spikeRing);
+  let spikeReady = false;
 
   // ---------------------------------------------------------------- physics
   // One step of the ball: gravity, then the net (a ball crossing below the tape bounces back).
   function vbIntegrate(b, dt) {
+    dt *= b.k || 1; // a faster rally runs the same arcs in less time
     const pz = b.z;
     b.vy -= VB.G * dt;
     b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt;
@@ -2048,18 +2132,35 @@
 
   // ---------------------------------------------------------------- touches
   function vbTouch(p, kind) {
-    vb.last = p.side; vb.touchId++; p.cool = 0.35;
-    const rig = p.side > 0 ? nearRig : farRig;
+    if (dbg.stats && vb.lastPlayer === p && vb.last === p.side && kind !== 'serve') dbg.stats.vbDouble++;
+    vb.touches = vb.last === p.side && kind !== 'serve' ? vb.touches + 1 : 1;
+    vb.last = p.side; vb.lastPlayer = p; vb.lastKind = kind; vb.touchId++; p.cool = 0.35;
+    if (kind !== 'serve') vb.ball.k = Math.min(VB.K_MAX, (vb.ball.k || 1) + VB.K_STEP);
+    if (dbg.stats) {
+      dbg.stats.vbMaxTouches = Math.max(dbg.stats.vbMaxTouches || 0, vb.touches);
+      dbg.stats.vbMaxK = Math.max(dbg.stats.vbMaxK || 1, vb.ball.k);
+      dbg.stats.hitsBy[p.slot] = (dbg.stats.hitsBy[p.slot] || 0) + 1;
+    }
+    const rig = p.rig;
     rig.pulse = 1;
     netEvent(['h', p.side]);
     burst(vb.ball.x, vb.ball.y, vb.ball.z, CHARS[rig.key].hex, kind === 'spike' ? 16 : 10, -p.side);
     Sfx.hit(rig.key);
-    if (kind === 'spike') { Sfx.fire(); popText('SPIKE!', '#ff6a3d'); if (dbg.stats) dbg.stats[p.side > 0 ? 'vbYouSpikes' : 'vbAiSpikes']++; }
+    if (kind === 'spike') { vb.spikes[p.slot]++; Sfx.fire(); popText('SPIKE!', '#ff6a3d'); if (dbg.stats) dbg.stats[p.side > 0 ? 'vbYouSpikes' : 'vbAiSpikes']++; }
     else if (dbg.stats) dbg.stats.vbBumps++;
   }
+  // May this player touch the ball now? Never twice in a row, and at most 3 touches per side.
+  const vbMayTouch = (p) => !(vb.last === p.side && (vb.lastPlayer === p || vb.touches >= 3));
   function vbBump(p) {
     const b = vb.ball;
     let tx, tz;
+    if (duo && vb.last !== p.side) {
+      // 2v2: the first touch sets the ball up high, near the net, for your teammate to attack
+      vbLaunch(b, clamp(p.mate.x, -VB.CW + 1, VB.CW - 1), p.side * VB.SET_Z, 5.2);
+      if (dbg.stats) dbg.stats.vbSets++;
+      vbTouch(p, 'set');
+      return;
+    }
     if (p.isAI || (p === VP && dbg.autoPlayer)) {
       const D = vbDiff(p);
       tx = clamp(rand(-1, 1) * (VB.CW - 1) + rand(-1, 1) * D.aim, -VB.CW - 1.2, VB.CW + 1.2);
@@ -2073,15 +2174,35 @@
     if (dbg.stats && !clear) dbg.stats.vbBumpNoClear++;
     vbTouch(p, 'bump');
   }
+  const vbIsPerson = (p) => !(p.isAI || (p === VP && dbg.autoPlayer));
+  // Could p spike the ball right now?
+  function vbSpikeReach(p) {
+    const b = vb.ball;
+    if (phase !== 'play' || p.cool > 0 || b.z * p.side <= 0 || !vbMayTouch(p)) return false;
+    if (!vbIsPerson(p)) return Math.abs(p.z) <= VB.SPIKE_NET && Math.hypot(b.x - p.x, b.z - p.z) <= VB.SPIKE_R && b.y >= VB.SPIKE_HMIN && b.y <= VB.SPIKE_HMAX;
+    if (b.y < VB.YOU_HMIN || b.y > VB.YOU_HMAX) return false;
+    if (Math.hypot(b.x - p.x, b.z - p.z) <= VB.YOU_SPIKE_R) return true;
+    const land = vbPredictLanding(); // on the ring = under the ball, as far as a person can tell
+    return !!land && Math.hypot(land.x - p.x, land.z - p.z) <= VB.YOU_RING_R;
+  }
   function vbTrySpike(p) {
     const b = vb.ball;
-    if (p.cool > 0 || b.z * p.side <= 0 || Math.abs(p.z) > VB.SPIKE_NET) return false;
-    if (Math.hypot(b.x - p.x, b.z - p.z) > VB.SPIKE_R || b.y < VB.SPIKE_HMIN || b.y > VB.SPIKE_HMAX) return false;
-    const aiAim = p.isAI || (p === VP && dbg.autoPlayer);
-    const def = p === VP ? VA : VP;
-    const tx = aiAim ? -(Math.sign(def.x) || (Math.random() < 0.5 ? 1 : -1)) * rand(2, VB.CW - 0.8) // away from the defender
-      : clamp(-p.x * 0.4 + p.vx * 0.45, -VB.CW + 0.8, VB.CW - 0.8);
-    if (!vbSpikeLaunch(b, tx, -p.side * rand(2, 5.5))) return false;
+    if (!vbSpikeReach(p)) return false;
+    const aiAim = !vbIsPerson(p);
+    let tx = Math.sign(p.vx) * rand(2.5, VB.CW - 0.8); // a person running sideways spikes that way...
+    if (aiAim || Math.abs(p.vx) < 2) { // ...otherwise it goes into the biggest gap between the defenders
+      let best = -1;
+      for (let i = 0; i < 8; i++) {
+        const x = rand(-1, 1) * (VB.CW - 0.8), gap = Math.min(...teamPlayers(-p.side).map((o) => Math.abs(o.x - x)));
+        if (gap > best) { best = gap; tx = x; }
+      }
+    }
+    if (!vbSpikeLaunch(b, tx, -p.side * rand(2, 5.5))) {
+      if (aiAim) return false;
+      // too far back to smash it down: a hard, flat drive over the net instead
+      if (dbg.stats) dbg.stats.vbDrives = (dbg.stats.vbDrives || 0) + 1;
+      vbLaunch(b, tx, -p.side * rand(4.5, VB.CL - 1), Math.max(b.y, VB.NET_H + 0.9));
+    }
     p.jumpT = 0.5;
     vbTouch(p, 'spike');
     return true;
@@ -2092,22 +2213,31 @@
   function vbAI(p) {
     const D = vbDiff(p);
     // once per incoming ball: decide whether to go for a spike
+    const homeX = duo ? p.lane * VB.CW * 0.35 : 0;
+    const setForMe = duo && vb.last === p.side && vb.lastPlayer === p.mate; // my teammate just set it up
     if (vb.touchId !== p.planFor) {
       p.planFor = vb.touchId;
-      p.wantSpike = vb.last !== p.side && Math.random() < (dbg.vSpikeP ?? D.spikeP);
-      p.err = rand(-1, 1) * D.judge; // misjudging where it comes down (easier AIs more often)
+      const spikeP = dbg.vSpikeP ?? D.spikeP;
+      p.wantSpike = setForMe ? Math.random() < Math.min(1, spikeP + 0.4) : vb.last !== p.side && Math.random() < spikeP;
+      p.err = rand(-1, 1) * D.judge * (setForMe ? 0.4 : 1); // misjudging where it comes down (easier AIs more often)
     }
     p.think -= STEP;
     if (p.think > 0) return;
     p.think = D.react;
-    if (phase !== 'play' || vb.last === p.side) { p.tx = 0; p.tz = p.side * 4.3; return; } // back to the middle
+    if (phase !== 'play' || !(vb.last !== p.side || (setForMe && vbMayTouch(p)))) { p.tx = homeX; p.tz = p.side * 4.3; return; } // back to my spot
+    if (duo && vb.last !== p.side) {
+      // 2v2: the teammate nearer to where it comes down takes it; the other moves up to the net for the set
+      const at = vbPredictAt(VB.REACH_H + 0.2, p.side);
+      const d = (q) => (at ? Math.hypot(q.x - at.x, q.z - at.z) : 0);
+      if (at && (d(p.mate) < d(p) || (d(p.mate) === d(p) && p.lane > 0))) { p.tx = homeX; p.tz = p.side * VB.SET_Z; return; }
+    }
     let at = p.wantSpike ? vbPredictAt(3.3, p.side) : null;
     if (at && Math.abs(at.z) > VB.SPIKE_NET - 0.3) { p.wantSpike = false; at = null; } // too far from the net to spike
     if (!at) at = vbPredictAt(VB.REACH_H + 0.2, p.side);
     if (at && Math.abs(at.x) < VB.CW + 2 && Math.abs(at.z) < VB.CL + 2) {
       // get under it (a touch behind for a bump, so it goes forward)
       p.tx = at.x + p.err; p.tz = at.z + (p.wantSpike ? 0 : p.side * 0.25);
-    } else { p.tx = 0; p.tz = p.side * 4.3; }
+    } else { p.tx = homeX; p.tz = p.side * 4.3; }
   }
   function vbMovePlayer(p, dt) {
     let tx, tz, maxV;
@@ -2133,19 +2263,25 @@
 
   // ---------------------------------------------------------------- flow
   function vbResetPlayers() {
-    for (const p of [VP, VA]) Object.assign(p, { x: 0, z: p.side * 4.5, vx: 0, vz: 0, jy: 0, jumpT: 0, cool: 0, spikeAt: -1, think: 0, tx: 0, tz: p.side * 4.5, err: 0, planFor: -1, wantSpike: false });
+    for (const p of [VP, VA, VP2, VA2]) {
+      const x = duo ? p.lane * VB.CW * 0.35 : 0;
+      Object.assign(p, { x, z: p.side * 4.5, vx: 0, vz: 0, jy: 0, jumpT: 0, cool: 0, spikeAt: -1, think: 0, tx: x, tz: p.side * 4.5, err: 0, planFor: -1, wantSpike: false });
+    }
     hk.aim.x = 0; hk.aim.z = 4.5;
   }
   // Whoever lost the point serves from their baseline.
   function vbResetServe() {
     phase = 'serve';
     serveT = firstServe ? 1.4 : 1.0;
-    const server = serveDir > 0 ? VP : VA;
+    const team = teamPlayers(serveDir > 0 ? 1 : -1), side = serveDir > 0 ? 1 : -1;
+    vb.rot[side] = (vb.rot[side] + 1) % team.length; // 2v2: teammates take turns serving
+    const server = team[vb.rot[side]];
     vb.server = server;
     server.x = rand(-2, 2); server.z = server.side * (VB.CL - 0.4);
     if (server === VP) { hk.aim.x = server.x; hk.aim.z = server.z; }
-    Object.assign(vb.ball, { x: server.x, y: 2.6, z: server.z - server.side * 0.3, vx: 0, vy: 0, vz: 0 });
-    vb.last = server.side;
+    const k = mode === 'game' ? Math.min(VB.K_START_MAX, 1 + VB.K_POINT * (score[0] + score[1])) : 1;
+    Object.assign(vb.ball, { x: server.x, y: 2.6, z: server.z - server.side * 0.3, vx: 0, vy: 0, vz: 0, k });
+    vb.last = server.side; vb.lastPlayer = null; vb.touches = 0;
     trailHist = [];
     if (mode === 'game' && firstServe) showBanner('READY?', 'var(--ink)');
     else if (mode === 'game' && server === VP) popText('SERVE', '#43e0ff');
@@ -2161,7 +2297,7 @@
   function vbStep(dt) {
     simTime += dt;
     if (net.role === 'host' && netLive() && net.spinA >= 0) { VA.spikeAt = net.spinA; net.spinA = -1; if (VA.jumpT <= 0) VA.jumpT = 0.5; } // your friend tapped SPIKE
-    if (!dbg.vFreeze) for (const p of [VP, VA]) vbMovePlayer(p, dt); // (vFreeze: rule tests with nobody touching the ball)
+    if (!dbg.vFreeze) for (const p of vbPlayers()) vbMovePlayer(p, dt); // (vFreeze: rule tests with nobody touching the ball)
     if (phase === 'serve') {
       const s = vb.server;
       Object.assign(vb.ball, { x: s.x, y: 2.6 + Math.sin(simTime * 6) * 0.08, z: s.z - s.side * 0.3 });
@@ -2173,7 +2309,7 @@
       const b = vb.ball;
       if (vbIntegrate(b, dt)) { Sfx.wall(); if (dbg.stats) dbg.stats.vbNet++; }
       // spikes: a tap (or the AI's decision) stays live for a moment while the ball comes into range
-      for (const p of dbg.vFreeze ? [] : [VP, VA]) {
+      for (const p of dbg.vFreeze ? [] : vbPlayers()) {
         const auto = p.isAI || (p === VP && dbg.autoPlayer);
         if (auto) { if (p.wantSpike && vbTrySpike(p)) p.wantSpike = false; continue; }
         const win = p === VA ? VB.SPIKE_WINDOW + 0.15 : VB.SPIKE_WINDOW; // (VA is a person only online: forgive lag)
@@ -2181,10 +2317,13 @@
         else p.spikeAt = -1;
       }
       // bumps: get under a falling ball on your side
-      for (const p of dbg.vFreeze ? [] : [VP, VA]) {
-        if (p.cool > 0 || b.vy > 0 || b.z * p.side < -0.1) continue;
-        const reach = Math.hypot(b.vx, b.vz) > 12 ? VB.DIG_R : VB.REACH_R; // spikes are hard to dig
-        if (Math.hypot(b.x - p.x, b.y - (VB.REACH_H + p.jy), b.z - p.z) < reach + VB.BR) vbBump(p);
+      for (const p of dbg.vFreeze ? [] : vbPlayers()) {
+        if (p.cool > 0 || b.vy > 0 || b.z * p.side < -0.1 || !vbMayTouch(p)) continue;
+        const hard = Math.hypot(b.vx, b.vz) > 12, reach = hard ? VB.DIG_R : VB.REACH_R; // spikes are hard to dig
+        if (Math.hypot(b.x - p.x, b.y - (VB.REACH_H + p.jy), b.z - p.z) < reach + VB.BR) {
+          if (dbg.stats && vb.lastPlayer && vb.lastPlayer.side !== p.side && vb.lastKind === 'spike') dbg.stats.vbDigs = (dbg.stats.vbDigs || 0) + 1;
+          vbBump(p);
+        }
       }
       // the ball comes down
       if (b.y <= VB.BR) {
@@ -2240,11 +2379,54 @@
       landRing.scale.setScalar(1 + Math.sin(time * 10) * 0.08);
     }
     // the characters are the players
-    for (const [p, rig] of [[VP, nearRig], [VA, farRig]]) {
-      rig.outer.position.set(p.x, p.jy, p.z);
-    }
+    for (const p of vbPlayers()) p.rig.outer.position.set(p.x, p.jy, p.z);
+    // you could spike right now: a ring under you and a glowing SPIKE button
+    const ready = mode === 'game' && !VP.isAI && vbSpikeReach(VP);
+    spikeRing.visible = ready;
+    if (ready) { spikeRing.position.x = VP.x; spikeRing.position.z = VP.z; spikeRing.scale.setScalar(1 + Math.sin(time * 18) * 0.1); }
+    if (ready !== spikeReady) { spikeReady = ready; $('#spinBtn').classList.toggle('ready', ready); }
+    // the ball warms from white to orange as the rally speeds up
+    const heat = clamp(((b.k || 1) - 1) / (VB.K_MAX - 1), 0, 1);
+    vbBallColor.setRGB(1, 1 - 0.55 * heat, 1 - 0.85 * heat);
+    ballMesh.material.color.copy(vbBallColor); ballMesh.material.emissive.copy(vbBallColor); ballGlow.material.color.copy(vbBallColor);
   }
 
+
+  // ================================================================ DUOS (2v2)
+  // Every mode can be played two against two: your teammate (P2 / MP2 / VP2) and the second
+  // opponent (A2 / MA2 / VA2) join, and the table, rink or court gets twice as wide.
+  for (const [list, rig, mate, lane, slot] of [
+    [[P, MP, VP], nearRig, [P2, MP2, VP2], -1, 0], [[P2, MP2, VP2], nearRig2, [P, MP, VP], 1, 1],
+    [[A, MA, VA], farRig, [A2, MA2, VA2], -1, 2], [[A2, MA2, VA2], farRig2, [A, MA, VA], 1, 3],
+  ]) list.forEach((q, i) => Object.assign(q, { rig, mate: mate[i], lane, slot }));
+  P2.isAI = MP2.isAI = VP2.isAI = A2.isAI = MA2.isAI = VA2.isAI = true;
+
+  // which pieces are on the table for this mode and team size
+  function applyRoster() {
+    const pong = gameMode === 'pong', hockey = gameMode === 'hockey';
+    P.group.visible = A.group.visible = pong;
+    P2.group.visible = A2.group.visible = pong && duo;
+    MP.group.visible = MA.group.visible = hockey;
+    MP2.group.visible = MA2.group.visible = hockey && duo;
+    nearRig2.outer.visible = farRig2.outer.visible = duo;
+  }
+  function setDuo(on) {
+    duo = !!on;
+    store.set('pp-duo', duo ? '1' : '0');
+    const k = duo ? 2 : 1;
+    HW = 5 * k; WL = HW - R; VB.CW = 5 * k;
+    wide.scale.x = k; hkCentre.scale.x = k; court.scale.x = k;
+    pongNetTex.repeat.x = (HW * 2) / 0.22; courtNetTex.repeat.x = (VB.CW * 2 + 0.8) / 0.25; // keep the net mesh square
+    for (const sz of [-1, 1]) hkRails[sz].gh = -1; // rebuild the end rails for the new width
+    setGoalWidth(-1, goalHalf(-1)); setGoalWidth(1, goalHalf(1));
+    buildFitPoints();
+    applyRoster();
+    document.body.classList.toggle('duo', duo);
+    $('#duoNote').hidden = !duo;
+    $('#rosterAi').previousElementSibling.textContent = duo ? 'OPPONENTS (AI + RANDOM)' : 'OPPONENT (AI)';
+    for (const el of document.querySelectorAll('.tsize')) el.setAttribute('aria-checked', String((el.dataset.duo === '1') === duo));
+    resize();
+  }
 
   // ---------------------------------------------------------------- visuals
   function animRig(rig, pad, dt) {
@@ -2279,7 +2461,7 @@
   }
   function render(dt) {
     time += dt;
-    for (const pad of [P, A]) {
+    for (const pad of [P, A, P2, A2]) {
       pad.pulse = Math.max(0, pad.pulse - dt * 4);
       pad.group.position.set(pad.x, PY, pad.side * (PZ - 0.2 * pad.pulse));
       pad.group.rotation.z = clamp(-pad.vx * 0.01, -0.25, 0.25);
@@ -2327,6 +2509,7 @@
     const hockey = gameMode === 'hockey', volley = gameMode === 'volley';
     animRig(nearRig, hockey ? MP : volley ? VP : P, dt);
     animRig(farRig, hockey ? MA : volley ? VA : A, dt);
+    if (duo) { animRig(nearRig2, hockey ? MP2 : volley ? VP2 : P2, dt); animRig(farRig2, hockey ? MA2 : volley ? VA2 : A2, dt); }
     if (hockey) hkRender(dt);
     if (volley) vbRender(dt);
 
@@ -2376,8 +2559,12 @@
   // steeply and move the camera to the closest distance where the whole table, both characters
   // and room for the scoreboard fit, so the long table fills the tall screen.
   const FIT_POINTS = [];
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) FIT_POINTS.push(new THREE.Vector3(sx * (HW + 0.3), 0, sz * (HL + 0.3)));
-  FIT_POINTS.push(new THREE.Vector3(0, 3.4, -9.3), new THREE.Vector3(0, 0.6, 8.7), new THREE.Vector3(0, -0.9, 8.7));
+  function buildFitPoints() {
+    FIT_POINTS.length = 0;
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) FIT_POINTS.push(new THREE.Vector3(sx * (HW + 0.3), 0, sz * (HL + 0.3)));
+    FIT_POINTS.push(new THREE.Vector3(0, 3.4, -9.3), new THREE.Vector3(0, 0.6, 8.7), new THREE.Vector3(0, -0.9, 8.7));
+  }
+  buildFitPoints();
   const fitTmp = new THREE.Vector3();
   function fitsView(cam) {
     cam.updateMatrixWorld();
@@ -2389,13 +2576,13 @@
   function resize() {
     const w = window.innerWidth, h = window.innerHeight, a = w / h;
     renderer.setSize(w, h, false);
-    if (a >= 1.35) {
+    if (a >= 1.35 && !duo) {
       camBase.pos.set(0, 7, 16); camBase.look.set(0, -0.5, -1);
       if (gameMode === 'volley') { camBase.pos.set(0, 10.5, 16); camBase.look.set(0, 0.2, -1); } // higher: the far court matters
       for (const cam of [camera, refCam]) { cam.aspect = a; cam.fov = 52; cam.updateProjectionMatrix(); }
     } else {
       const k = clamp((1.35 - a) / 0.85, 0, 1);                // 0 = landscape-ish, 1 = tall phone
-      const el = (24 + 32 * k) * Math.PI / 180;                 // camera elevation: 24 deg -> 56 deg
+      const el = Math.max(24 + 32 * k, duo ? 36 : 0) * Math.PI / 180; // camera elevation: 24 deg -> 56 deg (2v2: at least 36)
       camBase.look.set(0, -0.5 + 0.3 * k, -1 + 1.3 * k);
       for (const cam of [camera, refCam]) { cam.aspect = a; cam.fov = 50; cam.updateProjectionMatrix(); }
       let d = 6;
@@ -2510,6 +2697,10 @@
   $('.modes').addEventListener('click', (e) => {
     const el = e.target.closest('.mode');
     if (el) { setGameMode(el.dataset.mode); toMenu(); }
+  });
+  $('.sizes').addEventListener('click', (e) => {
+    const el = e.target.closest('.tsize');
+    if (el) { setDuo(el.dataset.duo === '1'); toMenu(); }
   });
   $('.picks').addEventListener('click', (e) => {
     const el = e.target.closest('.card');
@@ -2713,7 +2904,7 @@
   }
   function netGuestStartMatch(d) {
     youKey = d.guest; aiKey = d.host;
-    setGameMode(d.mode);
+    setGameMode(d.mode); setDuo(false); // (online is 1v1 for now)
     net.snap = null;
     netBeginMatch();
   }
@@ -2786,7 +2977,7 @@
       s.f = hk.fakes.map((f) => (f.active ? [r3(f.x), r3(f.z)] : 0));
     } else if (gameMode === 'volley') {
       const b = vb.ball;
-      s.v = [r3(b.x), r3(b.y), r3(b.z), r3(b.vx), r3(b.vy), r3(b.vz), vb.last, vb.server === VA ? -1 : 1];
+      s.v = [r3(b.x), r3(b.y), r3(b.z), r3(b.vx), r3(b.vy), r3(b.vz), vb.last, vb.server === VA ? -1 : 1, r3(b.k)];
       s.vp = [r3(VP.x), r3(VP.z), r3(VP.jy)]; s.va = [r3(VA.x), r3(VA.z), r3(VA.jy)];
     } else {
       s.b = [r3(ball.x), r3(ball.z), r3(ball.vx), r3(ball.vz), r3(ball.speed), r3(ball.curve), ball.spinLvl, ball.fire ? 1 : 0];
@@ -2845,7 +3036,7 @@
       s.f.forEach((f, i) => { const g = hk.fakes[i]; g.active = !!f; if (f) { g.x = -f[0]; g.z = -f[1]; } });
     } else if (gameMode === 'volley') {
       const b = vb.ball;
-      Object.assign(b, { x: -s.v[0], y: s.v[1], z: -s.v[2], vx: -s.v[3], vy: s.v[4], vz: -s.v[5] });
+      Object.assign(b, { x: -s.v[0], y: s.v[1], z: -s.v[2], vx: -s.v[3], vy: s.v[4], vz: -s.v[5], k: s.v[8] || 1 });
       if (phase === 'play') for (let t = 0; t < lag && b.y > VB.BR; t += STEP) vbIntegrate(b, STEP);
       vb.last = -s.v[6]; vb.server = s.v[7] > 0 ? VA : VP;
       const px = VA.x, pz = VA.z;
@@ -2927,6 +3118,7 @@
   // ---------------------------------------------------------------- boot
   buildRosters();
   setGameMode(gameMode);
+  setDuo(store.get('pp-duo', '0') === '1');
   updateMuteBtn();
   toMenu();
   const joinCode = (pageParams.get('join') || '').toUpperCase();
@@ -2943,6 +3135,7 @@
       growth: [], maxGoal: 0, serveGoal: [], violations: 0, violationLog: [],
       aiPowers: 0, aiBigSeen: 0, aiSlowSteps: 0, aiFireShots: 0, aiDecoys: 0, aiFakes: 0, aiWideRatio: 0,
       fakes: 0, fakePops: 0, fakeGoals: 0, fireSpeed: 0, bigSeen: 0, wideSeen: 0,
+      hitsBy: {}, vbSets: 0, vbDouble: 0, vbMaxTouches: 0, vbMaxK: 1,
       vbBumps: 0, vbBumpNoClear: 0, vbYouSpikes: 0, vbAiSpikes: 0, vbNet: 0, vbPoints: [],
     });
     const badBall = () => !Number.isFinite(ball.x) || !Number.isFinite(ball.z) || Math.abs(ball.x) > WL + 1e-6;
@@ -2962,7 +3155,7 @@
           if (y < VB.NET_H + VB.BR - 0.05) crossUnder++;
         }
         maxHeight = Math.max(maxHeight, b.y);
-        for (const p of [VP, VA]) if (p.side * p.z < 0.59 || Math.abs(p.x) > VB.CW + 1.01) bad++; // nobody leaves their half
+        for (const p of vbPlayers()) if (p.side * p.z < 0.59 || Math.abs(p.x) > VB.CW + 1.01) bad++; // nobody leaves their half
         rally = phase === 'play' ? rally + STEP : 0; maxRally = Math.max(maxRally, rally);
         if (before === 'play' && phase === 'point') {
           points++; log.push({ x: b.x, z: b.z, last, you: score[0] - sc[0], ai: score[1] - sc[1] }); if (predicted && predicted.at && predicted.id === vb.touchId) landErr.push(Math.hypot(predicted.at.x - b.x, predicted.at.z - b.z)); predicted = null; }
@@ -2972,7 +3165,7 @@
     window.__pong = {
       // Headless AI-vs-AI run: invariants plus return/miss counts per spin level.
       sim(seconds, opts = {}) {
-        setGameMode('pong');
+        setGameMode('pong'); setDuo(!!opts.duo);
         toMenu();
         dbg.diff = opts.diff || null; dbg.spinP = opts.spinP ?? null; dbg.forceLevel = opts.forceLevel || 0;
         dbg.stats = freshStats();
@@ -2999,7 +3192,7 @@
       },
       // Scripted player that tracks the ball and taps `tapAt` seconds before contact.
       simPlayer(seconds, opts = {}) {
-        if (!opts.resume) { setGameMode('pong'); startGame(); } // resume: keep playing the current match
+        if (!opts.resume) { setGameMode('pong'); setDuo(!!opts.duo); startGame(); } // resume: keep playing the current match
         dbg.diff = opts.diff || null; dbg.forcePower = opts.forcePower || null; dbg.forceAiPower = opts.forceAiPower || null; dbg.noAiPower = !!opts.noAiPower; dbg.stats = freshStats();
         let tapped = false, bad = 0;
         for (let i = 0, n = Math.round(seconds / STEP); i < n && phase !== 'over'; i++) {
@@ -3036,7 +3229,7 @@
       netAim(x, z) { targetX = x; hk.aim.x = x; hk.aim.z = z; },
       netForceScore(winSide) { scorePoint(winSide); },
       state: () => ({ you: youKey, mode: gameMode, phase, px: P.x, mx: MP.x, mz: MP.z, spinTap: spinTapAt, vx: VP.x, vz: VP.z, vJump: VP.jumpT, spikeTap: VP.spikeAt }),
-      mode(m) { setGameMode(m); startGame(); },
+      mode(m, duoOn = false) { setGameMode(m); setDuo(duoOn); startGame(); },
       // where the table's corners land on screen (normalised -1..1) with the current camera
       fit() {
         let minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
@@ -3050,7 +3243,7 @@
       parts: () => ({ pong: table.visible && pongParts.visible && P.group.visible, hockey: table.visible && hockeyParts.visible && MP.group.visible, volley: court.visible && !table.visible }),
       // Headless Volleyball run. Both sides are AI (yours plays as HARD). Checks every point against the rules.
       vsim(seconds, opts = {}) {
-        setGameMode('volley'); startGame();
+        setGameMode('volley'); setDuo(!!opts.duo); startGame();
         dbg.autoPlayer = true; dbg.diff = opts.diff || null; dbg.vSpikeP = opts.spikeP ?? null; dbg.stats = freshStats();
         const out = vbRun(seconds, opts);
         Object.assign(dbg, { autoPlayer: false, diff: null, vSpikeP: null, stats: null });
@@ -3060,11 +3253,24 @@
       // Scripted human: runs to the landing ring using the real input path (hk.aim). spike: go to the
       // net and tap when the ball is high; idle: stand still.
       vsimPlayer(seconds, opts = {}) {
-        setGameMode('volley'); startGame();
+        setGameMode('volley'); setDuo(!!opts.duo); startGame();
         dbg.diff = opts.diff || null; dbg.vSpikeP = opts.aiSpikeP ?? null; dbg.stats = freshStats();
         const out = vbRun(seconds, opts, (st) => {
           if (opts.idle || phase !== 'play') return;
           const b = vb.ball;
+          if (opts.realistic) {
+            // like a person: walk to the landing ring (re-checked every 0.25 s), tap once as the ball comes down near you
+            if (simTime >= (st.lookAt || 0)) {
+              st.lookAt = simTime + 0.25;
+              const land = vbPredictLanding(), mine = !duo || vb.lastPlayer === VP2 || !land || Math.hypot(land.x - VP.x, land.z - VP.z) <= Math.hypot(land.x - VP2.x, land.z - VP2.z);
+              if (land && land.z > 0 && mine) { hk.aim.x = land.x; hk.aim.z = land.z; }
+            }
+            if (st.seen !== vb.touchId) { st.seen = vb.touchId; st.tapped = false; } // a new ball to play
+            const forMe = vb.last !== 1 || (duo && vb.lastPlayer === VP2); // from the other side, or set up by your teammate
+            const near = Math.hypot(b.x - VP.x, b.z - VP.z) < 4; // (balls your teammate goes for aren't yours)
+            if (b.z > 0 && b.vy < 0 && forMe && near && !st.tapped && b.y < (st.tapH ??= 3.6 + rand(-0.7, 0.7))) { st.taps++; st.tapped = true; st.tapH = undefined; tapSpin(); }
+            return;
+          }
           if (vb.last === 1) { hk.aim.x = 0; hk.aim.z = opts.spike ? 2 : 4.5; return; } // wait for the return
           const at = vbPredictAt(opts.spike ? 3.3 : VB.REACH_H + 0.2, 1);
           if (at) { hk.aim.x = at.x; hk.aim.z = at.z + (opts.spike ? 0 : 0.25); }
@@ -3076,8 +3282,8 @@
         return out;
       },
       // Rule check: put the ball in flight (last touched by 1 = you, -1 = the AI) with nobody touching it.
-      vdrop(b, last) {
-        setGameMode('volley'); startGame();
+      vdrop(b, last, opts = {}) {
+        setGameMode('volley'); setDuo(!!opts.duo); startGame();
         dbg.vFreeze = true; dbg.stats = freshStats();
         phase = 'play'; Object.assign(vb.ball, b); vb.last = last;
         const sc = [...score];
@@ -3091,10 +3297,17 @@
         toMenu();
         return out;
       },
-      vball: () => ({ ...vb.ball, last: vb.last, phase, vp: [VP.x, VP.z, VP.jy], va: [VA.x, VA.z, VA.jy], ring: landRing.visible, ringAt: [landRing.position.x, landRing.position.z], score: [...score] }),
+      stepFor(dt) { step(dt); },
+      duoInfo: () => ({
+        duo, HW, CW: VB.CW, goal: goalHalf(1), keys: RIGS.map((r) => r.key), rigs: RIGS.map((r) => r.outer.visible),
+        pads: [P, P2, A, A2].map((q) => q.group.visible), mallets: [MP, MP2, MA, MA2].map((m) => m.group.visible),
+        px: [P.x, P2.x, A.x, A2.x], vx: [VP.x, VP2.x, VA.x, VA2.x], k: vb.ball.k, mini: [$('#miniYou').children.length, $('#miniAi').children.length],
+        overTitle: $('#overTitle').textContent,
+      }),
+      vball: () => ({ ...vb.ball, last: vb.last, kind: vb.lastKind, ready: spikeReady, spikes: [...vb.spikes], phase, vp: [VP.x, VP.z, VP.jy], va: [VA.x, VA.z, VA.jy], ring: landRing.visible, ringAt: [landRing.position.x, landRing.position.z], score: [...score] }),
       // Headless Air Hockey AI-vs-AI run.
       hsim(seconds, opts = {}) {
-        setGameMode('hockey'); toMenu();
+        setGameMode('hockey'); setDuo(!!opts.duo); toMenu();
         dbg.diff = opts.diff || null; dbg.stats = freshStats();
         let bad = 0, goals = 0;
         for (let i = 0, n = Math.round(seconds / STEP); i < n; i++) {
@@ -3112,7 +3325,7 @@
       },
       // Scripted Air Hockey player (driven by the hard AI but treated as you, so it earns boosts).
       hsimPlayer(seconds, opts = {}) {
-        setGameMode('hockey'); startGame();
+        setGameMode('hockey'); setDuo(!!opts.duo); startGame();
         dbg.autoPlayer = !opts.idle; dbg.forcePower = opts.forcePower || null; dbg.forceAiPower = opts.forceAiPower || null; dbg.noAiPower = !!opts.noAiPower; dbg.stats = freshStats(); // idle: your mallet never moves
         let bad = 0;
         for (let i = 0, n = Math.round(seconds / STEP); i < n && phase !== 'over'; i++) {
@@ -3146,7 +3359,7 @@
         };
       },
       // Picks you + opponent through the same rules as the menu, starts a match, reports who's where.
-      setup(you, ai) { setGameMode('pong'); pickYou(you); pickAi(ai); startGame(); const got = [nearRig.key, farRig.key]; toMenu(); return got; },
+      setup(you, ai) { setGameMode('pong'); setDuo(false); pickYou(you); pickAi(ai); startGame(); const got = [nearRig.key, farRig.key]; toMenu(); return got; },
     };
   }
   function frame(now) {
