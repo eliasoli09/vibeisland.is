@@ -56,6 +56,14 @@
   .tsize { appearance: none; cursor: pointer; font: 10px var(--pix); padding: 8px 14px; background: transparent; color: var(--muted); border: 2px solid var(--edge); border-radius: 999px; }
   .tsize:hover { color: var(--ink); }
   .tsize[aria-checked="true"] { border-color: var(--you); color: var(--ink); }
+  .scorecard { width: 100%; overflow-x: auto; }
+  .scorecard table { margin: 0 auto; border-collapse: collapse; font: 10px var(--pix); }
+  .scorecard th, .scorecard td { padding: 6px 7px; border: 1px solid var(--edge); text-align: center; }
+  .scorecard th { color: var(--muted); text-align: left; white-space: nowrap; }
+  .scorecard .par td { color: var(--muted); }
+  .scorecard .you td { color: var(--you); }
+  .scorecard .ai td { color: var(--ai); }
+  body.mode-golf .sizes, body.mode-golf #btnOnline, body.mode-golf #spinPips { display: none; } /* mini golf is 1 v 1 against the AI */
   .duo-note { margin: 0; color: var(--muted); font-size: 16px; text-align: center; max-width: 520px; }
   body.duo .who .mini { width: 54px; display: flex; gap: 3px; }
   body.duo .who .mini svg { width: calc(50% - 2px); }
@@ -290,6 +298,7 @@
         <button class="mode" id="modePong" type="button" role="radio" data-mode="pong" aria-checked="true">PING PONG</button>
         <button class="mode" id="modeHockey" type="button" role="radio" data-mode="hockey" aria-checked="false">AIR HOCKEY</button>
         <button class="mode" id="modeVolley" type="button" role="radio" data-mode="volley" aria-checked="false">VOLLEYBALL</button>
+        <button class="mode" id="modeGolf" type="button" role="radio" data-mode="golf" aria-checked="false">MINI GOLF</button>
       </div>
       <div class="sizes" role="radiogroup" aria-label="Team size">
         <button class="tsize" id="size1" type="button" role="radio" data-duo="0" aria-checked="true">1 V 1</button>
@@ -313,6 +322,7 @@
       </div>
       <p class="hint" id="hintHockey" hidden><span class="h-mouse">Move the mouse to slide your mallet anywhere in your half (or <kbd>A</kbd> / <kbd>D</kbd>). Hit the character puck into the AI's goal. <strong>Three hard smashes in a row</strong> earn a boost: BIG MALLET, FIREBALL, TRIPLE PUCK or WIDE GOAL. <strong>Goals grow</strong> every time the puck crosses the middle, and a <strong>shot clock</strong> (10 s, shorter every crossing) hands the puck over if you hold it too long. <kbd>Space</kbd> pauses, <kbd>M</kbd> mutes.</span><span class="h-touch"><strong>Drag anywhere</strong> to slide your mallet around your half, and flick fast to smash. Three smashes in a row earn a boost: BIG MALLET, FIREBALL, TRIPLE PUCK or WIDE GOAL. Goals grow every time the puck crosses the middle, and the shot clock hands the puck over if you hold it too long.</span></p>
       <p class="hint" id="hintVolley" hidden><span class="h-mouse">You are the player: <strong>move the mouse</strong> to run around your half (or <kbd>A</kbd> / <kbd>D</kbd>). The glowing ring shows where the ball will land. Get under it and you <strong>bump it back automatically</strong>; run left or right as you hit it to aim. When an <strong>orange ring lights up under you</strong>, the ball is in reach: <strong>click to jump and SPIKE</strong> it. In 2 v 2 your first touch sets the ball up for your teammate. Rallies get faster with every touch. In = point for the other side, out = point against whoever touched it last. First to 7. <kbd>Space</kbd> pauses, <kbd>M</kbd> mutes.</span><span class="h-touch"><strong>Drag anywhere</strong> to run around your half. The glowing ring shows where the ball will land: get under it and you bump it back automatically. When the <strong>SPIKE</strong> button glows orange, tap it to jump and smash the ball. In 2 v 2 your first touch sets the ball up for your teammate. Rallies get faster with every touch. First to 7.</span></p>
+      <p class="hint" id="hintGolf" hidden><span class="h-mouse">9 neon holes against the AI: windmill, loop, clown, pinball, gates, volcano, bridge and a robot. <strong>Slide aim:</strong> press anywhere and <strong>drag back</strong> like a slingshot. The drag direction aims and its length sets the power; let go to putt (or arrow keys + <kbd>Enter</kbd>). You putt first, then the AI. Fewest strokes wins, max 6 a hole.</span><span class="h-touch">9 neon holes against the AI. <strong>Slide aim:</strong> put a finger anywhere and <strong>drag back</strong> like a slingshot. The drag direction aims and its length sets the power; let go to putt. You putt first, then the AI. Fewest strokes wins.</span></p>
       <p class="hint" id="hintPong"><span class="h-mouse">Move the mouse left and right to steer your paddle (or <kbd>A</kbd> / <kbd>D</kbd>). Where the ball hits your paddle sets its angle. <strong>Click or tap just as the ball reaches your paddle to spin it</strong>. Chain 3 spins for a boost: BIG PADDLE, SLOW-MO, TRIPLE BALL or FIREBALL. Long matches grow pins on the table. <kbd>Space</kbd> pauses, <kbd>M</kbd> mutes.</span><span class="h-touch"><strong>Drag anywhere</strong> to steer your paddle. Tap <strong>SPIN</strong> just as the ball reaches you to spin it; 3 spins in a row earn a boost: BIG PADDLE, SLOW-MO, TRIPLE BALL or FIREBALL. Long rallies grow pins on the table.</span></p>
     </div>
   </div>
@@ -359,6 +369,7 @@
       <div id="overArt"></div>
       <h2 id="overTitle">CLAUDE WINS!</h2>
       <p class="sub" id="overSub"></p>
+      <div class="scorecard" id="overCard" hidden></div>
       <div class="row">
         <button class="btn" id="btnRematch" type="button">REMATCH</button>
         <button class="btn ghost" id="btnChange" type="button">CHANGE FIGHTER</button>
@@ -870,6 +881,7 @@
 
   // ---------------------------------------------------------------- flow
   function resetServe() {
+    if (gameMode === 'golf') { gfReset(); return; }
     if (gameMode === 'hockey') { hkResetServe(); return; }
     if (gameMode === 'volley') { vbResetServe(); return; }
     phase = 'serve';
@@ -910,7 +922,7 @@
     for (const rig of RIGS) rig.loop = false;
     clearBubbles();
     assignChars();
-    $('#menu').hidden = true; $('#over').hidden = true; $('#pauseMenu').hidden = true; $('#hud').hidden = false;
+    $('#menu').hidden = true; $('#over').hidden = true; $('#pauseMenu').hidden = true; $('#hud').hidden = false; $('#overCard').hidden = true;
     document.body.classList.add('playing');
     serveDir = -1; firstServe = true;
     resetServe();
@@ -925,7 +937,7 @@
     VP.isAI = true; vbResetPlayers();
     for (const rig of RIGS) rig.loop = false;
     clearBubbles();
-    $('#menu').hidden = false; $('#over').hidden = true; $('#pauseMenu').hidden = true; $('#hud').hidden = true;
+    $('#menu').hidden = false; $('#over').hidden = true; $('#overCard').hidden = true; $('#pauseMenu').hidden = true; $('#hud').hidden = true;
     document.body.classList.remove('playing');
     refreshMenu(); assignChars();
     serveDir = -1; firstServe = false;
@@ -967,6 +979,7 @@
 
   function gameOver() {
     netEvent(['over']);
+    $('#overCard').hidden = true;
     phase = 'over';
     endPower();
     const youWon = score[0] > score[1];
@@ -1553,6 +1566,7 @@
   function stepCore(dt) {
     if (gameMode === 'hockey') { hkStep(dt); return; }
     if (gameMode === 'volley') { vbStep(dt); return; }
+    if (gameMode === 'golf') { gfStep(dt); return; }
     simTime += dt;
     tickPowers(dt);
     // player paddle
@@ -1586,7 +1600,7 @@
   // ================================================================ AIR HOCKEY
   // Second game mode. Shares the table, characters, menu, HUD, slime, pins and boost system with
   // Ping Pong. The puck is a little character; mallets move freely in their own half.
-  const MODES = ['pong', 'hockey', 'volley'];
+  const MODES = ['pong', 'hockey', 'volley', 'golf'];
   let gameMode = MODES.includes(store.get('pp-mode', 'pong')) ? store.get('pp-mode', 'pong') : 'pong';
   const HPOWER = {
     big: { name: 'BIG MALLET', dur: 8, css: '#5be38a' },
@@ -1690,17 +1704,19 @@
   function setGameMode(m) {
     gameMode = MODES.includes(m) ? m : 'pong';
     store.set('pp-mode', gameMode);
-    const hockey = gameMode === 'hockey', volley = gameMode === 'volley', pong = gameMode === 'pong';
-    table.visible = !volley; court.visible = volley;
+    const hockey = gameMode === 'hockey', volley = gameMode === 'volley', pong = gameMode === 'pong', golf = gameMode === 'golf';
+    if (golf && duo) setDuo(false);
+    table.visible = pong || hockey; court.visible = volley; golfWorld.visible = golf;
+    if (!golf) { gfBall.visible = gfShadow.visible = aimRing.visible = false; aimDots.forEach((m) => { m.visible = false; }); camBase.golf = false; $('.first-to').textContent = 'FIRST TO 7'; }
     pongParts.visible = pong; hockeyParts.visible = hockey;
     applyRoster();
     if (!hockey) puckSlots.forEach((sl) => { sl.group.visible = false; });
     if (!volley) { landRing.visible = false; spikeRing.visible = false; $('#spinBtn').classList.remove('ready'); spikeReady = false; }
     // Volleyball: the characters are the players, so both are life-size; otherwise they watch from the ends
-    nearRig.scale = nearRig2.scale = volley ? 1 : 0.85; farRig.scale = farRig2.scale = volley ? 1 : 1.3;
-    if (!volley) for (const rig of RIGS) rig.outer.position.set(rig.x, rig.side > 0 ? rig.outer.position.y : 0.05, rig.side * (rig.side > 0 ? 8.7 : 9.3));
+    nearRig.scale = nearRig2.scale = volley ? 1 : golf ? 0.55 : 0.85; farRig.scale = farRig2.scale = volley ? 1 : golf ? 0.55 : 1.3;
+    if (!volley && !golf) for (const rig of RIGS) rig.outer.position.set(rig.x, rig.side > 0 ? rig.outer.position.y : 0.05, rig.side * (rig.side > 0 ? 8.7 : 9.3));
     ballMesh.scale.setScalar(1); shownSpin = -1; // the pong ball looks after its own size/colour again
-    $('#hintPong').hidden = !pong; $('#hintHockey').hidden = !hockey; $('#hintVolley').hidden = !volley;
+    $('#hintPong').hidden = !pong; $('#hintHockey').hidden = !hockey; $('#hintVolley').hidden = !volley; $('#hintGolf').hidden = !golf;
     $('#pipsLbl').textContent = hockey ? 'SMASH' : 'SPIN';
     $('#spinBtn').textContent = volley ? 'SPIKE' : 'SPIN';
     $('#spinBtn').setAttribute('aria-label', volley ? 'Spike' : 'Spin');
@@ -2630,6 +2646,740 @@
     bubbles.forEach((b, i) => { b.until = -1; bubbleEls[i].hidden = true; bubbleEls[i].classList.remove('show'); });
   }
 
+  // ================================================================ MINI GOLF
+  // Fourth mode: a 9-hole neon blacklight course, 1 v 1 against the AI. On every hole you putt
+  // first, then the AI plays it; fewest strokes over the 9 holes wins (max 6 strokes a hole).
+  // Slide aim: drag back anywhere, like a slingshot. The drag direction aims, its length sets the
+  // power, and letting go putts. Physics is 2D on the green (walls, bumpers, slopes and moving
+  // obstacles, all functions of the hole's clock), so the AI can plan by trying lots of shots with
+  // the very same physics.
+  const GF = {
+    BR: 0.17, CUP_R: 0.3, CUP_V: 3.4, MAXV: 14, DECEL: 2.3, DRAG: 0.22, STOP: 0.07, E_WALL: 0.72, E_BUMP: 1.25,
+    MAX_STROKES: 6, SPACING: 26, SHOT_T: 14,
+  };
+  const GDIFF = { // AI aim error (radians), power error (fraction), how many of its best shots it picks from
+    easy: { ang: 0.2, pow: 0.3, pick: 6 },
+    normal: { ang: 0.12, pow: 0.19, pick: 4 },
+    hard: { ang: 0.07, pow: 0.12, pick: 2 },
+  };
+  const NEON = { pink: 0xff2bd6, green: 0x39ff6a, orange: 0xffa21f, cyan: 0x29e6ff, purple: 0xb04bff, yellow: 0xfff23a, red: 0xff3b3b };
+
+  // ---------------------------------------------------------------- the course
+  // Local coordinates per hole: the tee is near +z (bottom of the screen), the cup towards -z.
+  const rect = (x1, z1, x2, z2) => [[x1, z1], [x2, z1], [x2, z2], [x1, z2]];
+  const HOLES = [
+    { name: 'DOGLEG', par: 2, color: NEON.green, tee: [0, 5.8], cup: [4.8, -4.2],
+      outline: [[-1.6, 7], [1.6, 7], [1.6, -1.6], [6.4, -1.6], [6.4, -6], [-1.6, -6]],
+      walls: [[-1.6, -4.6, -0.2, -6]], features: [] },
+    { name: 'WINDMILL', par: 3, color: NEON.pink, tee: [0, 6.3], cup: [0, -6],
+      outline: rect(-2.2, 7.5, 2.2, -8),
+      walls: [[-2.2, 0.7, -0.55, 0.7], [-0.55, 0.7, -0.55, -0.7], [-0.55, -0.7, -2.2, -0.7],
+        [2.2, 0.7, 0.55, 0.7], [0.55, 0.7, 0.55, -0.7], [0.55, -0.7, 2.2, -0.7]],
+      features: [{ type: 'windmill', x: 0, z: 0.7, w: 0.55, speed: 1.6 }] },
+    { name: 'LOOP', par: 3, color: NEON.cyan, tee: [0, 6], cup: [2.4, -5.6],
+      outline: [[-1.8, 7], [1.8, 7], [1.8, 1.6], [0.6, 1.6], [0.6, -1.6], [3.6, -1.6], [3.6, -7], [-1.8, -7], [-1.8, -1.6], [-0.6, -1.6], [-0.6, 1.6], [-1.8, 1.6]],
+      walls: [], features: [{ type: 'loop', x: 0, z1: 0.9, z2: -0.9, w: 0.6, minV: 5.2, R: 0.85 }] },
+    { name: 'CLOWN', par: 3, color: NEON.orange, tee: [0, 6], cup: [-2.2, -5.2],
+      outline: rect(-3.6, 7, 3.6, -6.6),
+      walls: [[-3.6, -2.6, -0.55, -2.6], [0.55, -2.6, 2.4, -2.6], [2.4, -2.6, 2.4, -4.6]],
+      features: [{ type: 'clown', x: 0, z: -2.6, w: 0.55, tongue: 2.2, open: 2.0, cycle: 3.0, exit: { x: -0.9, z: -4.1, vx: -1.2, vz: -1.1 } }] },
+    { name: 'PINBALL', par: 3, color: NEON.purple, tee: [0, 6], cup: [-1.5, -5.6],
+      outline: [[-3, 7], [3, 7], [3.6, 6], [3.6, -5], [2.4, -7], [-2.4, -7], [-3.6, -5], [-3.6, 6]],
+      walls: [[-3.6, 4, -2.2, 3], [3.6, 4, 2.2, 3]],
+      bumpers: [[0, 2.5, 0.55], [-1.8, 0, 0.5], [1.8, 0, 0.5], [0, -1.3, 0.45], [-2.7, 2.6, 0.4], [2.7, 2.6, 0.4], [-0.9, -3.4, 0.45], [0.9, -3.4, 0.45], [-2.6, -3.6, 0.4]], features: [] },
+    { name: 'GATES', par: 3, color: NEON.yellow, tee: [0, 6.3], cup: [0, -6.6],
+      outline: rect(-2.6, 7.5, 2.6, -8),
+      walls: [], features: [
+        { type: 'gate', x: 0, z: 3, len: 3, amp: 1.3, speed: 1.4, phase: 0 },
+        { type: 'gate', x: 0, z: -0.5, len: 3, amp: 1.3, speed: 1.9, phase: 1.5 },
+        { type: 'gate', x: 0, z: -4, len: 3, amp: 1.3, speed: 1.2, phase: 3 }] },
+    { name: 'VOLCANO', par: 3, color: NEON.red, tee: [0, 5.4], cup: [0.5, -2.5],
+      outline: [[-3.6, 6.5], [3.6, 6.5], [4.2, 5.9], [4.2, -5.9], [3.6, -6.5], [-3.6, -6.5], [-4.2, -5.9], [-4.2, 5.9]],
+      walls: [], features: [{ type: 'hill', x: 0, z: -1.5, R: 3, H: 1.2, slope: 5.6 }] },
+    { name: 'BRIDGE', par: 3, color: NEON.cyan, tee: [0, 6.2], cup: [3.4, -5.8],
+      outline: rect(-1.6, 7.5, 4.6, -7),
+      walls: [[2.6, 4.2, 2.6, -2.8], [1.4, -4.4, 4.6, -4.4]],
+      water: rect(-1.6, 4.2, 2.6, -2.8), bridge: [-0.45, 4.2, 0.45, -2.8], features: [{ type: 'water' }] },
+    { name: 'ROBOT', par: 4, color: NEON.green, tee: [0, 7.3], cup: [4, -7.6],
+      outline: [[-2, 8.5], [2, 8.5], [2, 3], [6, 3], [6, -9], [2, -9], [2, -4], [-2, -4]],
+      walls: [], features: [
+        { type: 'arm', x: 2, z: -0.5, L: 1.9, speed: 0.9, r: 0.42 },
+        { type: 'portal', a: [-1.4, -3.4, 0.36], b: [5.3, -4.6], dir: [0, -1] }] },
+  ];
+  HOLES.forEach((h, i) => {
+    h.origin = [((i % 3) - 1) * GF.SPACING, (Math.floor(i / 3) - 1) * GF.SPACING];
+    h.segs = [];
+    h.outline.forEach((p, j) => { const q = h.outline[(j + 1) % h.outline.length]; h.segs.push([p[0], p[1], q[0], q[1]]); });
+    for (const w of h.walls) h.segs.push(w);
+    h.bumpers = (h.bumpers || []).map(([x, z, r]) => ({ x, z, r, flash: 0 }));
+    const xs = h.outline.map((p) => p[0]), zs = h.outline.map((p) => p[1]);
+    h.bounds = { x1: Math.min(...xs), x2: Math.max(...xs), z1: Math.min(...zs), z2: Math.max(...zs) };
+  });
+  const PAR_TOTAL = HOLES.reduce((n, h) => n + h.par, 0);
+
+  // ---------------------------------------------------------------- moving obstacles (functions of the hole clock t)
+  const wrapA = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+  const windmillBlocked = (f, t) => [0, 1, 2, 3].some((k) => Math.abs(wrapA(f.speed * t + (k * Math.PI) / 2 + Math.PI / 2)) < 0.32); // a blade pointing down
+  const gateX = (f, t) => f.x + f.amp * Math.sin(f.speed * t + f.phase);
+  const armAngle = (f, t) => f.speed * t;
+  const clownOpen = (f, t) => t % f.cycle < f.open;
+  // segments that move: [x1, z1, x2, z2, vx, vz, wx, wz] (vx/vz: velocity, or for the arm the pivot + spin)
+  function movingSegs(h, t, out) {
+    out.length = 0;
+    for (const f of h.features) {
+      if (f.type === 'windmill' && windmillBlocked(f, t)) out.push([f.x - f.w, f.z + 0.05, f.x + f.w, f.z + 0.05, 0, 0]);
+      else if (f.type === 'gate') {
+        const cx = gateX(f, t), v = f.amp * f.speed * Math.cos(f.speed * t + f.phase);
+        out.push([cx - f.len / 2, f.z, cx + f.len / 2, f.z, v, 0]);
+      } else if (f.type === 'arm') {
+        const a = armAngle(f, t);
+        out.push([f.x, f.z, f.x + f.L * Math.cos(a), f.z + f.L * Math.sin(a), 0, 0, f.speed]); // spins: speed at a point = w x r
+      } else if (f.type === 'clown' && !clownOpen(f, t)) out.push([f.x - f.w, f.z + 0.02, f.x + f.w, f.z + 0.02, 0, 0]); // teeth
+    }
+    return out;
+  }
+
+  // ---------------------------------------------------------------- physics
+  // Circle vs segment; e = bounciness; (svx, svz) = the segment's own velocity at the contact.
+  function gfSeg(b, s, e) {
+    const [x1, z1, x2, z2] = s, dx = x2 - x1, dz = z2 - z1, L2 = dx * dx + dz * dz || 1e-9;
+    const u = clamp(((b.x - x1) * dx + (b.z - z1) * dz) / L2, 0, 1);
+    const cx = x1 + u * dx, cz = z1 + u * dz;
+    let nx = b.x - cx, nz = b.z - cz;
+    const d = Math.hypot(nx, nz);
+    if (d >= GF.BR) return false;
+    if (d > 1e-6) { nx /= d; nz /= d; } else { nx = -dz; nz = dx; const l = Math.hypot(nx, nz) || 1; nx /= l; nz /= l; }
+    b.x = cx + nx * (GF.BR + 1e-4); b.z = cz + nz * (GF.BR + 1e-4);
+    let svx = s[4] || 0, svz = s[5] || 0;
+    if (s[6]) { const w = s[6]; svx = -w * (cz - z1); svz = w * (cx - x1); } // the spinning arm
+    const rvx = b.vx - svx, rvz = b.vz - svz, vn = rvx * nx + rvz * nz;
+    if (vn < 0) { b.vx -= (1 + e) * vn * nx; b.vz -= (1 + e) * vn * nz; b.vx *= 0.97; b.vz *= 0.97; return true; }
+    return false;
+  }
+  const _mov = [];
+  // One step of a ball on hole h at hole-time t. Returns an event: 'cup', 'water', 'stop', 'wall', 'bump', ...
+  function gfStepBall(h, b, t, dt, stats) {
+    if (b.hold > 0) { // inside the loop, the clown or a tunnel
+      b.hold -= dt;
+      if (b.hold <= 0) { Object.assign(b, b.after); b.pz = b.z; b.special = null; return b.afterEv || null; }
+      return null;
+    }
+    let ev = null;
+    // slopes push the ball
+    for (const f of h.features) {
+      if (f.type === 'hill') {
+        const dx = b.x - f.x, dz = b.z - f.z, r = Math.hypot(dx, dz);
+        if (r < f.R && r > 1e-3) { const a = (f.slope * r) / f.R; b.vx += (dx / r) * a * dt; b.vz += (dz / r) * a * dt; }
+      } else if (f.type === 'clown' && Math.abs(b.x - f.x) < f.w + 0.2 && b.z < f.z + f.tongue && b.z > f.z) b.vz += 2.2 * dt; // up the tongue
+    }
+    // rolling friction
+    let sp = Math.hypot(b.vx, b.vz);
+    if (sp > 0) { const ns = Math.max(0, sp - (GF.DECEL + GF.DRAG * sp) * dt); b.vx *= ns / sp; b.vz *= ns / sp; sp = ns; }
+    const n = Math.max(1, Math.ceil((sp * dt) / (GF.BR * 0.5)));
+    movingSegs(h, t, _mov);
+    for (let i = 0; i < n; i++) {
+      b.x += (b.vx * dt) / n; b.z += (b.vz * dt) / n;
+      for (const s of h.segs) if (gfSeg(b, s, GF.E_WALL)) ev = 'wall';
+      for (const s of _mov) if (gfSeg(b, s, 0.8)) { ev = 'wall'; if (stats) stats.moverHits++; }
+      for (const q of h.bumpers) {
+        const dx = b.x - q.x, dz = b.z - q.z, d = Math.hypot(dx, dz), min = q.r + GF.BR;
+        if (d >= min || d < 1e-6) continue;
+        const nx = dx / d, nz = dz / d, vn = b.vx * nx + b.vz * nz;
+        b.x = q.x + nx * min; b.z = q.z + nz * min;
+        if (vn < 0) {
+          b.vx -= (1 + GF.E_BUMP) * vn * nx; b.vz -= (1 + GF.E_BUMP) * vn * nz;
+          const s2 = Math.hypot(b.vx, b.vz); if (s2 < 4) { b.vx += nx * (4 - s2); b.vz += nz * (4 - s2); } // bumpers always kick
+          q.flash = 1; ev = 'bump'; if (stats) stats.bumps++;
+        }
+      }
+      for (const f of h.features) if (f.type === 'arm') { // the robot's body
+        const dx = b.x - f.x, dz = b.z - f.z, d = Math.hypot(dx, dz), min = f.r + GF.BR;
+        if (d < min && d > 1e-6) { const nx = dx / d, nz = dz / d, vn = b.vx * nx + b.vz * nz; b.x = f.x + nx * min; b.z = f.z + nz * min; if (vn < 0) { b.vx -= 1.7 * vn * nx; b.vz -= 1.7 * vn * nz; } }
+      }
+    }
+    sp = Math.hypot(b.vx, b.vz);
+    if (sp > GF.MAXV) { b.vx *= GF.MAXV / sp; b.vz *= GF.MAXV / sp; sp = GF.MAXV; }
+    // special places
+    for (const f of h.features) {
+      if (f.type === 'loop' && Math.abs(b.x - f.x) < f.w) {
+        if (b.pz >= f.z1 && b.z < f.z1 && b.vz < 0) {
+          if (sp >= f.minV) { // round the loop
+            b.hold = 0.6; b.special = { type: 'loop', f, sp }; b.after = { x: f.x, z: f.z2 - 0.05, vx: 0, vz: -sp * 0.8 }; b.afterEv = 'loop';
+            b.x = f.x; b.z = f.z1; if (stats) stats.loops++;
+            return 'loopIn';
+          }
+          b.z = f.z1 + 0.02; b.vz = Math.abs(b.vz) * 0.5; if (stats) stats.loopFails++; return 'loopFail'; // not fast enough: it rolls back
+        }
+        if (b.pz <= f.z2 && b.z > f.z2 && b.vz > 0) { b.z = f.z2 - 0.02; b.vz = -Math.abs(b.vz) * 0.5; } // can't go round backwards
+      } else if (f.type === 'clown' && Math.abs(b.x - f.x) < f.w && b.pz >= f.z && b.z < f.z + 0.02 && b.vz < 0 && clownOpen(f, t)) {
+        b.hold = 0.9; b.special = { type: 'gone' }; b.after = { x: f.exit.x, z: f.exit.z, vx: f.exit.vx, vz: f.exit.vz }; b.afterEv = 'spit';
+        if (stats) stats.clown++;
+        return 'gulp';
+      } else if (f.type === 'portal') {
+        const [ax, az, ar] = f.a;
+        if (Math.hypot(b.x - ax, b.z - az) < ar) {
+          const s = clamp(sp, 1.5, 4.5);
+          b.hold = 0.55; b.special = { type: 'gone' }; b.after = { x: f.b[0], z: f.b[1], vx: f.dir[0] * s, vz: f.dir[1] * s }; b.afterEv = 'portalOut';
+          if (stats) stats.portals++;
+          return 'portalIn';
+        }
+      } else if (f.type === 'water' && gfInWater(h, b.x, b.z)) { if (stats) stats.water++; return 'water'; }
+    }
+    b.pz = b.z;
+    // the cup: a slow enough ball drops in; the lip pulls a slow ball the last bit
+    const cdx = h.cup[0] - b.x, cdz = h.cup[1] - b.z, dc = Math.hypot(cdx, cdz);
+    if (dc < GF.CUP_R && sp < GF.CUP_V) return 'cup';
+    if (dc < GF.CUP_R * 1.8 && sp < GF.CUP_V * 0.6 && dc > 1e-3) { b.vx += (cdx / dc) * 2.2 * dt; b.vz += (cdz / dc) * 2.2 * dt; }
+    if (sp < GF.STOP) {
+      let push = 0;
+      for (const f of h.features) if (f.type === 'hill') { const r = Math.hypot(b.x - f.x, b.z - f.z); if (r < f.R) push = (f.slope * r) / f.R; }
+      if (push < GF.DECEL * 1.2) { b.vx = b.vz = 0; return 'stop'; }
+    }
+    return ev;
+  }
+  const gfInPoly = (poly, x, z) => {
+    let inside = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const [xi, zi] = poly[i], [xj, zj] = poly[j];
+      if ((zi > z) !== (zj > z) && x < ((xj - xi) * (z - zi)) / (zj - zi) + xi) inside = !inside;
+    }
+    return inside;
+  };
+  function gfInWater(h, x, z) {
+    if (!h.water || !gfInPoly(h.water, x, z)) return false;
+    const [bx1, bz1, bx2, bz2] = h.bridge;
+    return !(x > bx1 && x < bx2 && z < bz1 && z > bz2);
+  }
+  const gfHeight = (h, x, z) => {
+    for (const f of h.features) if (f.type === 'hill') { const r = Math.hypot(x - f.x, z - f.z); if (r < f.R) return f.H * (1 - (r / f.R) ** 2); }
+    return 0;
+  };
+
+  // ---------------------------------------------------------------- AI: how far is it to the cup from here (around walls)?
+  // A distance map per hole (walking distance on a grid, water and walls in the way, tunnels and the
+  // clown's mouth as shortcuts). The AI tries lots of shots and keeps the ones that end closest.
+  const GRID = 0.25;
+  function gfDistMap(h) {
+    const { x1, x2, z1, z2 } = h.bounds, W = Math.ceil((x2 - x1) / GRID) + 1, Hh = Math.ceil((z2 - z1) / GRID) + 1;
+    const free = new Uint8Array(W * Hh), dist = new Float32Array(W * Hh).fill(1e9);
+    const cell = (x, z) => [Math.round((x - x1) / GRID), Math.round((z - z1) / GRID)];
+    const probe = { x: 0, z: 0, vx: 0, vz: 0 };
+    for (let j = 0; j < Hh; j++) for (let i = 0; i < W; i++) {
+      const x = x1 + i * GRID, z = z1 + j * GRID;
+      if (!gfInPoly(h.outline, x, z) || gfInWater(h, x, z)) continue;
+      let ok = true;
+      for (const s of h.segs) { probe.x = x; probe.z = z; if (gfSeg(probe, s, 0)) { ok = false; break; } }
+      for (const q of h.bumpers) if (Math.hypot(x - q.x, z - q.z) < q.r + GF.BR) ok = false;
+      free[j * W + i] = ok ? 1 : 0;
+    }
+    const run = (seeds) => { // Dijkstra on the grid (8 neighbours)
+      const open = seeds.slice();
+      while (open.length) {
+        open.sort((a, b) => dist[b] - dist[a]);
+        const k = open.pop(), i = k % W, j = (k - i) / W;
+        for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+          if (!di && !dj) continue;
+          const ni = i + di, nj = j + dj;
+          if (ni < 0 || nj < 0 || ni >= W || nj >= Hh) continue;
+          const nk = nj * W + ni;
+          if (!free[nk]) continue;
+          const nd = dist[k] + (di && dj ? 1.414 : 1) * GRID;
+          if (nd < dist[nk] - 1e-6) { dist[nk] = nd; open.push(nk); }
+        }
+      }
+    };
+    const [ci, cj] = cell(h.cup[0], h.cup[1]);
+    dist[cj * W + ci] = 0; run([cj * W + ci]);
+    // shortcuts: the clown's mouth and the tunnel lead straight to their exits
+    const seeds = [];
+    for (const f of h.features) {
+      let ex, ez, area;
+      if (f.type === 'clown') { ex = f.exit.x; ez = f.exit.z; area = (x, z) => Math.abs(x - f.x) < f.w && z > f.z && z < f.z + 0.4; }
+      else if (f.type === 'portal') { ex = f.b[0]; ez = f.b[1]; area = (x, z) => Math.hypot(x - f.a[0], z - f.a[1]) < f.a[2]; }
+      else continue;
+      const [ei, ej] = cell(ex, ez), d0 = dist[ej * W + ei] + 1;
+      for (let j = 0; j < Hh; j++) for (let i = 0; i < W; i++) if (free[j * W + i] && area(x1 + i * GRID, z1 + j * GRID) && d0 < dist[j * W + i]) { dist[j * W + i] = d0; seeds.push(j * W + i); }
+    }
+    if (seeds.length) run(seeds);
+    h.dist = (x, z) => {
+      const i = clamp(Math.round((x - x1) / GRID), 0, W - 1), j = clamp(Math.round((z - z1) / GRID), 0, Hh - 1);
+      let best = dist[j * W + i];
+      if (best >= 1e8) for (let dj = -2; dj <= 2; dj++) for (let di = -2; di <= 2; di++) { // (right against a wall)
+        const ni = i + di, nj = j + dj; if (ni >= 0 && nj >= 0 && ni < W && nj < Hh) best = Math.min(best, dist[nj * W + ni] + 0.3);
+      }
+      return best;
+    };
+  }
+  HOLES.forEach(gfDistMap);
+
+  // Try a shot (angle, power 0-1) from (x, z) fired at hole-time t0; returns where it ends up and how good that is.
+  const shotSpeed = (p) => 1.2 + p * (GF.MAXV - 1.2);
+  function gfSimShot(h, x, z, ang, pow, t0) {
+    const sp = shotSpeed(pow), b = { x, z, pz: z, vx: Math.cos(ang) * sp, vz: Math.sin(ang) * sp, hold: 0 };
+    const dt = 1 / 60;
+    for (let i = 0, t = t0; i < GF.SHOT_T * 60; i++, t += dt) {
+      const ev = gfStepBall(h, b, t, dt, null);
+      if (ev === 'cup') return { score: -1, x: b.x, z: b.z };
+      if (ev === 'water') return { score: 60, x, z };
+      if (ev === 'stop') break;
+    }
+    if (!Number.isFinite(b.x)) return { score: 1e9, x, z };
+    return { score: h.dist(b.x, b.z), x: b.x, z: b.z };
+  }
+
+  // ---------------------------------------------------------------- 3D course
+  const golfWorld = new THREE.Group(); golfWorld.visible = false; scene.add(golfWorld);
+  const speckleTex = (() => {
+    const c = document.createElement('canvas'); c.width = c.height = 256;
+    const g = c.getContext('2d');
+    g.fillStyle = '#100a26'; g.fillRect(0, 0, 256, 256);
+    const cols = ['#ff2bd6', '#39ff6a', '#ffa21f', '#29e6ff', '#fff23a', '#b04bff'];
+    for (let i = 0; i < 520; i++) { g.fillStyle = cols[i % cols.length]; g.globalAlpha = 0.35 + Math.random() * 0.5; g.fillRect(Math.random() * 256, Math.random() * 256, 1.6 + Math.random() * 2.2, 1.6 + Math.random() * 2.2); }
+    const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(0.3, 0.3);
+    return t;
+  })();
+  const greenMat = new THREE.MeshStandardMaterial({ map: speckleTex, roughness: 0.9, emissive: 0xffffff, emissiveMap: speckleTex, emissiveIntensity: 0.55 });
+  const baseMat = new THREE.MeshStandardMaterial({ color: 0x07041a, roughness: 0.8 });
+  const neonMat = (c, k = 0.9) => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: k, roughness: 0.4 });
+  function flagTexture(n, color) {
+    const c = document.createElement('canvas'); c.width = 128; c.height = 80;
+    const g = c.getContext('2d');
+    g.fillStyle = '#' + color.toString(16).padStart(6, '0'); g.beginPath(); g.moveTo(0, 0); g.lineTo(128, 40); g.lineTo(0, 80); g.closePath(); g.fill();
+    g.fillStyle = '#0b0620'; g.font = 'bold 44px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(n), 42, 42);
+    return new THREE.CanvasTexture(c);
+  }
+  const shapeOf = (poly) => { const s = new THREE.Shape(); poly.forEach(([x, z], i) => (i ? s.lineTo(x, -z) : s.moveTo(x, -z))); s.closePath(); return s; };
+  function addWall(g, s, mat, h = 0.28) {
+    const [x1, z1, x2, z2] = s, len = Math.hypot(x2 - x1, z2 - z1);
+    const m = new THREE.Mesh(new THREE.BoxGeometry(len + 0.12, h, 0.12), mat);
+    m.position.set((x1 + x2) / 2, h / 2, (z1 + z2) / 2); m.rotation.y = -Math.atan2(z2 - z1, x2 - x1);
+    g.add(m); return m;
+  }
+  function buildHole(h, idx) {
+    const g = new THREE.Group(); g.position.set(h.origin[0], 0, h.origin[1]); golfWorld.add(g); h.group = g;
+    const shape = shapeOf(h.outline);
+    if (h.water) shape.holes.push(shapeOf(h.water));
+    const green = new THREE.Mesh(new THREE.ShapeGeometry(shape), greenMat); green.rotation.x = -Math.PI / 2; green.position.y = 0.001; g.add(green);
+    const baseShape = shapeOf(h.outline);
+    if (h.water) baseShape.holes.push(shapeOf(h.water)); // (the pond is a hole in the table: the water sits below)
+    const base = new THREE.Mesh(new THREE.ExtrudeGeometry(baseShape, { depth: 0.6, bevelEnabled: false }), baseMat);
+    base.rotation.x = Math.PI / 2; base.position.y = -0.002; g.add(base);
+    // glowing rim under the edge (like the LED strips in the photo)
+    const rimMat = new THREE.MeshBasicMaterial({ color: h.color });
+    h.outline.forEach((p, j) => { const q = h.outline[(j + 1) % h.outline.length]; const m = addWall(g, [p[0], p[1], q[0], q[1]], rimMat, 0.05); m.position.y = -0.3; m.scale.z = 1.6; });
+    const wallMat = neonMat(h.color, 0.85);
+    h.segs.forEach((s) => addWall(g, s, wallMat));
+    // cup, flag, tee
+    const cupY = gfHeight(h, h.cup[0], h.cup[1]) + 0.006;
+    const cup = new THREE.Mesh(new THREE.CircleGeometry(GF.CUP_R, 28), new THREE.MeshBasicMaterial({ color: 0x000000 }));
+    cup.rotation.x = -Math.PI / 2; cup.position.set(h.cup[0], cupY, h.cup[1]); g.add(cup);
+    const lip = new THREE.Mesh(new THREE.RingGeometry(GF.CUP_R, GF.CUP_R + 0.05, 28), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+    lip.rotation.x = -Math.PI / 2; lip.position.set(h.cup[0], cupY + 0.002, h.cup[1]); g.add(lip);
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.9, 8), new THREE.MeshBasicMaterial({ color: 0xe8e8ff }));
+    pole.position.set(h.cup[0] + 0.02, cupY + 0.95, h.cup[1]); g.add(pole);
+    const flag = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.5), new THREE.MeshBasicMaterial({ map: flagTexture(idx + 1, h.color), transparent: true, side: THREE.DoubleSide }));
+    flag.position.set(h.cup[0] + 0.42, cupY + 1.6, h.cup[1]); g.add(flag); h.flag = flag;
+    const tee = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.02, 0.6), neonMat(0x39ff6a, 0.4)); tee.position.set(h.tee[0], 0.01, h.tee[1]); g.add(tee);
+    for (const q of h.bumpers) {
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(q.r, q.r, 0.4, 28), neonMat(NEON.pink, 0.7)); m.position.set(q.x, 0.2, q.z); g.add(m);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(q.r, 0.05, 8, 28), neonMat(NEON.yellow, 1)); ring.rotation.x = Math.PI / 2; ring.position.set(q.x, 0.42, q.z); g.add(ring);
+      q.mesh = m;
+    }
+    for (const f of h.features) buildFeature(h, f, g);
+  }
+  function buildFeature(h, f, g) {
+    if (f.type === 'windmill') {
+      const house = new THREE.Group(); house.position.set(f.x, 0, 0); g.add(house);
+      const red = neonMat(NEON.red, 0.55);
+      // a tower over the tunnel (the side walls already block the rest of the lane)
+      const tower = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 1.05, 2.6, 6), red); tower.position.set(0, 1.3, -0.1); house.add(tower);
+      const door = new THREE.Mesh(new THREE.BoxGeometry(f.w * 2, 0.55, 0.1), new THREE.MeshBasicMaterial({ color: 0x050008 })); door.position.set(0, 0.28, f.z + 0.02); house.add(door);
+      const arch = new THREE.Mesh(new THREE.TorusGeometry(f.w, 0.07, 8, 20, Math.PI), neonMat(NEON.yellow, 1)); arch.position.set(0, 0.5, f.z + 0.06); house.add(arch);
+      const roof = new THREE.Mesh(new THREE.ConeGeometry(1.0, 1.1, 6), neonMat(NEON.purple, 0.7)); roof.position.set(0, 3.15, -0.1); house.add(roof);
+      const blades = new THREE.Group(); blades.position.set(0, 1.85, f.z + 0.5); house.add(blades);
+      const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.2, 14), neonMat(NEON.yellow, 1)); hub.rotation.x = Math.PI / 2; blades.add(hub);
+      const green = neonMat(NEON.green, 1);
+      for (let k = 0; k < 4; k++) {
+        const arm = new THREE.Group(); arm.rotation.z = (k * Math.PI) / 2; blades.add(arm);
+        const blade = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.42, 0.08), green); blade.position.x = 1.0; arm.add(blade);
+      }
+      f.blades = blades;
+    } else if (f.type === 'loop') {
+      const pink = neonMat(NEON.pink, 0.8);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(f.R, 0.17, 14, 48), pink);
+      ring.rotation.y = Math.PI / 2; ring.position.set(f.x, f.R + 0.05, (f.z1 + f.z2) / 2); g.add(ring);
+      for (const sx of [-1, 1]) { const rail = new THREE.Mesh(new THREE.TorusGeometry(f.R, 0.06, 8, 48), neonMat(NEON.cyan, 1)); rail.rotation.y = Math.PI / 2; rail.position.set(f.x + sx * 0.3, f.R + 0.05, (f.z1 + f.z2) / 2); g.add(rail); }
+      const foot = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.3, 0.6), pink); foot.position.set(f.x, 0.15, f.z1 + 0.5); g.add(foot);
+      foot.visible = false; // (just the loop: the chute's walls guide the ball in)
+    } else if (f.type === 'clown') {
+      const head = new THREE.Group(); head.position.set(f.x, 0, f.z - 1.3); g.add(head);
+      const face = new THREE.Mesh(new THREE.SphereGeometry(1.7, 32, 24), neonMat(0xff8a1f, 0.45)); face.scale.set(1.25, 1.05, 0.8); face.position.y = 2.1; head.add(face);
+      for (const sx of [-1, 1]) {
+        const eye = new THREE.Mesh(new THREE.SphereGeometry(0.42, 20, 14), neonMat(0xffffff, 0.4)); eye.position.set(sx * 0.65, 2.75, 1.15); head.add(eye);
+        const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 10), neonMat(0x2a6bff, 0.6)); pupil.position.set(sx * 0.6, 2.72, 1.5); head.add(pupil);
+        const hair = new THREE.Mesh(new THREE.SphereGeometry(0.75, 16, 12), neonMat(0xff4a1f, 0.6)); hair.position.set(sx * 1.85, 2.8, -0.2); head.add(hair);
+      }
+      const nose = new THREE.Mesh(new THREE.SphereGeometry(0.38, 20, 14), neonMat(NEON.red, 0.8)); nose.position.set(0, 2.15, 1.45); head.add(nose);
+      const hat = new THREE.Mesh(new THREE.ConeGeometry(0.7, 1.5, 20), neonMat(NEON.purple, 0.7)); hat.position.set(0.4, 4.2, -0.2); hat.rotation.z = -0.25; head.add(hat);
+      const mouth = new THREE.Mesh(new THREE.BoxGeometry(f.w * 2 + 0.3, 0.9, 0.5), new THREE.MeshBasicMaterial({ color: 0x050008 })); mouth.position.set(0, 0.45, 1.15); head.add(mouth);
+      const lips = new THREE.Mesh(new THREE.TorusGeometry(0.85, 0.16, 10, 32), neonMat(NEON.red, 0.8)); lips.scale.set(1, 0.6, 1); lips.position.set(0, 0.9, 1.3); head.add(lips);
+      const teeth = new THREE.Group(); head.add(teeth);
+      for (let k = -2; k <= 2; k++) { const t = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.28, 0.08), neonMat(0xffffff, 0.5)); t.position.set(k * 0.24, 0.0, 1.32); teeth.add(t); }
+      teeth.position.y = 1.15; f.teeth = teeth;
+      const tongue = new THREE.Mesh(new THREE.BoxGeometry(f.w * 2 + 0.25, 0.08, f.tongue), neonMat(0xff2f6e, 0.7));
+      tongue.position.set(f.x, 0.16, f.z + f.tongue / 2); tongue.rotation.x = -0.14; g.add(tongue);
+      // party flags behind it
+      const cols = [NEON.pink, NEON.green, NEON.yellow, NEON.cyan, NEON.orange];
+      for (let k = 0; k < 12; k++) { const p = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.34, 3), neonMat(cols[k % 5], 0.9)); p.rotation.x = Math.PI; p.position.set(-3.4 + k * 0.62, 4.6 + Math.sin(k * 0.9) * 0.15, f.z - 3.4); g.add(p); }
+    } else if (f.type === 'gate') {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(f.len, 0.32, 0.18), neonMat(NEON.orange, 0.9)); m.position.set(f.x, 0.16, f.z); g.add(m); f.mesh = m;
+    } else if (f.type === 'hill') {
+      const pts = [];
+      for (let i = 0; i <= 16; i++) { const r = (f.R * i) / 16; pts.push(new THREE.Vector2(r, f.H * (1 - (r / f.R) ** 2) + 0.002)); }
+      pts.push(new THREE.Vector2(f.R, 0));
+      const mound = new THREE.Mesh(new THREE.LatheGeometry(pts.reverse(), 48), greenMat); mound.position.set(f.x, 0, f.z); g.add(mound);
+      for (let k = 1; k <= 3; k++) { const r = (f.R * k) / 3.4; const ring = new THREE.Mesh(new THREE.TorusGeometry(r, 0.03, 6, 48), neonMat(k % 2 ? NEON.orange : NEON.red, 1)); ring.rotation.x = Math.PI / 2; ring.position.set(f.x, f.H * (1 - (r / f.R) ** 2) + 0.02, f.z); g.add(ring); }
+    } else if (f.type === 'water') {
+      const waterTex = (() => { // glowing ripples
+        const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d');
+        x.fillStyle = '#0738c9'; x.fillRect(0, 0, 128, 128); x.strokeStyle = 'rgba(120, 220, 255, 0.55)'; x.lineWidth = 3;
+        for (let i = 0; i < 9; i++) { x.beginPath(); x.arc(Math.random() * 128, Math.random() * 128, 8 + Math.random() * 18, 0.3, 2.4); x.stroke(); }
+        const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(1.2, 1.6); return t;
+      })();
+      const water = new THREE.Mesh(new THREE.ShapeGeometry(shapeOf(h.water)), new THREE.MeshStandardMaterial({ map: waterTex, emissive: 0x2a7bff, emissiveMap: waterTex, emissiveIntensity: 0.9 }));
+      water.rotation.x = -Math.PI / 2; water.position.y = -0.12; g.add(water); f.mesh = water; f.tex = waterTex;
+      const [bx1, bz1, bx2, bz2] = h.bridge;
+      const deck = new THREE.Mesh(new THREE.BoxGeometry(bx2 - bx1, 0.1, bz1 - bz2), new THREE.MeshStandardMaterial({ map: speckleTex, emissive: 0xffffff, emissiveMap: speckleTex, emissiveIntensity: 0.5 }));
+      deck.position.set((bx1 + bx2) / 2, -0.05, (bz1 + bz2) / 2); g.add(deck);
+      for (const sx of [bx1, bx2]) { const edge = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, bz1 - bz2), new THREE.MeshBasicMaterial({ color: NEON.cyan })); edge.position.set(sx, 0.01, (bz1 + bz2) / 2); g.add(edge); }
+    } else if (f.type === 'arm') {
+      const bot = new THREE.Group(); bot.position.set(f.x, 0, f.z); g.add(bot); f.bot = bot;
+      const body = buildModel(CHARS.codex); body.scale.setScalar(1.15); body.position.y = 0.05; bot.add(body);
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(f.L, 0.22, 0.22), neonMat(NEON.cyan, 1)); arm.position.set(f.L / 2, 0.18, 0); bot.add(arm);
+      const hub = new THREE.Mesh(new THREE.CylinderGeometry(f.r, f.r, 0.3, 24), neonMat(NEON.purple, 0.7)); hub.position.y = 0.15; bot.add(hub);
+    } else if (f.type === 'portal') {
+      const [ax, az, ar] = f.a;
+      const hole = new THREE.Mesh(new THREE.CircleGeometry(ar, 24), new THREE.MeshBasicMaterial({ color: 0x000000 })); hole.rotation.x = -Math.PI / 2; hole.position.set(ax, 0.005, az); g.add(hole);
+      for (const [x, z] of [[ax, az], [f.b[0], f.b[1]]]) { const ring = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.07, 8, 28), neonMat(NEON.purple, 1)); ring.rotation.x = Math.PI / 2; ring.position.set(x, 0.07, z); g.add(ring); }
+      const pipe = new THREE.Mesh(new THREE.TorusGeometry(2.4, 0.12, 8, 24, Math.PI), neonMat(NEON.purple, 0.6)); pipe.position.set((ax + f.b[0]) / 2, 0, (az + f.b[1]) / 2); pipe.rotation.y = Math.atan2(f.b[1] - az, -(f.b[0] - ax)); g.add(pipe);
+    }
+  }
+  HOLES.forEach(buildHole);
+  // the balls, the aim guide
+  const gfBall = new THREE.Mesh(new THREE.SphereGeometry(GF.BR, 20, 14), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.5 }));
+  gfBall.visible = false; scene.add(gfBall);
+  const gfShadow = new THREE.Mesh(new THREE.CircleGeometry(GF.BR * 1.1, 16), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.45, depthWrite: false }));
+  gfShadow.rotation.x = -Math.PI / 2; gfShadow.visible = false; scene.add(gfShadow);
+  const aimDots = Array.from({ length: 14 }, () => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffffff })); m.visible = false; scene.add(m); return m; });
+  const aimRing = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.36, 32, 1, 0, Math.PI * 2), new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.9 }));
+  aimRing.rotation.x = -Math.PI / 2; aimRing.visible = false; scene.add(aimRing);
+
+  // ---------------------------------------------------------------- the round
+  const gf = {
+    hole: 0, turn: 0, state: 'intro', timer: 0, t: 0, ball: { x: 0, z: 0, pz: 0, vx: 0, vz: 0, hold: 0 },
+    strokes: [[], []], cur: 0, from: null, plan: null, drag: null, keyAim: null, shotT: 0, aim: null, cam: null,
+    players: [{ isAI: false }, { isAI: true }],
+  };
+  const gfH = () => HOLES[gf.hole];
+  const gfRig = (i) => (i === 0 ? nearRig : farRig);
+  const gfTotal = (i) => gf.strokes[i].reduce((n, s) => n + (s || 0), 0);
+  const gfIsAI = (i) => gf.players[i].isAI || (i === 0 && dbg.autoPlayer);
+  function gfReset() { // a new round from hole 1
+    gf.strokes = [[], []];
+    gf.players[0].isAI = mode !== 'game'; gf.players[1].isAI = true;
+    gfStartHole(0);
+  }
+  function gfStartHole(i) {
+    gf.hole = i; gf.turn = 0; gf.state = 'intro'; gf.timer = mode === 'game' ? 1.4 : 0.8; gf.t = 0;
+    gf.strokes[0][i] = 0; gf.strokes[1][i] = 0;
+    gfPlaceAtTee();
+    gfFitCamera(false);
+    phase = 'play';
+    if (mode === 'game') showBanner(`HOLE ${i + 1} · PAR ${gfH().par}`, 'var(--ink)');
+    gfHud();
+  }
+  function gfPlaceAtTee() {
+    const h = gfH();
+    Object.assign(gf.ball, { x: h.tee[0], z: h.tee[1], pz: h.tee[1], vx: 0, vz: 0, hold: 0, special: null });
+    gf.cur = 0; gf.plan = null; gf.drag = null; gf.keyAim = null; gf.aim = null;
+  }
+  function gfHud() {
+    if (gameMode !== 'golf') return;
+    score[0] = gfTotal(0); score[1] = gfTotal(1); updateHUD();
+    const who = gf.turn === 0 ? 'YOUR' : CHARS[farRig.key].name + "'S";
+    $('.first-to').textContent = gf.state === 'over' ? `PAR ${PAR_TOTAL}` : `HOLE ${gf.hole + 1}/9 · PAR ${gfH().par} · ${who} SHOT ${gf.cur + 1}`;
+  }
+  // a putt in direction ang with power 0-1
+  function gfShoot(ang, pow) {
+    if (gf.state !== 'aim') return;
+    const sp = shotSpeed(clamp(pow, 0, 1));
+    gf.from = { x: gf.ball.x, z: gf.ball.z };
+    gf.ball.vx = Math.cos(ang) * sp; gf.ball.vz = Math.sin(ang) * sp; gf.ball.pz = gf.ball.z;
+    gf.cur++; gf.strokes[gf.turn][gf.hole] = gf.cur;
+    gf.state = 'roll'; gf.shotT = 0; gf.aim = null; gf.drag = null; gf.keyAim = null;
+    gfRig(gf.turn).pulse = 1;
+    Sfx.tone(260 + pow * 300, 0.08, 'triangle', 0.08, 1.4);
+    if (dbg.stats) dbg.stats.gfShots++;
+    gfHud();
+  }
+  function gfEndTurn(holed) {
+    if (!holed) { gf.cur = GF.MAX_STROKES + 1; gf.strokes[gf.turn][gf.hole] = gf.cur; popText('MAX STROKES: +1', '#ff5d6c'); }
+    if (gf.turn === 0) { gf.turn = 1; gfPlaceAtTee(); gf.state = 'switch'; gf.timer = 0.9; if (mode === 'game') popText(`${CHARS[farRig.key].name}'S TURN`, 'var(--ai)'); gfHud(); return; }
+    gfHoleResult();
+  }
+  function gfHoleResult() {
+    const a = gf.strokes[0][gf.hole], b = gf.strokes[1][gf.hole];
+    gf.state = 'result'; gf.timer = mode === 'game' ? 2.4 : 1.2;
+    if (dbg.stats) dbg.stats.gfHoles.push([a, b]);
+    if (a !== b) {
+      const win = a < b ? 0 : 1;
+      gfRig(win).jumpT = 0.7; gfRig(1 - win).shakeT = 0.8;
+      slimeOn(gfRig(1 - win), CHARS[gfRig(win).key], mode === 'game' && win === 1);
+      if (mode === 'game') {
+        showBanner(win === 0 ? 'HOLE WON!' : CHARS[farRig.key].name + ' WINS THE HOLE', win === 0 ? 'var(--you)' : 'var(--ai)');
+        win === 0 ? Sfx.good() : Sfx.bad();
+        if (win === 1 && !gfIsAI(0)) { const text = pickLine('rival'); say(2, text); }
+      }
+    } else if (mode === 'game') showBanner('HALVED', 'var(--ink)');
+    gfHud();
+  }
+  function gfGameOver() {
+    gf.state = 'over'; phase = 'over';
+    const a = gfTotal(0), b = gfTotal(1), youWon = a < b, tie = a === b;
+    const winRig = youWon ? nearRig : farRig;
+    if (!tie) { winRig.loop = true; (youWon ? farRig : nearRig).shakeT = 1.2; }
+    $('#overArt').innerHTML = tie ? gridSVG(CHARS[youKey]) + gridSVG(CHARS[aiKey]) : gridSVG(CHARS[winRig.key]);
+    $('#overTitle').textContent = tie ? 'ALL SQUARE!' : CHARS[winRig.key].name + ' WINS!';
+    $('#overTitle').style.color = tie ? 'var(--ink)' : CHARS[winRig.key].css;
+    const vsPar = (n) => (n - PAR_TOTAL === 0 ? 'E' : (n - PAR_TOTAL > 0 ? '+' : '') + (n - PAR_TOTAL));
+    $('#overSub').textContent = `You ${a} (${vsPar(a)}) · ${CHARS[aiKey].name} ${b} (${vsPar(b)}) · par ${PAR_TOTAL}`;
+    const row = (label, cells, cls = '') => `<tr class="${cls}"><th>${label}</th>${cells.map((c) => `<td>${c}</td>`).join('')}</tr>`;
+    $('#overCard').innerHTML = `<table>${row('HOLE', HOLES.map((_, i) => i + 1).concat('TOT'))}${row('PAR', HOLES.map((h) => h.par).concat(PAR_TOTAL), 'par')}${row('YOU', gf.strokes[0].concat(a), 'you')}${row(CHARS[aiKey].name, gf.strokes[1].concat(b), 'ai')}</table>`;
+    $('#overCard').hidden = false;
+    $('#btnRematch').style.background = CHARS[youKey].css;
+    $('#over').hidden = false;
+    document.body.classList.remove('playing');
+    youWon ? Sfx.win() : Sfx.lose();
+    gfHud();
+  }
+
+  // ---------------------------------------------------------------- AI planning (a few shots per step, so it never stalls a frame)
+  function gfPlanStart() {
+    const h = gfH(), cands = [], direct = Math.atan2(h.cup[1] - gf.ball.z, h.cup[0] - gf.ball.x);
+    for (let k = 0; k < 40; k++) for (const p of [0.12, 0.2, 0.28, 0.36, 0.45, 0.55, 0.66, 0.8, 1]) cands.push([direct + (k / 40) * Math.PI * 2, p]);
+    for (let k = -6; k <= 6; k++) for (const p of [0.15, 0.22, 0.3, 0.4, 0.5]) cands.push([direct + k * 0.04, p]); // careful putts straight at it
+    gf.plan = { cands, i: 0, results: [], t0: gf.t + 1.4, refined: false };
+  }
+  function gfPlanWork(n) {
+    const h = gfH(), P = gf.plan;
+    for (let k = 0; k < n && P.i < P.cands.length; k++, P.i++) {
+      const [a, p] = P.cands[P.i], r = gfSimShot(h, gf.ball.x, gf.ball.z, a, p, P.t0);
+      P.results.push({ a, p, score: r.score });
+    }
+    if (P.i < P.cands.length) return false;
+    if (!P.refined) { // look closer around the best few
+      P.refined = true;
+      const top = P.results.slice().sort((x, y) => x.score - y.score).slice(0, 3);
+      for (const c of top) for (let da = -2; da <= 2; da++) for (const dp of [-0.06, -0.03, 0, 0.03, 0.06]) P.cands.push([c.a + da * 0.012, clamp(c.p + dp, 0.08, 1)]);
+      return false;
+    }
+    const D = GDIFF[gf.turn === 0 && dbg.autoPlayer ? 'hard' : curDiffKey()];
+    const best = P.results.sort((x, y) => x.score - y.score).slice(0, D.pick);
+    const c = best[Math.floor(Math.random() * best.length)];
+    P.choice = { a: c.a + rand(-1, 1) * D.ang, p: clamp(c.p * (1 + rand(-1, 1) * D.pow), 0.05, 1), score: c.score };
+    return true;
+  }
+
+  // ---------------------------------------------------------------- step
+  function gfStep(dt) {
+    simTime += dt;
+    gf.t += dt;
+    const h = gfH(), b = gf.ball;
+    for (const q of h.bumpers) q.flash = Math.max(0, q.flash - dt * 3);
+    if (gf.state === 'intro' || gf.state === 'switch') { gf.timer -= dt; if (gf.timer <= 0) gf.state = 'aim'; return; }
+    if (gf.state === 'aim') {
+      if (!gfIsAI(gf.turn)) return; // waiting for your putt
+      if (!gf.plan) gfPlanStart();
+      if (!gf.plan.choice) gfPlanWork(gf.turn === 0 && dbg.autoPlayer ? 400 : 6);
+      else if (gf.t >= gf.plan.t0) gfShoot(gf.plan.choice.a, gf.plan.choice.p);
+      else gf.aim = { a: gf.plan.choice.a, p: gf.plan.choice.p * clamp(1 - (gf.plan.t0 - gf.t) / 0.7, 0, 1) }; // the AI lines up its putt
+      return;
+    }
+    if (gf.state === 'roll') {
+      gf.shotT += dt;
+      const ev = gfStepBall(h, b, gf.t, dt, dbg.stats);
+      if (ev) gfEvent(ev);
+      if (gf.state === 'roll' && (ev === 'stop' || gf.shotT > GF.SHOT_T)) {
+        b.vx = b.vz = 0;
+        if (gf.cur >= GF.MAX_STROKES) gfEndTurn(false);
+        else { gf.state = 'aim'; gf.plan = null; gfHud(); }
+      }
+      if (!Number.isFinite(b.x) || !Number.isFinite(b.z)) { Object.assign(b, gf.from || { x: h.tee[0], z: h.tee[1] }); b.vx = b.vz = 0; gf.state = 'aim'; gf.plan = null; }
+      return;
+    }
+    if (gf.state === 'holed' || gf.state === 'splash') {
+      gf.timer -= dt;
+      if (gf.timer > 0) return;
+      if (gf.state === 'holed') { gfEndTurn(true); return; }
+      Object.assign(b, gf.from, { vx: 0, vz: 0, hold: 0, pz: gf.from.z }); // back to where the shot started
+      if (gf.cur >= GF.MAX_STROKES) gfEndTurn(false); else { gf.state = 'aim'; gf.plan = null; gfHud(); }
+      return;
+    }
+    if (gf.state === 'result') {
+      gf.timer -= dt;
+      if (gf.timer > 0) return;
+      if (gf.hole < HOLES.length - 1) gfStartHole(gf.hole + 1);
+      else if (mode === 'game') gfGameOver();
+      else gfReset(); // the menu demo just keeps playing
+    }
+  }
+  function gfEvent(ev) {
+    const h = gfH(), b = gf.ball, w = (x, z) => [h.origin[0] + x, h.origin[1] + z];
+    if (ev === 'wall') Sfx.wall();
+    else if (ev === 'bump') Sfx.pin();
+    else if (ev === 'loopIn') { Sfx.spin(3); popText('LOOP!', '#ff2bd6'); }
+    else if (ev === 'loopFail') popText('TOO SOFT!', '#29e6ff');
+    else if (ev === 'gulp') { Sfx.poof(); popText('GULP!', '#ffa21f'); }
+    else if (ev === 'spit') { Sfx.pop ? Sfx.pop() : Sfx.bounce(); }
+    else if (ev === 'portalIn') Sfx.spin(2);
+    else if (ev === 'water') {
+      const [x, z] = w(b.x, b.z); burst(x, 0, z, 0x29e6ff, 14, 1); Sfx.splat();
+      popText('SPLASH! +1', '#29e6ff');
+      gf.cur++; gf.strokes[gf.turn][gf.hole] = gf.cur;
+      gf.state = 'splash'; gf.timer = 0.9; b.vx = b.vz = 0;
+    } else if (ev === 'cup') {
+      const [x, z] = w(h.cup[0], h.cup[1]); burst(x, gfHeight(h, h.cup[0], h.cup[1]) + 0.2, z, CHARS[gfRig(gf.turn).key].hex, 18, 1);
+      Sfx.good();
+      const n = gf.cur, d = n - h.par;
+      popText(n === 1 ? 'HOLE IN ONE!' : d <= -2 ? 'EAGLE!' : d === -1 ? 'BIRDIE!' : d === 0 ? 'PAR' : d === 1 ? 'BOGEY' : `+${d}`, n === 1 || d < 0 ? '#39ff6a' : '#eef3ff');
+      if (dbg.stats) dbg.stats.gfCups++;
+      gf.state = 'holed'; gf.timer = 0.9; b.vx = b.vz = 0; b.special = { type: 'cup' };
+      gfRig(gf.turn).jumpT = 0.7;
+    }
+  }
+
+  // ---------------------------------------------------------------- input: slide aim
+  const gfCanAim = () => gameMode === 'golf' && mode === 'game' && !paused && gf.state === 'aim' && !gfIsAI(gf.turn);
+  const AIM_PX = () => Math.min(window.innerWidth, window.innerHeight) * 0.38; // drag this far for full power
+  function gfAimFromDrag() {
+    const d = gf.drag, a = tableAt(d.x0, d.y0, new THREE.Vector3()), c = tableAt(d.x, d.y, new THREE.Vector3());
+    if (!a || !c) return null;
+    const dx = a.x - c.x, dz = a.z - c.z, px = Math.hypot(d.x - d.x0, d.y - d.y0);
+    if (Math.hypot(dx, dz) < 1e-4) return null;
+    return { a: Math.atan2(dz, dx), p: clamp(px / AIM_PX(), 0, 1) };
+  }
+  canvas.addEventListener('pointerdown', (e) => {
+    if (!gfCanAim() || (e.pointerType !== 'touch' && e.button !== 0)) return;
+    gf.drag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY };
+    gf.keyAim = null;
+  });
+  window.addEventListener('pointermove', (e) => {
+    if (!gf.drag || e.pointerId !== gf.drag.id) return;
+    gf.drag.x = e.clientX; gf.drag.y = e.clientY;
+    gf.aim = gfAimFromDrag();
+  });
+  const gfRelease = (e) => {
+    if (!gf.drag || e.pointerId !== gf.drag.id) return;
+    const aim = gfAimFromDrag();
+    gf.drag = null; gf.aim = null;
+    if (aim && aim.p > 0.04 && gfCanAim()) gfShoot(aim.a, aim.p);
+  };
+  window.addEventListener('pointerup', gfRelease);
+  window.addEventListener('pointercancel', (e) => { if (gf.drag && e.pointerId === gf.drag.id) { gf.drag = null; gf.aim = null; } });
+  // keyboard: arrows aim and set the power, Enter putts
+  window.addEventListener('keydown', (e) => {
+    if (!gfCanAim()) return;
+    const k = e.key, h = gfH();
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter', 'a', 'd', 'w', 's', 'A', 'D', 'W', 'S'].includes(k)) return;
+    if (!gf.keyAim) gf.keyAim = { a: Math.atan2(h.cup[1] - gf.ball.z, h.cup[0] - gf.ball.x), p: 0.35 };
+    if (k === 'ArrowLeft' || k === 'a' || k === 'A') gf.keyAim.a -= 0.06;
+    if (k === 'ArrowRight' || k === 'd' || k === 'D') gf.keyAim.a += 0.06;
+    if (k === 'ArrowUp' || k === 'w' || k === 'W') gf.keyAim.p = clamp(gf.keyAim.p + 0.05, 0.05, 1);
+    if (k === 'ArrowDown' || k === 's' || k === 'S') gf.keyAim.p = clamp(gf.keyAim.p - 0.05, 0.05, 1);
+    if (k === 'Enter') { gfShoot(gf.keyAim.a, gf.keyAim.p); return; }
+    gf.aim = { ...gf.keyAim };
+    e.preventDefault();
+  });
+
+  // ---------------------------------------------------------------- camera + visuals
+  const gfCamPts = [];
+  function gfFitCamera(snap) {
+    const h = gfH(), [ox, oz] = h.origin, { x1, x2, z1, z2 } = h.bounds;
+    const a = camera.aspect, k = clamp((1.35 - a) / 0.85, 0, 1);
+    const el = ((a >= 1.35 ? 60 : 60 + 12 * k) * Math.PI) / 180; // look down steeply: the holes are long
+    const look = new THREE.Vector3(ox + (x1 + x2) / 2, 0, oz + (z1 + z2) / 2 + 0.3);
+    gfCamPts.length = 0;
+    for (const x of [x1, x2]) for (const z of [z1, z2]) gfCamPts.push(new THREE.Vector3(ox + x, 0, oz + z));
+    gfCamPts.push(new THREE.Vector3(ox + h.tee[0], 0.9, oz + h.tee[1] + 1.6)); // the players by the tee
+    for (const f of h.features) { // tall things must fit too
+      if (f.type === 'clown') gfCamPts.push(new THREE.Vector3(ox + f.x, 4.6, oz + f.z - 1.3));
+      if (f.type === 'windmill') gfCamPts.push(new THREE.Vector3(ox + f.x, 3.4, oz + f.z));
+    }
+    let d = 6;
+    for (; d < 90; d += 0.3) {
+      refCam.position.set(look.x, look.y + d * Math.sin(el), look.z + d * Math.cos(el));
+      refCam.lookAt(look); refCam.updateMatrixWorld();
+      if (gfCamPts.every((pt) => { fitTmp.copy(pt).project(refCam); return Math.abs(fitTmp.x) <= 0.94 && fitTmp.y >= -0.9 && fitTmp.y <= 0.74; })) break;
+    }
+    gf.cam = { pos: refCam.position.clone(), look };
+    if (snap || !camBase.golf) { camBase.pos.copy(gf.cam.pos); camBase.look.copy(look); camBase.golf = true; }
+  }
+  function gfRender(dt) {
+    const h = gfH(), b = gf.ball, [ox, oz] = h.origin;
+    // moving parts
+    for (const hole of HOLES) for (const f of hole.features) {
+      const t = hole === h ? gf.t : time;
+      if (f.type === 'windmill') f.blades.rotation.z = f.speed * t;
+      else if (f.type === 'gate') f.mesh.position.x = gateX(f, t);
+      else if (f.type === 'arm') f.bot.rotation.y = -armAngle(f, t);
+      else if (f.type === 'clown') f.teeth.position.y += ((clownOpen(f, t) ? 1.15 : 0.3) - f.teeth.position.y) * Math.min(1, dt * 14);
+      else if (f.type === 'water') { f.tex.offset.set(time * 0.03, time * 0.05); f.mesh.material.emissiveIntensity = 0.8 + Math.sin(time * 2) * 0.15; }
+    }
+    for (const q of h.bumpers) q.mesh.material.emissiveIntensity = 0.7 + q.flash * 1.5;
+    // the ball
+    const live = gf.state !== 'result' && gf.state !== 'over' && !(b.special && b.special.type === 'cup');
+    let bx = b.x, bz = b.z, by = gfHeight(h, b.x, b.z) + GF.BR, show = live;
+    if (b.hold > 0 && b.special) {
+      if (b.special.type === 'gone') show = false;
+      else if (b.special.type === 'loop') {
+        const f = b.special.f, p = clamp(1 - b.hold / 0.6, 0, 1), th = p * Math.PI * 2;
+        bz = f.z1 + (f.z2 - f.z1) * p - Math.sin(th) * f.R * 0.9; by = GF.BR + f.R * (1 - Math.cos(th)); bx = f.x;
+      }
+    }
+    if (gf.state === 'splash') show = false;
+    const key = gfRig(gf.turn).key;
+    gfBall.visible = show; gfShadow.visible = show;
+    gfBall.material.emissive.setHex(CHARS[key].hex);
+    gfBall.position.set(ox + bx, by, oz + bz);
+    gfShadow.position.set(ox + bx, gfHeight(h, bx, bz) + 0.01, oz + bz);
+    // aim guide: dotted line, longer and redder with more power
+    const aim = gf.aim, aiming = show && aim && gf.state === 'aim';
+    aimRing.visible = aiming;
+    aimDots.forEach((m, i) => {
+      m.visible = aiming && i < 3 + Math.round(aim.p * 11);
+      if (!m.visible) return;
+      const d = 0.35 + i * (0.25 + aim.p * 0.35);
+      m.position.set(ox + bx + Math.cos(aim.a) * d, by - GF.BR + 0.06, oz + bz + Math.sin(aim.a) * d);
+      m.material.color.setHSL(0.33 * (1 - aim.p), 1, 0.55);
+    });
+    if (aiming) { aimRing.position.set(ox + bx, by - GF.BR + 0.03, oz + bz); aimRing.scale.setScalar(1 + aim.p * 1.6); aimRing.material.color.setHSL(0.33 * (1 - aim.p), 1, 0.55); }
+    // the characters: whoever is putting stands by the ball, the other waits by the tee
+    for (let i = 0; i < 2; i++) {
+      const rig = gfRig(i), mine = i === gf.turn && gf.state !== 'result';
+      const px = mine ? bx - 0.75 : h.tee[0] + 1.7, pz = mine ? bz + 0.45 : h.tee[1] + 1.1;
+      const pad = { x: ox + px, vx: 0 };
+      animRig(rig, pad, dt);
+      rig.outer.position.z += (oz + pz - rig.outer.position.z) * Math.min(1, dt * 8);
+      rig.outer.position.y = gfHeight(h, px, pz);
+    }
+    // camera glides to the hole
+    if (gf.cam) {
+      const k = 1 - Math.exp(-dt * 4);
+      camBase.pos.lerp(gf.cam.pos, k); camBase.look.lerp(gf.cam.look, k);
+    }
+    refCam.position.copy(camBase.pos); refCam.lookAt(camBase.look); refCam.updateMatrixWorld();
+  }
+
   // ---------------------------------------------------------------- visuals
   function animRig(rig, pad, dt) {
     rig.x += (pad.x - rig.x) * Math.min(1, dt * 10);
@@ -2709,15 +3459,18 @@
     }
     slimes.forEach((sl) => updateSlime(sl, dt));
     updateBubbles();
-    const hockey = gameMode === 'hockey', volley = gameMode === 'volley';
+    const hockey = gameMode === 'hockey', volley = gameMode === 'volley', golf = gameMode === 'golf';
+    if (golf) gfRender(dt);
+    else {
     animRig(nearRig, hockey ? MP : volley ? VP : P, dt);
     animRig(farRig, hockey ? MA : volley ? VA : A, dt);
+    }
     if (duo) { animRig(nearRig2, hockey ? MP2 : volley ? VP2 : P2, dt); animRig(farRig2, hockey ? MA2 : volley ? VA2 : A2, dt); }
     if (hockey) hkRender(dt);
     if (volley) vbRender(dt);
 
     // ball (Ping Pong only)
-    if (!volley) { // (Volleyball draws its own ball)
+    if (!volley && !golf) { // (Volleyball and mini golf draw their own balls)
     const showBall = !hockey && phase !== 'over' && Math.abs(ball.z) < HL + 4;
     let by = phase === 'serve' ? ballY(0) + Math.sin(time * 6) * 0.08 : ballY(ball.z);
     ballMesh.visible = ballGlow.visible = showBall && by > -2.8;
@@ -2748,7 +3501,7 @@
 
     // camera
     shake = Math.max(0, shake - dt * 1.6);
-    const sway = mode === 'game' ? (hockey ? MP.x : volley ? VP.x : P.x) * 0.1 : Math.sin(time * 0.25) * 1.2;
+    const sway = golf ? 0 : mode === 'game' ? (hockey ? MP.x : volley ? VP.x : P.x) * 0.1 : Math.sin(time * 0.25) * 1.2;
     camera.position.set(
       camBase.pos.x + sway + (Math.random() - 0.5) * shake * 0.5,
       camBase.pos.y + (Math.random() - 0.5) * shake * 0.5,
@@ -2797,6 +3550,7 @@
       camBase.pos.copy(refCam.position);
     }
     refCam.position.copy(camBase.pos); refCam.lookAt(camBase.look); refCam.updateMatrixWorld();
+    if (gameMode === 'golf') { gfFitCamera(true); refCam.position.copy(camBase.pos); refCam.lookAt(camBase.look); refCam.updateMatrixWorld(); }
   }
   window.addEventListener('resize', resize);
   resize();
@@ -2865,6 +3619,7 @@
 
   // Spin: a click / trackpad tap / touch on the table (not on buttons), or Shift.
   function tapSpin() {
+    if (gameMode === 'golf') return;
     if (net.role === 'guest' && netLive() && gameMode !== 'hockey' && phase === 'play') netSend('spin', {}, true); // the host runs the game
     if (gameMode === 'volley') { vbSpikeTap(); return; }
     if (gameMode === 'hockey' || mode !== 'game' || paused || phase !== 'play') return;
@@ -3708,6 +4463,32 @@
         return out;
       },
       stepFor(dt) { step(dt); },
+      // Headless mini golf: both sides played by the AI (yours as HARD unless opts.diff), checking the ball never escapes.
+      gsim(seconds, opts = {}) {
+        setGameMode('golf'); toMenu();
+        dbg.diff = opts.diff || null; dbg.stats = { ...freshStats(), gfShots: 0, gfCups: 0, gfHoles: [], moverHits: 0, bumps: 0, loops: 0, loopFails: 0, clown: 0, portals: 0, water: 0, escaped: 0, perHole: {} };
+        if (opts.game) { setGameMode('golf'); startGame(); dbg.autoPlayer = true; }
+        for (let i = 0, n = Math.round(seconds / STEP); i < n && phase !== 'over'; i++) {
+          const before = gf.hole;
+          step(STEP);
+          const b = gf.ball, h = gfH();
+          if (!(b.hold > 0) && gf.state === 'roll' && !gfInPoly(h.outline, b.x, b.z)) dbg.stats.escaped++;
+          if (gf.hole !== before) dbg.stats.perHole[before] = true;
+        }
+        const out = { ...dbg.stats, holeNow: gf.hole, strokes: gf.strokes, over: phase === 'over', card: $('#overCard').hidden ? 0 : $('#overCard').querySelectorAll('td').length };
+        Object.assign(dbg, { diff: null, stats: null, autoPlayer: false });
+        if (!opts.keep) toMenu();
+        return out;
+      },
+      golf: () => ({ hole: gf.hole, turn: gf.turn, state: gf.state, ball: { ...gf.ball, special: undefined, after: undefined }, cur: gf.cur, strokes: gf.strokes, aim: gf.aim, t: gf.t,
+        holes: HOLES.map((h) => ({ name: h.name, par: h.par, tee: h.tee, cup: h.cup })), totals: [gfTotal(0), gfTotal(1)], par: PAR_TOTAL }),
+      golfGo(i) { gfStartHole(i); gf.state = 'aim'; },
+      golfShoot(a, p) { gfShoot(a, p); },
+      golfPlan(i, tries) { // how well can a perfect AI do from the tee of hole i?
+        const h = HOLES[i]; let best = 1e9;
+        for (let k = 0; k < tries; k++) { const r = gfSimShot(h, h.tee[0], h.tee[1], (k / tries) * Math.PI * 2, 0.5, 0); best = Math.min(best, r.score); }
+        return best;
+      },
       talk: () => RIGS.map((r, i) => (bubbles[i].until >= 0 && !bubbleEls[i].hidden ? { i, text: bubbleEls[i].textContent, ...bubbleEls[i].getBoundingClientRect().toJSON() } : null)),
       talkLines: () => TALK,
       setTalk(opts = {}) { dbg.talkMateP = opts.mateP ?? null; },

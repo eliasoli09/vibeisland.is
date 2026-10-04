@@ -184,6 +184,15 @@ test("Pixel Pong has an Air Hockey mode", () => {
   assert.match(pongDetailSource, /lofthokkí/);
 });
 
+test("Pixel Pong has a 9-hole mini golf mode", () => {
+  assert.match(staticPongSource, /data-mode="golf"/);
+  assert.match(staticPongSource, /function gfStepBall\(h, b, t, dt, stats\)/);
+  for (const hole of ["DOGLEG", "WINDMILL", "LOOP", "CLOWN", "PINBALL", "GATES", "VOLCANO", "BRIDGE", "ROBOT"]) assert.match(staticPongSource, new RegExp(`name: '${hole}'`));
+  assert.match(staticPongSource, /id="overCard"/);
+  assert.match(projectsSource, /mínígolf/);
+  assert.match(pongDetailSource, /mínígolf/);
+});
+
 test("Pixel Pong AIs trash talk", () => {
   assert.match(staticPongSource, /id="bubbles"/);
   assert.match(staticPongSource, /Þetta verður svo EZ😭/);
