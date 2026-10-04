@@ -184,6 +184,13 @@ test("Pixel Pong has an Air Hockey mode", () => {
   assert.match(pongDetailSource, /lofthokkí/);
 });
 
+test("Pixel Pong AIs trash talk", () => {
+  assert.match(staticPongSource, /id="bubbles"/);
+  assert.match(staticPongSource, /Þetta verður svo EZ😭/);
+  assert.match(staticPongSource, /Just stick to roblox lil bro🤏/);
+  assert.match(staticPongSource, /function trashTalk\(winSide\)/);
+});
+
 test("Pixel Pong has 2 v 2 teams", () => {
   assert.match(staticPongSource, /data-duo="1"/);
   assert.match(staticPongSource, /function setDuo\(on\)/);
