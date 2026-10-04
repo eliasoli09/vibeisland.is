@@ -136,6 +136,24 @@
   .ai-power { position: fixed; right: 12px; top: calc(56px + env(safe-area-inset-top, 0px)); }
   @media (max-width: 720px) { .ai-power { top: calc(112px + env(safe-area-inset-top, 0px)); } }
   body.touch .ai-power { top: calc(112px + env(safe-area-inset-top, 0px)); }
+  /* trash talk: speech bubbles over the characters' heads */
+  #bubbles { position: absolute; inset: 0; z-index: 3; pointer-events: none; overflow: hidden; }
+  .bubble {
+    position: absolute; left: 0; top: 0; max-width: min(250px, 60vw); width: max-content; padding: 9px 13px;
+    background: #fff; color: #0b1020; border: 3px solid var(--bc, #fff); border-radius: 16px; text-align: center;
+    font: 700 15px/1.25 system-ui, -apple-system, "Segoe UI", sans-serif; box-shadow: 0 5px 0 rgba(0, 0, 0, 0.35);
+    transform: translate(-50%, calc(-100% - 14px)) scale(0); transform-origin: 50% 100%; opacity: 0;
+  }
+  .bubble::after { content: ""; position: absolute; left: 50%; bottom: -13px; margin-left: -9px; border: 10px solid transparent; border-bottom: 0; border-top-color: var(--bc, #fff); }
+  .bubble.show { animation: bubblePop 2.8s ease-out forwards; }
+  @keyframes bubblePop {
+    0% { transform: translate(-50%, calc(-100% - 14px)) scale(0); opacity: 0; }
+    7% { transform: translate(-50%, calc(-100% - 14px)) scale(1.15); opacity: 1; }
+    13% { transform: translate(-50%, calc(-100% - 14px)) scale(1); opacity: 1; }
+    86% { transform: translate(-50%, calc(-100% - 14px)) scale(1); opacity: 1; }
+    100% { transform: translate(-50%, calc(-100% - 24px)) scale(0.92); opacity: 0; }
+  }
+  @media (max-width: 600px) { .bubble { font-size: 13px; padding: 7px 10px; } }
   #pop { position: absolute; left: 0; right: 0; bottom: 24%; z-index: 4; text-align: center; pointer-events: none; opacity: 0; font: clamp(12px, 2.6vw, 20px) var(--pix); text-shadow: 0 3px 0 rgba(0, 0, 0, 0.55); }
   #pop.show { animation: rise 0.85s ease-out forwards; }
   @keyframes rise {
@@ -262,6 +280,7 @@
 
   <div id="banner"></div>
   <div id="pop"></div>
+  <div id="bubbles" aria-live="polite"></div>
   <div id="slimeScreen" aria-hidden="true"><svg viewBox="0 0 200 100" preserveAspectRatio="none"><defs><linearGradient id="slimeShade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.22"/><stop offset="0.35" stop-color="#fff" stop-opacity="0"/><stop offset="0.6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.32"/></linearGradient></defs><path id="slimePath" fill="currentColor" d="M0 0H200V30Q198.0 33.6 197.6 31.6C197.6 41.9 195.8 48.8 191.6 48.8C187.4 48.8 185.7 41.9 185.7 31.6Q183.7 29.4 180.6 27.4C180.6 43.9 178.5 55.0 173.7 55.0C168.9 55.0 166.8 43.9 166.8 27.4Q164.8 29.5 164.2 27.5C164.2 46.0 162.8 58.3 159.6 58.3C156.3 58.3 154.9 46.0 154.9 27.5Q152.9 29.9 151.6 27.9C151.6 57.7 149.6 77.6 145.2 77.6C140.7 77.6 138.7 57.7 138.7 27.9Q136.7 33.0 134.4 31.0C134.4 64.3 132.2 86.5 127.0 86.5C121.9 86.5 119.7 64.3 119.7 31.0Q117.7 35.0 116.0 33.0C116.0 40.4 113.3 45.2 107.1 45.2C100.9 45.2 98.2 40.4 98.2 33.0Q96.2 31.2 91.3 29.2C91.3 38.6 89.7 44.8 86.1 44.8C82.5 44.8 81.0 38.6 81.0 29.2Q79.0 33.5 76.8 31.5C76.8 54.2 75.2 69.4 71.4 69.4C67.7 69.4 66.1 54.2 66.1 31.5Q64.1 29.4 62.9 27.4C62.9 35.2 60.8 40.4 55.9 40.4C51.1 40.4 49.0 35.2 49.0 27.4Q47.0 31.2 43.5 29.2C43.5 47.5 41.2 59.7 35.9 59.7C30.6 59.7 28.3 47.5 28.3 29.2Q26.3 34.6 22.1 32.6C22.1 47.2 20.2 56.9 15.6 56.9C11.0 56.9 9.1 47.2 9.1 32.6Q2 32 0 30Z"/><use href="#slimePath" fill="url(#slimeShade)"/><path d="M6 8C40 13 72 5 112 10S170 6 194 11" fill="none" stroke="#fff" stroke-opacity="0.45" stroke-width="2.2" stroke-linecap="round"/><g fill="#fff" fill-opacity="0.35"><circle cx="142.2" cy="11.2" r="2.2"/><circle cx="29.7" cy="13.5" r="1.9"/><circle cx="36.0" cy="14.8" r="0.9"/><circle cx="131.0" cy="19.8" r="1.6"/><circle cx="169.1" cy="11.6" r="1.8"/><circle cx="117.4" cy="16.4" r="1.4"/><circle cx="162.6" cy="23.0" r="1.5"/><circle cx="130.2" cy="7.1" r="1.8"/><circle cx="127.1" cy="23.9" r="2.0"/><circle cx="60.4" cy="12.9" r="1.7"/><circle cx="12.2" cy="14.3" r="1.0"/><circle cx="29.5" cy="7.1" r="1.9"/><circle cx="31.8" cy="10.5" r="1.3"/><circle cx="168.3" cy="7.5" r="1.4"/><ellipse cx="190.4" cy="45.8" rx="1.1" ry="2"/><ellipse cx="172.5" cy="52.0" rx="1.1" ry="2"/><ellipse cx="158.4" cy="55.3" rx="1.1" ry="2"/><ellipse cx="144.0" cy="74.6" rx="1.1" ry="2"/><ellipse cx="125.8" cy="83.5" rx="1.1" ry="2"/><ellipse cx="70.2" cy="66.4" rx="1.1" ry="2"/><ellipse cx="34.7" cy="56.7" rx="1.1" ry="2"/><ellipse cx="14.4" cy="53.9" rx="1.1" ry="2"/></g></svg></div>
 
   <div id="menu" class="overlay">
@@ -721,6 +740,7 @@
     bucket() { this.tone(620, 0.08, 'square', 0.03, 1.4); this.tone(930, 0.12, 'triangle', 0.03, 0.9, 0.05); },
     power() { [784, 988, 1175, 1568].forEach((f, i) => this.tone(f, 0.1, 'square', 0.05, 1, i * 0.06)); },
     bounce() { this.tone(170, 0.05, 'sine', 0.09, 0.8); },
+    talk() { [660, 880, 740].forEach((f, i) => this.tone(f, 0.05, 'square', 0.035, 1.2, i * 0.05)); },
     good() { [523, 659, 784].forEach((f, i) => this.tone(f, 0.12, 'square', 0.05, 1, i * 0.08)); },
     bad() { [330, 262, 196].forEach((f, i) => this.tone(f, 0.14, 'triangle', 0.07, 1, i * 0.09)); },
     win() { [523, 659, 784, 1046, 784, 1046].forEach((f, i) => this.tone(f, 0.14, 'square', 0.05, 1, i * 0.1)); },
@@ -888,6 +908,7 @@
     MP.isAI = false; hkResetMallets();
     VP.isAI = false; vbResetPlayers();
     for (const rig of RIGS) rig.loop = false;
+    clearBubbles();
     assignChars();
     $('#menu').hidden = true; $('#over').hidden = true; $('#pauseMenu').hidden = true; $('#hud').hidden = false;
     document.body.classList.add('playing');
@@ -903,6 +924,7 @@
     MP.isAI = true; hkResetMallets();
     VP.isAI = true; vbResetPlayers();
     for (const rig of RIGS) rig.loop = false;
+    clearBubbles();
     $('#menu').hidden = false; $('#over').hidden = true; $('#pauseMenu').hidden = true; $('#hud').hidden = true;
     document.body.classList.remove('playing');
     refreshMenu(); assignChars();
@@ -930,6 +952,7 @@
     // the losers get slimed in the winner's colour (and you also get it on screen)
     loseRigs.forEach((r, i) => slimeOn(r, CHARS[winRigs[i % winRigs.length].key], mode === 'game' && winSide < 0 && i === 0));
     if (mode !== 'game') { pointT = 0.9; return; }
+    trashTalk(winSide);
     const youScored = winSide > 0;
     if (!youScored && streak) { streak = 0; updateSpinHUD(); }
     score[youScored ? 0 : 1]++;
@@ -2530,6 +2553,83 @@
     resize();
   }
 
+  // ================================================================ TRASH TALK
+  // When an AI's team scores against a person, one of those AIs gloats in a speech bubble. In 2v2 your AI teammate
+  // sometimes moans at you when your team lets one in. Only AI players talk (never your friends
+  // online); the host picks the line and sends it to everyone.
+  const TALK = {
+    rival: ['Þetta verður svo EZ😭', 'Loooool þú getur ekki neitt💀', 'Nooob😂', 'Vitlaust mark Snilli😭', 'Þú getur ekki BLAUTAN bro😑'],
+    mate: ['Ég hefði alveg eins getað verið einn í liði Bro😴', 'Get ég skipt um liðsfélaga eða 😩', 'Just stick to roblox lil bro🤏'],
+    T: 2.8,        // how long a bubble stays up
+    MATE_P: 0.5,   // how often your teammate moans
+    MATE_DELAY: 0.9,
+  };
+  const talkLast = { rival: -1, mate: -1 };
+  const talkQueue = [];
+  const bubbleEls = RIGS.map(() => {
+    const el = document.createElement('div');
+    el.className = 'bubble'; el.hidden = true;
+    $('#bubbles').appendChild(el);
+    return el;
+  });
+  const bubbles = RIGS.map(() => ({ text: '', until: -1 }));
+  function pickLine(pool) {
+    const lines = TALK[pool];
+    let i = Math.floor(Math.random() * lines.length);
+    if (lines.length > 1 && i === talkLast[pool]) i = (i + 1 + Math.floor(Math.random() * (lines.length - 1))) % lines.length; // never twice in a row
+    talkLast[pool] = i;
+    return lines[i];
+  }
+  // somebody (by player number 0-3, in this screen's order) says something
+  function say(idx, text) {
+    const rig = RIGS[idx], el = bubbleEls[idx];
+    if (!rig || !rig.key) return;
+    el.textContent = text;
+    el.style.setProperty('--bc', CHARS[rig.key].css);
+    el.hidden = false;
+    el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+    bubbles[idx] = { text, until: time + TALK.T };
+    Sfx.talk();
+  }
+  // a point was scored by side winSide (host / offline only)
+  function trashTalk(winSide) {
+    if (mode !== 'game' || net.role === 'guest') return;
+    const list = ENT_SETS[gameMode], on = (i) => duo || i % 2 === 0;
+    const isBot = (q) => q.isAI && !q.remote;
+    const winners = list.filter((q, i) => on(i) && q.side === winSide && isBot(q));
+    const someoneToTaunt = list.some((q, i) => on(i) && q.side === -winSide && !isBot(q)); // (AIs only taunt people)
+    if (winners.length && someoneToTaunt) {
+      const who = winners[Math.floor(Math.random() * winners.length)], text = pickLine('rival');
+      say(who.slot, text); netEvent(['talk', who.slot, text]);
+    }
+    // your (or a friend's) AI teammate isn't impressed
+    const moaner = list.find((q, i) => on(i) && q.side === -winSide && isBot(q) && duo && !isBot(q.mate));
+    if (moaner && Math.random() < (dbg.talkMateP ?? TALK.MATE_P)) talkQueue.push({ at: time + TALK.MATE_DELAY, slot: moaner.slot, text: pickLine('mate') });
+  }
+  function updateBubbles() {
+    while (talkQueue.length && talkQueue[0].at <= time) {
+      const t = talkQueue.shift();
+      if (mode === 'game') { say(t.slot, t.text); netEvent(['talk', t.slot, t.text]); }
+    }
+    RIGS.forEach((rig, i) => {
+      const b = bubbles[i], el = bubbleEls[i];
+      if (b.until < 0) return;
+      if (time > b.until || mode !== 'game' || !rig.outer.visible) { b.until = -1; el.hidden = true; el.classList.remove('show'); return; }
+      // just above the character's head, wherever it is on screen
+      const def = CHARS[rig.key];
+      rig.outer.getWorldPosition(fitTmp);
+      fitTmp.y += rig.inner.position.y + def.grid.length * def.voxel * rig.scale + 0.25;
+      fitTmp.project(camera);
+      const x = clamp((fitTmp.x + 1) / 2 * window.innerWidth, 70, window.innerWidth - 70);
+      const y = clamp((1 - fitTmp.y) / 2 * window.innerHeight, 70, window.innerHeight - 10);
+      el.style.left = x + 'px'; el.style.top = y + 'px';
+    });
+  }
+  function clearBubbles() {
+    talkQueue.length = 0;
+    bubbles.forEach((b, i) => { b.until = -1; bubbleEls[i].hidden = true; bubbleEls[i].classList.remove('show'); });
+  }
+
   // ---------------------------------------------------------------- visuals
   function animRig(rig, pad, dt) {
     rig.x += (pad.x - rig.x) * Math.min(1, dt * 10);
@@ -2608,6 +2708,7 @@
       if (p.sink >= 1) { p.mesh.visible = false; sinkingPins.splice(i, 1); }
     }
     slimes.forEach((sl) => updateSlime(sl, dt));
+    updateBubbles();
     const hockey = gameMode === 'hockey', volley = gameMode === 'volley';
     animRig(nearRig, hockey ? MP : volley ? VP : P, dt);
     animRig(farRig, hockey ? MA : volley ? VA : A, dt);
@@ -3349,10 +3450,11 @@
     else if (k === 'spin') popText(g * a[0] > 0 ? (a[1] > 1 ? `SPIN x${a[1]}` : 'SPIN!') : 'INCOMING SPIN', SPIN.css[a[1]]);
     else if (k === 'pop') popText(a[0], a[1]);
     else if (k === 'banner') showBanner(a[0], a[1]);
+    else if (k === 'talk') say(localIdx(a[0]), a[1]);
   }
   // the host's sounds play on the guests too
   for (const name of Object.keys(Sfx)) {
-    if (typeof Sfx[name] !== 'function' || ['init', 'tone', 'good', 'bad', 'win', 'lose', 'bucket', 'splat'].includes(name)) continue;
+    if (typeof Sfx[name] !== 'function' || ['init', 'tone', 'good', 'bad', 'win', 'lose', 'bucket', 'splat', 'talk'].includes(name)) continue;
     const original = Sfx[name];
     Sfx[name] = function (...args) { netEvent(['s', name, args]); return original.apply(this, args); };
   }
@@ -3606,6 +3708,9 @@
         return out;
       },
       stepFor(dt) { step(dt); },
+      talk: () => RIGS.map((r, i) => (bubbles[i].until >= 0 && !bubbleEls[i].hidden ? { i, text: bubbleEls[i].textContent, ...bubbleEls[i].getBoundingClientRect().toJSON() } : null)),
+      talkLines: () => TALK,
+      setTalk(opts = {}) { dbg.talkMateP = opts.mateP ?? null; },
       duoInfo: () => ({
         duo, HW, CW: VB.CW, goal: goalHalf(1), keys: RIGS.map((r) => r.key), rigs: RIGS.map((r) => r.outer.visible),
         pads: [P, P2, A, A2].map((q) => q.group.visible), mallets: [MP, MP2, MA, MA2].map((m) => m.group.visible),
