@@ -45,3 +45,31 @@ Fourth mode, **MINI GOLF**, played 1 v 1 against an AI character (no 2 v 2, no o
 - the loop (hard vs soft putt), the water penalty, turns, and a full match ending with the scorecard
 
 Static checks are in `app/verkefni/verkefni.test.mjs`.
+
+## Graphics and camera upgrade (2026-10-05)
+Feedback: "make the course and graphics 100x nicer, with much better 3D models, and have the camera move with where you are on the hole."
+
+- **Camera** (`gfCamera`):
+  - **Hole start:** a flyover from the whole-hole view in to behind the ball.
+  - **Aiming:** the camera sits behind the ball looking down the hole's *path* (`gfPathDir` picks the nearby visible point that is closest to the cup on the AI's distance map, so it looks round the dogleg's corner).
+  - **Rolling:** it chases the ball. When the ball drops, it circles the cup.
+  - **VIEW button (or V):** shows the whole hole. On portrait phones the camera sits further back and higher.
+- **Bloom** (three r128 `UnrealBloomPass`, loaded on demand from jsdelivr) makes the neon glow. If loading fails, or the device renders under 35 fps for about 3 real seconds, it switches off and the plain render is used.
+- **Course:**
+  - A blacklight carpet texture with the cup cut out as a real hole.
+  - Rounded rails with glowing tops and end knobs; tables with LED strips and a glow on the floor.
+  - A neon sign per hole, string lights, two coloured lights per hole, stars, fog and a dark floor.
+  - Flags that wave.
+- **Models:**
+  - **Windmill:** octagonal tower with windows, a door arch and lattice sails.
+  - **Loop:** a see-through corkscrew tube with rails and legs.
+  - **Clown:** a detailed head with cheeks, eyes, brows, hair, a hat with a pompom, a ruffled collar, lips, teeth, a jaw that drops when the mouth opens, and a curled tongue.
+  - **Bumpers:** mushroom bumpers that flash and pulse when hit.
+  - **Gates:** hazard-striped gates on tracks.
+  - **Volcano:** a rocky lava texture, rocks and rising embers.
+  - **Bridge:** a wooden plank bridge with lamps, lily pads and rippling water.
+  - **Robot:** stands on a hazard-striped turntable with a jointed arm and claw.
+  - **Tunnel:** swirling portals and a see-through pipe.
+- **Players:** the putting player stands beside the ball with a putter that draws back with the power and swings through. The other player watches from the floor beside the table. The ball glows and leaves a trail, and confetti flies when it drops.
+- **Performance:** only the hole being played is drawn (plus the previous one during the flyover).
+- **Tests:** `tests/minigolf-browser.py` now also checks the camera: behind the ball looking up the hole, following the ball and staying behind it along the path round the dogleg, and VIEW lifting it to show the whole hole. A `golfSnap` test hook skips the camera glide on slow machines.

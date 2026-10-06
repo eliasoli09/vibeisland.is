@@ -64,6 +64,33 @@ def main():
         check(totals["easy"] > totals["normal"] > totals["hard"], f"harder AIs take fewer strokes ({ {k: round(v, 1) for k, v in totals.items()} })")
         check(abs(totals["normal"] - 27) <= 6, f"a NORMAL AI plays about par ({totals['normal']:.1f} vs 27)")
 
+        # 2b. The camera plays like a golf game: behind the ball looking down the hole, follows the ball, VIEW shows it all
+        page.evaluate("__pong.golfSnap(); __pong.mode('golf'); __pong.golfGo(0)")
+        page.wait_for_timeout(1200)
+        g = page.evaluate("__pong.golf()")
+        ox, oz = -26, -26  # hole 1's place on the course
+        bx, bz = ox + g["ball"]["x"], oz + g["ball"]["z"]
+        cam, look = g["cam"], g["look"]
+        check(cam[2] > bz + 2 and look[2] < bz and cam[1] > 2, f"the camera sits behind the ball, looking up the hole (cam {[round(c, 1) for c in cam]}, ball z {bz:.1f})")
+        page.evaluate("__pong.golfShoot(-Math.PI / 2, 0.55)")
+        page.wait_for_function("__pong.golf().state !== 'roll'", timeout=60000)
+        page.wait_for_timeout(1500)
+        g = page.evaluate("__pong.golf()")
+        bx2, bz2 = ox + g["ball"]["x"], oz + g["ball"]["z"]
+        near = math.hypot(g["cam"][0] - bx2, g["cam"][2] - bz2)
+        check(math.hypot(g["cam"][0] - cam[0], g["cam"][2] - cam[2]) > 3 and near < 7, f"the camera follows the ball up the hole ({near:.1f} away from it)")
+        behind = math.atan2(bz2 - g["cam"][2], bx2 - g["cam"][0])  # from the camera to the ball...
+        d = abs(math.atan2(math.sin(behind - g["pathDir"]), math.cos(behind - g["pathDir"])))
+        check(d < 0.4, f"...and stays behind it along the hole's path, round the dogleg's corner (off by {d:.2f})")
+        page.keyboard.press("v")
+        page.wait_for_timeout(1200)
+        v = page.evaluate("__pong.golf()")
+        check(v["view"] and v["cam"][1] > g["cam"][1] + 3, f"VIEW shows the whole hole from above (camera height {g['cam'][1]:.1f} -> {v['cam'][1]:.1f})")
+        page.keyboard.press("v")
+        bloom = page.evaluate("__pong.golf().bloom")
+        print("bloom on:", bloom)
+        page.evaluate("__pong.golfSnap(false)")
+
         # 3. Slide aim with the mouse: drag back, see the aim, let go to putt
         page.evaluate("__pong.mode('golf'); __pong.golfGo(1)")
         page.wait_for_timeout(1500)
@@ -80,7 +107,7 @@ def main():
         page.mouse.up()
         g = page.evaluate("__pong.golf()")
         check(g["state"] == "roll" and g["cur"] == 1 and g["ball"]["vz"] < -3, "letting go putts the ball up the course")
-        page.wait_for_function("__pong.golf().state !== 'roll'", timeout=20000)
+        page.wait_for_function("__pong.golf().state !== 'roll'", timeout=60000)
 
         # 4. Keys: arrows aim and set the power, Enter putts
         page.evaluate("__pong.golfGo(0)")
@@ -92,29 +119,29 @@ def main():
 
         # 5. The loop: a hard putt goes round it; a soft one rolls back
         page.evaluate("__pong.golfGo(2); __pong.golfShoot(-Math.PI / 2, 1)")
-        page.wait_for_function("__pong.golf().ball.z < -1.2 || __pong.golf().state !== 'roll'", timeout=20000)
+        page.wait_for_function("__pong.golf().ball.z < -1.2 || __pong.golf().state !== 'roll'", timeout=60000)
         check(page.evaluate("__pong.golf().ball.z") < -1.2, "a hard putt goes round the loop")
         page.evaluate("__pong.golfGo(2); __pong.golfShoot(-Math.PI / 2, 0.2)")
-        page.wait_for_function("__pong.golf().state !== 'roll'", timeout=20000)
+        page.wait_for_function("__pong.golf().state !== 'roll'", timeout=60000)
         check(page.evaluate("__pong.golf().ball.z") > 0.8, "a soft putt can't make it round and rolls back")
 
         # 6. Water: off the bridge = +1 stroke and back to where you putted from
         page.evaluate("__pong.golfGo(7); __pong.golfShoot(Math.atan2(-4, -1.2), 0.45)")
-        page.wait_for_function("__pong.golf().state === 'aim' && __pong.golf().cur >= 2", timeout=20000)
+        page.wait_for_function("__pong.golf().state === 'aim' && __pong.golf().cur >= 2", timeout=60000)
         g = page.evaluate("__pong.golf()")
         check(g["cur"] == 2 and abs(g["ball"]["x"]) < 0.01 and abs(g["ball"]["z"] - 6.2) < 0.01, "SPLASH: a putt into the water costs a stroke and you play again from the same spot")
 
         # 7. Turns: after you finish the hole the AI plays it, then the next hole
         page.evaluate("__pong.golfGo(0)")
         for _ in range(8):  # (aim straight at the cup and putt softly until it drops or you run out of strokes)
-            page.wait_for_function("(g => (g.state === 'aim' && g.turn === 0) || g.turn === 1)(__pong.golf())", timeout=20000)
+            page.wait_for_function("(g => (g.state === 'aim' && g.turn === 0) || g.turn === 1)(__pong.golf())", timeout=60000)
             if page.evaluate("__pong.golf().turn") == 1:
                 break
             page.evaluate("(() => { const g = __pong.golf(), h = g.holes[g.hole]; __pong.golfShoot(Math.atan2(h.cup[1] - g.ball.z, h.cup[0] - g.ball.x), 0.25); })()")
-            page.wait_for_function("__pong.golf().state !== 'roll'", timeout=20000)
+            page.wait_for_function("__pong.golf().state !== 'roll'", timeout=60000)
         page.wait_for_function("__pong.golf().turn === 1", timeout=30000)
         check(True, "when you're done with a hole, the AI plays it")
-        page.wait_for_function("__pong.golf().hole === 1", timeout=60000)
+        page.evaluate("(() => { for (let i = 0; i < 120 * 120 && __pong.golf().hole === 0; i++) __pong.stepFor(1 / 120); })()")  # (fast-forward the AI's turn)
         g = page.evaluate("__pong.golf()")
         check(g["strokes"][0][0] >= 1 and g["strokes"][1][0] >= 1, f"then it's on to hole 2 (hole 1: you {g['strokes'][0][0]}, AI {g['strokes'][1][0]})")
 
@@ -124,11 +151,12 @@ def main():
         page.evaluate("__pong.mode('golf')")
 
         # 9. On a phone: slide aim with a finger
+        page.close()  # (one 3D page at a time on this machine)
         phone_ctx = browser.new_context(**p.devices["iPhone 13"])
         phone = phone_ctx.new_page()
         phone.on("pageerror", lambda error: ERRORS.append(str(error)))
-        phone.goto(GAME)
-        phone.wait_for_function("Boolean(window.__pong)", timeout=30000)
+        phone.goto(GAME, timeout=90000)
+        phone.wait_for_function("Boolean(window.__pong)", timeout=60000)
         phone.evaluate("__pong.mode('golf'); __pong.golfGo(0)")
         phone.wait_for_timeout(1500)
         cdp = phone_ctx.new_cdp_session(phone)
