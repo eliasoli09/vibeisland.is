@@ -73,3 +73,20 @@ Feedback: "make the course and graphics 100x nicer, with much better 3D models, 
 - **Players:** the putting player stands beside the ball with a putter that draws back with the power and swings through. The other player watches from the floor beside the table. The ball glows and leaves a trail, and confetti flies when it drops.
 - **Performance:** only the hole being played is drawn (plus the previous one during the flyover).
 - **Tests:** `tests/minigolf-browser.py` now also checks the camera: behind the ball looking up the hole, following the ball and staying behind it along the path round the dogleg, and VIEW lifting it to show the whole hole. A `golfSnap` test hook skips the camera glide on slow machines.
+
+## Online against a friend (2026-10-06)
+Feedback: "add online mini golf against a friend."
+
+- **Same 1 v 1 flow as the other modes:** pick MINI GOLF, press PLAY ONLINE, and the friend joins with the QR code or link and picks a fighter. The friend is player 2: the host putts first on each hole, then the friend. There are no AIs, and so no trash talk.
+- **Who runs what:** the host's game runs the ball.
+  - The friend aims with slide aim on their own screen; their putt (angle and power) goes to the host as `putt`.
+  - While they drag, their aim line is shared live (`gaim`, about 12 Hz), so the host sees it.
+- **Snapshots** (`s.g`) carry the hole, whose turn it is, the state, the hole clock (for the windmill, gates and robot), both scorecards, the ball (including the loop, clown and tunnel), and the putting player's aim.
+- **The friend's side** (`gfApplySnap`) swaps the players so they are always "you" on their own screen. Between snapshots it rolls the ball with the same physics, so it moves smoothly.
+- **Events:** pops, confetti, hole results (`gfres`, shown from the friend's side: slime, banners), "YOUR TURN" and game over (`gfover`, the scorecard) all reach the friend. The course isn't mirrored for either player.
+- **Disconnects:** online play now waits 12 seconds of silence (was 5) before someone counts as gone. A slow device can freeze for a few seconds while it builds the course's graphics; those are now built up front when mini golf is picked (`gfPrecompile`).
+- **Tests:** `tests/online-golf-browser.py` runs host + friend over a direct connection and over the relay:
+  - the invite, the friend as player 2, and each side's own fighter
+  - the host's putt reaching the friend's screen and scorecard
+  - the friend's turn, with live aim shown to the host and a cancelled drag not putting
+  - matching scorecards after hole 1, moving on to hole 2, and a disconnect

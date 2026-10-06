@@ -42,7 +42,7 @@ def main():
         # 1. The mode: 1 v 1 only, 9 unique holes, par 27
         page.locator("#modeGolf").click()
         check(page.locator("#modeGolf").get_attribute("aria-checked") == "true" and page.locator("#hintGolf").is_visible(), "MINI GOLF is a mode, and the menu explains slide aim")
-        check(not page.locator(".sizes").is_visible() and not page.locator("#btnOnline").is_visible(), "mini golf is 1 v 1 against the AI (no 2 v 2, no online)")
+        check(not page.locator(".sizes").is_visible() and page.locator("#btnOnline").is_visible(), "mini golf is 1 v 1: against the AI, or a friend online (no 2 v 2)")
         g = page.evaluate("__pong.golf()")
         names = [h["name"] for h in g["holes"]]
         check(len(names) == 9 and len(set(names)) == 9 and g["par"] == 27, f"9 different holes, par 27 ({', '.join(names)})")
