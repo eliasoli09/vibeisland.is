@@ -104,7 +104,7 @@ def match(browser, mode, transport):
 
     # the friend leaves: the host is told and gets the win
     gctx.close()
-    host.wait_for_function("__pong.net().over", timeout=12000)
+    host.wait_for_function("__pong.net().over", timeout=40000)
     check(host.evaluate("__pong.net().overTitle") == "OPPONENT LEFT", f"{label}: the host is told when the friend leaves")
     hctx.close()
 

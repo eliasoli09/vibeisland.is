@@ -63,7 +63,7 @@
   .scorecard .par td { color: var(--muted); }
   .scorecard .you td { color: var(--you); }
   .scorecard .ai td { color: var(--ai); }
-  body.mode-golf .sizes, body.mode-golf #btnOnline, body.mode-golf #spinPips { display: none; } /* mini golf is 1 v 1 against the AI */
+  body.mode-golf .sizes, body.mode-golf #spinPips { display: none; } /* mini golf is 1 v 1 (against the AI or a friend online) */
   #golfView { position: absolute; left: calc(16px + env(safe-area-inset-left, 0px)); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); display: none; pointer-events: auto; padding: 10px 14px; font: 11px var(--pix); color: var(--ink); background: rgba(5, 9, 24, 0.75); border: 2px solid var(--edge); }
   #golfView[aria-pressed="true"] { border-color: var(--you); color: var(--you); }
   body.mode-golf.playing #golfView { display: block; }
@@ -326,7 +326,7 @@
       </div>
       <p class="hint" id="hintHockey" hidden><span class="h-mouse">Move the mouse to slide your mallet anywhere in your half (or <kbd>A</kbd> / <kbd>D</kbd>). Hit the character puck into the AI's goal. <strong>Three hard smashes in a row</strong> earn a boost: BIG MALLET, FIREBALL, TRIPLE PUCK or WIDE GOAL. <strong>Goals grow</strong> every time the puck crosses the middle, and a <strong>shot clock</strong> (10 s, shorter every crossing) hands the puck over if you hold it too long. <kbd>Space</kbd> pauses, <kbd>M</kbd> mutes.</span><span class="h-touch"><strong>Drag anywhere</strong> to slide your mallet around your half, and flick fast to smash. Three smashes in a row earn a boost: BIG MALLET, FIREBALL, TRIPLE PUCK or WIDE GOAL. Goals grow every time the puck crosses the middle, and the shot clock hands the puck over if you hold it too long.</span></p>
       <p class="hint" id="hintVolley" hidden><span class="h-mouse">You are the player: <strong>move the mouse</strong> to run around your half (or <kbd>A</kbd> / <kbd>D</kbd>). The glowing ring shows where the ball will land. Get under it and you <strong>bump it back automatically</strong>; run left or right as you hit it to aim. When an <strong>orange ring lights up under you</strong>, the ball is in reach: <strong>click to jump and SPIKE</strong> it. In 2 v 2 your first touch sets the ball up for your teammate. Rallies get faster with every touch. In = point for the other side, out = point against whoever touched it last. First to 7. <kbd>Space</kbd> pauses, <kbd>M</kbd> mutes.</span><span class="h-touch"><strong>Drag anywhere</strong> to run around your half. The glowing ring shows where the ball will land: get under it and you bump it back automatically. When the <strong>SPIKE</strong> button glows orange, tap it to jump and smash the ball. In 2 v 2 your first touch sets the ball up for your teammate. Rallies get faster with every touch. First to 7.</span></p>
-      <p class="hint" id="hintGolf" hidden><span class="h-mouse">9 neon holes against the AI: windmill, loop, clown, pinball, gates, volcano, bridge and a robot. <strong>Slide aim:</strong> press anywhere and <strong>drag back</strong> like a slingshot. The drag direction aims and its length sets the power; let go to putt (or arrow keys + <kbd>Enter</kbd>). You putt first, then the AI. Fewest strokes wins, max 6 a hole.</span><span class="h-touch">9 neon holes against the AI. <strong>Slide aim:</strong> put a finger anywhere and <strong>drag back</strong> like a slingshot. The drag direction aims and its length sets the power; let go to putt. You putt first, then the AI. Fewest strokes wins.</span></p>
+      <p class="hint" id="hintGolf" hidden><span class="h-mouse">9 neon holes against the AI: windmill, loop, clown, pinball, gates, volcano, bridge and a robot. <strong>Slide aim:</strong> press anywhere and <strong>drag back</strong> like a slingshot. The drag direction aims and its length sets the power; let go to putt (or arrow keys + <kbd>Enter</kbd>). You putt first, then the AI. Fewest strokes wins, max 6 a hole. PLAY ONLINE to take on a friend.</span><span class="h-touch">9 neon holes against the AI. <strong>Slide aim:</strong> put a finger anywhere and <strong>drag back</strong> like a slingshot. The drag direction aims and its length sets the power; let go to putt. You putt first, then the AI. Fewest strokes wins.</span></p>
       <p class="hint" id="hintPong"><span class="h-mouse">Move the mouse left and right to steer your paddle (or <kbd>A</kbd> / <kbd>D</kbd>). Where the ball hits your paddle sets its angle. <strong>Click or tap just as the ball reaches your paddle to spin it</strong>. Chain 3 spins for a boost: BIG PADDLE, SLOW-MO, TRIPLE BALL or FIREBALL. Long matches grow pins on the table. <kbd>Space</kbd> pauses, <kbd>M</kbd> mutes.</span><span class="h-touch"><strong>Drag anywhere</strong> to steer your paddle. Tap <strong>SPIN</strong> just as the ball reaches you to spin it; 3 spins in a row earn a boost: BIG PADDLE, SLOW-MO, TRIPLE BALL or FIREBALL. Long rallies grow pins on the table.</span></p>
     </div>
   </div>
@@ -1719,7 +1719,7 @@
       $('.first-to').textContent = 'FIRST TO 7';
     }
     scene.fog = golf ? golfFog : defaultFog; // (the course is big: fog further out)
-    if (golf) gfLoadBloom();
+    if (golf) { gfLoadBloom(); gfPrecompile(); }
     pongParts.visible = pong; hockeyParts.visible = hockey;
     applyRoster();
     if (!hockey) puckSlots.forEach((sl) => { sl.group.visible = false; });
@@ -3260,6 +3260,16 @@
   function gfConfetti(x, y, z) {
     for (const c of confetti) { c.m.visible = true; c.m.position.set(x, y, z); c.v.set(rand(-2.5, 2.5), rand(3.5, 7), rand(-2.5, 2.5)); c.r.set(rand(-8, 8), rand(-8, 8), rand(-8, 8)); c.life = rand(1.4, 2.2); }
   }
+  // build the GPU programs for the whole course once, up front (otherwise the first frames of each hole stall)
+  let gfCompiled = false;
+  function gfPrecompile() {
+    if (gfCompiled) return;
+    gfCompiled = true;
+    const vis = HOLES.map((h) => h.group.visible);
+    HOLES.forEach((h) => { h.group.visible = true; });
+    try { renderer.compile(scene, camera); } catch (e) { /* not fatal */ }
+    HOLES.forEach((h, i) => { h.group.visible = vis[i]; });
+  }
   // bloom: loaded on demand from the CDN, off again if the device is slow
   const golfFX = { composer: null, bloom: null, loading: false, off: false, slow: 0 };
   async function gfLoadBloom() {
@@ -3296,7 +3306,7 @@
   const gfIsAI = (i) => gf.players[i].isAI || (i === 0 && dbg.autoPlayer);
   function gfReset() { // a new round from hole 1
     gf.strokes = [[], []];
-    gf.players[0].isAI = mode !== 'game'; gf.players[1].isAI = true;
+    gf.players[0].isAI = mode !== 'game'; gf.players[1].isAI = !net.live; // online: player 2 is your friend
     gfStartHole(0);
   }
   function gfStartHole(i) {
@@ -3333,15 +3343,26 @@
     if (dbg.stats) dbg.stats.gfShots++;
     gfHud();
   }
+  // a putt by you: online friends send it to the host, who runs the ball
+  function gfPutt(a, p) {
+    if (net.role === 'guest' && netLive()) { netSend('putt', [r3(a), r3(p)], true); gf.state = 'sent'; gf.aim = null; gf.drag = null; gf.keyAim = null; gf.lastAim = a; return; }
+    gfShoot(a, p);
+  }
+  const gfPop = (text, color) => { popText(text, color); netEvent(['pop', text, color]); }; // (shown to an online friend too)
   function gfEndTurn(holed) {
-    if (!holed) { gf.cur = GF.MAX_STROKES + 1; gf.strokes[gf.turn][gf.hole] = gf.cur; popText('MAX STROKES: +1', '#ff5d6c'); }
-    if (gf.turn === 0) { gf.turn = 1; gfPlaceAtTee(); gf.state = 'switch'; gf.timer = 0.9; if (mode === 'game') popText(`${CHARS[farRig.key].name}'S TURN`, 'var(--ai)'); gfHud(); return; }
+    if (!holed) { gf.cur = GF.MAX_STROKES + 1; gf.strokes[gf.turn][gf.hole] = gf.cur; gfPop('MAX STROKES: +1', '#ff5d6c'); }
+    if (gf.turn === 0) { gf.turn = 1; gfPlaceAtTee(); gf.state = 'switch'; gf.timer = 0.9; if (mode === 'game') popText(`${CHARS[farRig.key].name}'S TURN`, 'var(--ai)'); netEvent(['gfturn']); gfHud(); return; }
     gfHoleResult();
   }
   function gfHoleResult() {
     const a = gf.strokes[0][gf.hole], b = gf.strokes[1][gf.hole];
     gf.state = 'result'; gf.timer = mode === 'game' ? 2.4 : 1.2;
     if (dbg.stats) dbg.stats.gfHoles.push([a, b]);
+    netEvent(['gfres', a, b]);
+    gfPresentResult(a, b);
+  }
+  // who won the hole (a: your strokes, b: your rival's): slime, banner, sound, trash talk
+  function gfPresentResult(a, b) {
     if (a !== b) {
       const win = a < b ? 0 : 1;
       gfRig(win).jumpT = 0.7; gfRig(1 - win).shakeT = 0.8;
@@ -3349,12 +3370,13 @@
       if (mode === 'game') {
         showBanner(win === 0 ? 'HOLE WON!' : CHARS[farRig.key].name + ' WINS THE HOLE', win === 0 ? 'var(--you)' : 'var(--ai)');
         win === 0 ? Sfx.good() : Sfx.bad();
-        if (win === 1 && !gfIsAI(0)) { const text = pickLine('rival'); say(2, text); }
+        if (win === 1 && !gfIsAI(0) && gfIsAI(1)) { const text = pickLine('rival'); say(2, text); } // (AIs only)
       }
     } else if (mode === 'game') showBanner('HALVED', 'var(--ink)');
     gfHud();
   }
   function gfGameOver() {
+    netEvent(['gfover']);
     gf.state = 'over'; phase = 'over';
     const a = gfTotal(0), b = gfTotal(1), youWon = a < b, tie = a === b;
     const winRig = youWon ? nearRig : farRig;
@@ -3363,7 +3385,7 @@
     $('#overTitle').textContent = tie ? 'ALL SQUARE!' : CHARS[winRig.key].name + ' WINS!';
     $('#overTitle').style.color = tie ? 'var(--ink)' : CHARS[winRig.key].css;
     const vsPar = (n) => (n - PAR_TOTAL === 0 ? 'E' : (n - PAR_TOTAL > 0 ? '+' : '') + (n - PAR_TOTAL));
-    $('#overSub').textContent = `You ${a} (${vsPar(a)}) · ${CHARS[aiKey].name} ${b} (${vsPar(b)}) · par ${PAR_TOTAL}`;
+    $('#overSub').textContent = `You ${a} (${vsPar(a)}) · ${CHARS[aiKey].name} ${b} (${vsPar(b)}) · par ${PAR_TOTAL}${net.live ? ' · online' : ''}`;
     const row = (label, cells, cls = '') => `<tr class="${cls}"><th>${label}</th>${cells.map((c) => `<td>${c}</td>`).join('')}</tr>`;
     $('#overCard').innerHTML = `<table>${row('HOLE', HOLES.map((_, i) => i + 1).concat('TOT'))}${row('PAR', HOLES.map((h) => h.par).concat(PAR_TOTAL), 'par')}${row('YOU', gf.strokes[0].concat(a), 'you')}${row(CHARS[aiKey].name, gf.strokes[1].concat(b), 'ai')}</table>`;
     $('#overCard').hidden = false;
@@ -3448,22 +3470,22 @@
     const h = gfH(), b = gf.ball, w = (x, z) => [h.origin[0] + x, h.origin[1] + z];
     if (ev === 'wall') Sfx.wall();
     else if (ev === 'bump') Sfx.pin();
-    else if (ev === 'loopIn') { Sfx.spin(3); popText('LOOP!', '#ff2bd6'); }
-    else if (ev === 'loopFail') popText('TOO SOFT!', '#29e6ff');
-    else if (ev === 'gulp') { Sfx.poof(); popText('GULP!', '#ffa21f'); }
+    else if (ev === 'loopIn') { Sfx.spin(3); gfPop('LOOP!', '#ff2bd6'); }
+    else if (ev === 'loopFail') gfPop('TOO SOFT!', '#29e6ff');
+    else if (ev === 'gulp') { Sfx.poof(); gfPop('GULP!', '#ffa21f'); }
     else if (ev === 'spit') { Sfx.pop ? Sfx.pop() : Sfx.bounce(); }
     else if (ev === 'portalIn') Sfx.spin(2);
     else if (ev === 'water') {
       const [x, z] = w(b.x, b.z); burst(x, 0, z, 0x29e6ff, 14, 1); Sfx.splat();
-      popText('SPLASH! +1', '#29e6ff');
+      gfPop('SPLASH! +1', '#29e6ff');
       gf.cur++; gf.strokes[gf.turn][gf.hole] = gf.cur;
       gf.state = 'splash'; gf.timer = 0.9; b.vx = b.vz = 0;
     } else if (ev === 'cup') {
       const [x, z] = w(h.cup[0], h.cup[1]); burst(x, gfHeight(h, h.cup[0], h.cup[1]) + 0.2, z, CHARS[gfRig(gf.turn).key].hex, 18, 1);
-      gfConfetti(x, gfHeight(h, h.cup[0], h.cup[1]) + 0.3, z); gf.orbit = gf.camYaw + Math.PI;
+      gfConfetti(x, gfHeight(h, h.cup[0], h.cup[1]) + 0.3, z); gf.orbit = gf.camYaw + Math.PI; netEvent(['gfcup', x, gfHeight(h, h.cup[0], h.cup[1]) + 0.3, z]);
       Sfx.good();
       const n = gf.cur, d = n - h.par;
-      popText(n === 1 ? 'HOLE IN ONE!' : d <= -2 ? 'EAGLE!' : d === -1 ? 'BIRDIE!' : d === 0 ? 'PAR' : d === 1 ? 'BOGEY' : `+${d}`, n === 1 || d < 0 ? '#39ff6a' : '#eef3ff');
+      gfPop(n === 1 ? 'HOLE IN ONE!' : d <= -2 ? 'EAGLE!' : d === -1 ? 'BIRDIE!' : d === 0 ? 'PAR' : d === 1 ? 'BOGEY' : `+${d}`, n === 1 || d < 0 ? '#39ff6a' : '#eef3ff');
       if (dbg.stats) dbg.stats.gfCups++;
       gf.state = 'holed'; gf.timer = 0.9; b.vx = b.vz = 0; b.special = { type: 'cup' };
       gfRig(gf.turn).jumpT = 0.7;
@@ -3471,7 +3493,13 @@
   }
 
   // ---------------------------------------------------------------- input: slide aim
-  const gfCanAim = () => gameMode === 'golf' && mode === 'game' && !paused && gf.state === 'aim' && !gfIsAI(gf.turn);
+  const gfCanAim = () => gameMode === 'golf' && mode === 'game' && !paused && gf.state === 'aim' && gf.turn === 0 && !gfIsAI(0);
+  let gfAimSentAt = 0;
+  function gfShareAim(aim) { // an online friend sees you line up your putt
+    if (net.role !== 'guest' || !netLive() || (aim && performance.now() - gfAimSentAt < 80)) return;
+    gfAimSentAt = performance.now();
+    netSend('gaim', aim ? [r3(aim.a), r3(aim.p)] : 0);
+  }
   const AIM_PX = () => Math.min(window.innerWidth, window.innerHeight) * 0.38; // drag this far for full power
   function gfAimFromDrag() {
     const d = gf.drag, a = tableAt(d.x0, d.y0, new THREE.Vector3()), c = tableAt(d.x, d.y, new THREE.Vector3());
@@ -3489,12 +3517,14 @@
     if (!gf.drag || e.pointerId !== gf.drag.id) return;
     gf.drag.x = e.clientX; gf.drag.y = e.clientY;
     gf.aim = gfAimFromDrag();
+    gfShareAim(gf.aim);
   });
   const gfRelease = (e) => {
     if (!gf.drag || e.pointerId !== gf.drag.id) return;
     const aim = gfAimFromDrag();
     gf.drag = null; gf.aim = null;
-    if (aim && aim.p > 0.04 && gfCanAim()) gfShoot(aim.a, aim.p);
+    if (aim && aim.p > 0.04 && gfCanAim()) gfPutt(aim.a, aim.p);
+    else gfShareAim(null);
   };
   window.addEventListener('pointerup', gfRelease);
   window.addEventListener('pointercancel', (e) => { if (gf.drag && e.pointerId === gf.drag.id) { gf.drag = null; gf.aim = null; } });
@@ -3512,8 +3542,9 @@
     if (k === 'ArrowRight' || k === 'd' || k === 'D') gf.keyAim.a += 0.06;
     if (k === 'ArrowUp' || k === 'w' || k === 'W') gf.keyAim.p = clamp(gf.keyAim.p + 0.05, 0.05, 1);
     if (k === 'ArrowDown' || k === 's' || k === 'S') gf.keyAim.p = clamp(gf.keyAim.p - 0.05, 0.05, 1);
-    if (k === 'Enter') { gfShoot(gf.keyAim.a, gf.keyAim.p); return; }
+    if (k === 'Enter') { gfPutt(gf.keyAim.a, gf.keyAim.p); return; }
     gf.aim = { ...gf.keyAim };
+    gfShareAim(gf.aim);
     e.preventDefault();
   });
 
@@ -4013,6 +4044,7 @@
   // who sent it (f) and who it's for (t: one id, a list of ids, or everyone).
   const NET_URL = 'https://imzqngcwykvqxzylhujf.supabase.co';
   const NET_KEY = 'sb_publishable_33PGYWKmqvdCDUkwRnthrQ_vgQiQsEE'; // public publishable key: only used for live game channels
+  const NET_TIMEOUT = 12000; // ms of silence before a player counts as gone (a slow phone can stall a few seconds while it builds the graphics)
   const NET_SHARED_POPS = new Set(['PINS!', '+1 PIN', 'FACE-OFF', 'SPIKE!', 'OUT!']);
   const pageParams = new URLSearchParams(location.search);
   const makeId = () => Math.random().toString(36).slice(2, 10);
@@ -4146,6 +4178,8 @@
       else if (!peer) return;
       else if (k === 'i') { const s = peer.flip ? -1 : 1; peer.rx = s * d[0]; peer.rz = s * (d[1] ?? 6); } // into the host's frame
       else if (k === 'spin') peer.spinA = simTime;
+      else if (k === 'putt' && gameMode === 'golf' && gf.turn === 1 && gf.state === 'aim') gfShoot(d[0], d[1]); // your friend putts
+      else if (k === 'gaim' && gameMode === 'golf' && gf.turn === 1 && gf.state === 'aim') gf.aim = d ? { a: d[0], p: d[1] } : null;
       else if (k === 'ping') netSend('pong', d, false, from);
       else if (k === 'rematch' && phase === 'over') netHostRestart();
       else if (k === 'bye') netPeerLeft(peer);
@@ -4157,7 +4191,7 @@
       else if (k === 'lobby') netGuestLobby(d);
       else if (k === 'full') { if (!net.live) showOnline('This game is full. Ask your friend to start a new one.'); }
       else if (k === 'start') netGuestStartMatch(d);
-      else if (k === 's') net.snap = d;
+      else if (k === 's') { net.snap = d; net.snaps = (net.snaps || 0) + 1; }
       else if (k === 'e') d.forEach(netGuestEvent);
       else if (k === 'pong') net.rtt = clamp((performance.now() - d) / 1000, 0, 0.6);
       else if (k === 'bye') netOpponentLeft();
@@ -4302,7 +4336,7 @@
     net.waitTimer = null;
     const host = net.info.host;
     if (youKey === host) youKey = ORDER.find((k) => k !== host);
-    showOnline(`${CHARS[host].name} wants to play ${{ hockey: 'AIR HOCKEY', volley: 'VOLLEYBALL' }[net.info.mode] || 'PING PONG'}. Pick your fighter:`);
+    showOnline(`${CHARS[host].name} wants to play ${MODE_NAMES[net.info.mode] || 'PING PONG'}. Pick your fighter:`);
     const roster = $('#rosterJoin');
     roster.innerHTML = ORDER.map((k) => `<button class="card" type="button" data-char="${k}" style="--c:${CHARS[k].css}" aria-pressed="${k === youKey}" ${k === host ? 'disabled' : ''}><span class="art">${gridSVG(CHARS[k])}</span><span class="nm">${CHARS[k].name}</span></button>`).join('');
     $('#onPick').hidden = false; $('#onJoin').hidden = false;
@@ -4405,9 +4439,16 @@
     ? Math.min(...pad.hist.map((h) => Math.abs(xc - h[1])))
     : Math.abs(xc - pad.x));
   const r3 = (v) => Math.round(v * 1000) / 1000;
-  const MODE_NAMES = { pong: 'PING PONG', hockey: 'AIR HOCKEY', volley: 'VOLLEYBALL' };
+  const MODE_NAMES = { pong: 'PING PONG', hockey: 'AIR HOCKEY', volley: 'VOLLEYBALL', golf: 'MINI GOLF' };
   function netSnapshot() {
     const s = { m: gameMode, ph: phase, sc: [...score], st: r3(serveT) };
+    if (gameMode === 'golf') { // the friend is player 2 (turn 1)
+      const b = gf.ball, sp = b.special;
+      s.g = { h: gf.hole, tn: gf.turn, st: gf.state, tm: r3(gf.timer), t: r3(gf.t), cur: gf.cur, k: gf.strokes,
+        b: [r3(b.x), r3(b.z), r3(b.vx), r3(b.vz), r3(b.hold || 0)], sp: sp ? [sp.type, sp.f ? gfH().features.indexOf(sp.f) : -1] : 0,
+        aim: gf.aim ? [r3(gf.aim.a), r3(gf.aim.p)] : 0 };
+      return s;
+    }
     const on = (i) => duo || i % 2 === 0;
     if (gameMode === 'hockey') {
       const q = hk.puck;
@@ -4430,11 +4471,11 @@
   function netHostTick() {
     if (net.role !== 'host' || !netLive()) return;
     const now = performance.now();
-    for (const peer of [...net.peers.values()]) if (now - peer.lastRecv > 5000) netPeerLeft(peer);
+    for (const peer of [...net.peers.values()]) if (now - peer.lastRecv > NET_TIMEOUT) netPeerLeft(peer);
     if (net.role !== 'host' || !netLive()) return;
     if (simTime < net.nextSend) return;
     net.nextSend = simTime + (netTransport() === 'p2p' ? 1 / 30 : net.duo ? 1 / 15 : 1 / 20);
-    netSend('s', netSnapshot());
+    netSend('s', netSnapshot()); net.sentSnaps = (net.sentSnaps || 0) + 1;
     if (net.events.length) { netSend('e', net.events, true); net.events = []; }
   }
 
@@ -4442,7 +4483,14 @@
   function netGuestStep(dt) {
     simTime += dt;
     const now = performance.now();
-    if (now - net.lastRecv > 5000) { netOpponentLeft(); return; }
+    if (now - net.lastRecv > NET_TIMEOUT) { netOpponentLeft(); return; }
+    if (gameMode === 'golf') { // turn by turn: aim and putt locally, the host runs the ball
+      if (now > net.nextPing) { net.nextPing = now + 2000; netSend('ping', now, true); }
+      const s = net.snap;
+      if (s) { net.snap = null; gfApplySnap(s); }
+      else { gf.t += dt; if (gf.state === 'roll') gfStepBall(gfH(), gf.ball, gf.t, dt, null); } // smooth between snapshots
+      return;
+    }
     // your own paddle/mallet/player moves instantly from your input
     if (gameMode === 'hockey') hkMoveMallet(MP, dt); else if (gameMode === 'volley') vbMovePlayer(VP, dt); else humanPaddle(dt);
     if (simTime >= net.nextSend) {
@@ -4497,6 +4545,26 @@
       netGuestPins(s.n, g);
     }
   }
+  // Mini golf from the friend's side: the host is player 1, so swap the players (you are always "you").
+  function gfApplySnap(s) {
+    if (s.m !== 'golf' || !s.g) return;
+    const g = s.g;
+    if (g.h !== gf.hole) gfStartHole(g.h);
+    const turn = 1 - g.tn, wasRoll = gf.state === 'roll';
+    if (!(gf.state === 'sent' && g.st === 'aim' && turn === 0)) gf.state = g.st; // (your putt is on its way to the host)
+    if (gf.turn !== turn && g.st === 'switch') popText(turn === 0 ? 'YOUR TURN' : `${CHARS[farRig.key].name}'S TURN`, turn === 0 ? 'var(--you)' : 'var(--ai)');
+    gf.turn = turn; gf.timer = g.tm; gf.t = g.t; gf.cur = g.cur;
+    gf.strokes = [g.k[1] || [], g.k[0] || []];
+    const b = gf.ball, h = gfH();
+    Object.assign(b, { x: g.b[0], z: g.b[1], vx: g.b[2], vz: g.b[3], hold: g.b[4] });
+    b.pz = b.z;
+    b.special = g.sp ? { type: g.sp[0], f: g.sp[1] >= 0 ? h.features[g.sp[1]] : null } : null;
+    if (turn === 1 || gf.state !== 'aim') gf.aim = g.aim ? { a: g.aim[0], p: g.aim[1] } : gf.state === 'aim' ? null : gf.aim; // your rival's aim
+    if (!wasRoll && gf.state === 'roll') { gf.swingT = 0.35; gf.pathDir = null; if (g.aim) gf.lastAim = g.aim[0]; } // the putter swings
+    if (gf.state === 'aim' && wasRoll) gf.pathDir = null;
+    phase = g.st === 'over' ? 'over' : 'play';
+    gfHud();
+  }
   function netGuestPins(list, g) {
     const key = (q) => `${q[0]},${q[1]}`;
     const want = new Set(list.map((q) => key([g * q[0], g * q[1]])));
@@ -4511,7 +4579,7 @@
     }
   }
   function netGuestEvent(e) {
-    const [k, ...a] = e, g = net.me.flip ? -1 : 1;
+    const [k, ...a] = e, g = net.me.flip && gameMode !== 'golf' ? -1 : 1; // (golf: both see the course the same way round)
     if (k === 's' && Sfx[a[0]]) Sfx[a[0]](...a[1]);
     else if (k === 'b') burst(g * a[0], a[1], g * a[2], a[3], a[4], g * a[5]);
     else if (k === 'h') { const li = localIdx(a[0]); RIGS[li].pulse = 1; ENT_SETS[gameMode][li].pulse = 1; }
@@ -4521,6 +4589,9 @@
     else if (k === 'pop') popText(a[0], a[1]);
     else if (k === 'banner') showBanner(a[0], a[1]);
     else if (k === 'talk') say(localIdx(a[0]), a[1]);
+    else if (k === 'gfres') gfPresentResult(a[1], a[0]); // (your strokes are the host's rival's)
+    else if (k === 'gfcup') { gfConfetti(a[0], a[1], a[2]); gf.orbit = gf.camYaw + Math.PI; }
+    else if (k === 'gfover') gfGameOver();
   }
   // the host's sounds play on the guests too
   for (const name of Object.keys(Sfx)) {
@@ -4700,10 +4771,12 @@
       // online test hooks
       net: () => ({
         role: net.role, live: net.live, transport: netTransport(), duo, id: net.id, peers: net.peers.size, seats: net.seats, me: net.me,
-        keys: [youKey, mateKey, aiKey, ai2Key], ents: ENT_SETS[gameMode].map((q) => [q.x, q.z ?? 0]), ai: ENT_SETS[gameMode].map((q) => q.isAI),
-        remote: ENT_SETS[gameMode].map((q) => !!q.remote), spikes: [...vb.spikes], mode: gameMode, phase, score: [...score], you: youKey, rival: aiKey,
+        keys: [youKey, mateKey, aiKey, ai2Key], ents: (ENT_SETS[gameMode] || []).map((q) => [q.x, q.z ?? 0]), ai: (ENT_SETS[gameMode] || []).map((q) => q.isAI),
+        remote: (ENT_SETS[gameMode] || []).map((q) => !!q.remote), spikes: [...vb.spikes], mode: gameMode, phase, score: [...score], you: youKey, rival: aiKey,
         ball: [ball.x, ball.z], puck: [hk.puck.x, hk.puck.z], px: P.x, ax: A.x, mp: [MP.x, MP.z], ma: [MA.x, MA.z],
-        vball: [vb.ball.x, vb.ball.y, vb.ball.z], vp: [VP.x, VP.z], va: [VA.x, VA.z], vaJump: VA.jumpT, spinA: Math.max(-1, ...[...net.peers.values()].map((p) => p.spinA)),
+        vball: [vb.ball.x, vb.ball.y, vb.ball.z], vp: [VP.x, VP.z], va: [VA.x, VA.z],
+        snaps: net.snaps || 0, sent: net.sentSnaps || 0,
+        golf: { hole: gf.hole, turn: gf.turn, state: gf.state, strokes: gf.strokes, ball: [gf.ball.x, gf.ball.z], aim: gf.aim, ai: gf.players.map((q) => q.isAI) }, vaJump: VA.jumpT, spinA: Math.max(-1, ...[...net.peers.values()].map((p) => p.spinA)),
         slimeYou: slimes.get(nearRig).t >= 0, slimeAi: slimes.get(farRig).t >= 0, over: !$('#over').hidden, overTitle: $('#overTitle').textContent,
       }),
       netAim(x, z) { targetX = x; hk.aim.x = x; hk.aim.z = z; },
@@ -4801,6 +4874,13 @@
       golfGo(i) { gfStartHole(i); gf.state = 'aim'; },
       golfSnap(on = true) { dbg.camSnap = on; },
       golfShoot(a, p) { gfShoot(a, p); },
+      golfBest() { // a good putt for whoever plays on this screen (for tests): plan like a HARD AI, then putt it
+        const auto = dbg.autoPlayer; dbg.autoPlayer = true;
+        gfPlanStart(); while (!gfPlanWork(100000)) { /* plan */ }
+        dbg.autoPlayer = auto;
+        const c = gf.plan.choice; gf.plan = null; gfPutt(c.a, c.p);
+        return c;
+      },
       golfPlan(i, tries) { // how well can a perfect AI do from the tee of hole i?
         const h = HOLES[i]; let best = 1e9;
         for (let k = 0; k < tries; k++) { const r = gfSimShot(h, h.tee[0], h.tee[1], (k / tries) * Math.PI * 2, 0.5, 0); best = Math.min(best, r.score); }

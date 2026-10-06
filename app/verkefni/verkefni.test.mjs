@@ -189,6 +189,8 @@ test("Pixel Pong has a 9-hole mini golf mode", () => {
   assert.match(staticPongSource, /function gfStepBall\(h, b, t, dt, stats\)/);
   for (const hole of ["DOGLEG", "WINDMILL", "LOOP", "CLOWN", "PINBALL", "GATES", "VOLCANO", "BRIDGE", "ROBOT"]) assert.match(staticPongSource, new RegExp(`name: '${hole}'`));
   assert.match(staticPongSource, /id="overCard"/);
+  assert.match(staticPongSource, /golf: 'MINI GOLF'/); // online too
+  assert.match(staticPongSource, /function gfApplySnap\(s\)/);
   assert.match(projectsSource, /mínígolf/);
   assert.match(pongDetailSource, /mínígolf/);
 });
