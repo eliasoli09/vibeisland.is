@@ -48,7 +48,7 @@
   .title .b { color: var(--codex); }
   .sub { margin: 0; color: var(--muted); font-size: 22px; }
 
-  .modes { display: flex; border: 2px solid var(--edge); }
+  .modes { display: flex; flex-wrap: wrap; justify-content: center; border: 2px solid var(--edge); }
   .mode { appearance: none; cursor: pointer; font: 11px var(--pix); padding: 11px 16px; background: transparent; color: var(--muted); border: 0; }
   .mode:hover { color: var(--ink); }
   .mode[aria-checked="true"] { background: var(--edge); color: var(--ink); }
@@ -67,6 +67,12 @@
   #golfView { position: absolute; left: calc(16px + env(safe-area-inset-left, 0px)); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); display: none; pointer-events: auto; padding: 10px 14px; font: 11px var(--pix); color: var(--ink); background: rgba(5, 9, 24, 0.75); border: 2px solid var(--edge); }
   #golfView[aria-pressed="true"] { border-color: var(--you); color: var(--you); }
   body.mode-golf.playing #golfView { display: block; }
+  body.mode-pool .sizes, body.mode-pool #spinPips, body.mode-pool #btnOnline { display: none; } /* pool is 1 v 1 against the AI */
+  #poolPow { position: absolute; right: calc(14px + env(safe-area-inset-right, 0px)); top: 50%; transform: translateY(-50%); width: 60px; height: min(240px, 44vh); display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 8px 6px; pointer-events: auto; touch-action: none; cursor: ns-resize; font: 8px var(--pix); color: var(--ink); background: rgba(5, 9, 24, 0.8); border: 2px solid var(--edge); }
+  #poolPow b { position: relative; flex: 1; width: 18px; background: #1a2550; border: 1px solid var(--edge); }
+  #poolPowFill { position: absolute; left: 0; right: 0; top: 0; height: 0; background: linear-gradient(#5be38a, #ffc34d 55%, #ff5d6c); }
+  body.touch.mode-pool .first-to { display: block; top: calc(112px + env(safe-area-inset-top, 0px)); width: max-content; max-width: 92vw; text-align: center; line-height: 1.6; }
+  @media (max-aspect-ratio: 1/1) { #poolPow { top: auto; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); transform: none; height: 20vh; } } /* tall screens: under the table */
   .duo-note { margin: 0; color: var(--muted); font-size: 16px; text-align: center; max-width: 520px; }
   body.duo .who .mini { width: 54px; display: flex; gap: 3px; }
   body.duo .who .mini svg { width: calc(50% - 2px); }
@@ -281,6 +287,7 @@
     </div>
     <button id="spinBtn" type="button" aria-label="Spin">SPIN</button>
     <button id="golfView" type="button" aria-pressed="false">VIEW</button>
+    <div id="poolPow" role="slider" aria-label="Shot power: pull down and let go" aria-valuemin="0" aria-valuemax="100" hidden><span>POWER</span><b><i id="poolPowFill"></i></b><span>PULL</span></div>
     <div class="net-badge" id="netBadge" hidden>ONLINE</div>
     <div class="shot-clock" id="shotClock" hidden aria-live="off"><span>SHOT CLOCK</span><b id="shotNum">7.0</b></div>
     <div class="spin-hud">
@@ -303,6 +310,7 @@
         <button class="mode" id="modeHockey" type="button" role="radio" data-mode="hockey" aria-checked="false">AIR HOCKEY</button>
         <button class="mode" id="modeVolley" type="button" role="radio" data-mode="volley" aria-checked="false">VOLLEYBALL</button>
         <button class="mode" id="modeGolf" type="button" role="radio" data-mode="golf" aria-checked="false">MINI GOLF</button>
+        <button class="mode" id="modePool" type="button" role="radio" data-mode="pool" aria-checked="false">POOL</button>
       </div>
       <div class="sizes" role="radiogroup" aria-label="Team size">
         <button class="tsize" id="size1" type="button" role="radio" data-duo="0" aria-checked="true">1 V 1</button>
@@ -327,6 +335,7 @@
       <p class="hint" id="hintHockey" hidden><span class="h-mouse">Move the mouse to slide your mallet anywhere in your half (or <kbd>A</kbd> / <kbd>D</kbd>). Hit the character puck into the AI's goal. <strong>Three hard smashes in a row</strong> earn a boost: BIG MALLET, FIREBALL, TRIPLE PUCK or WIDE GOAL. <strong>Goals grow</strong> every time the puck crosses the middle, and a <strong>shot clock</strong> (10 s, shorter every crossing) hands the puck over if you hold it too long. <kbd>Space</kbd> pauses, <kbd>M</kbd> mutes.</span><span class="h-touch"><strong>Drag anywhere</strong> to slide your mallet around your half, and flick fast to smash. Three smashes in a row earn a boost: BIG MALLET, FIREBALL, TRIPLE PUCK or WIDE GOAL. Goals grow every time the puck crosses the middle, and the shot clock hands the puck over if you hold it too long.</span></p>
       <p class="hint" id="hintVolley" hidden><span class="h-mouse">You are the player: <strong>move the mouse</strong> to run around your half (or <kbd>A</kbd> / <kbd>D</kbd>). The glowing ring shows where the ball will land. Get under it and you <strong>bump it back automatically</strong>; run left or right as you hit it to aim. When an <strong>orange ring lights up under you</strong>, the ball is in reach: <strong>click to jump and SPIKE</strong> it. In 2 v 2 your first touch sets the ball up for your teammate. Rallies get faster with every touch. In = point for the other side, out = point against whoever touched it last. First to 7. <kbd>Space</kbd> pauses, <kbd>M</kbd> mutes.</span><span class="h-touch"><strong>Drag anywhere</strong> to run around your half. The glowing ring shows where the ball will land: get under it and you bump it back automatically. When the <strong>SPIKE</strong> button glows orange, tap it to jump and smash the ball. In 2 v 2 your first touch sets the ball up for your teammate. Rallies get faster with every touch. First to 7.</span></p>
       <p class="hint" id="hintGolf" hidden><span class="h-mouse">9 neon holes against the AI: windmill, loop, clown, pinball, gates, volcano, bridge and a robot. <strong>Slide aim:</strong> press anywhere and <strong>drag back</strong> like a slingshot. The drag direction aims and its length sets the power; let go to putt (or arrow keys + <kbd>Enter</kbd>). You putt first, then the AI. Fewest strokes wins, max 6 a hole. PLAY ONLINE to take on a friend.</span><span class="h-touch">9 neon holes against the AI. <strong>Slide aim:</strong> put a finger anywhere and <strong>drag back</strong> like a slingshot. The drag direction aims and its length sets the power; let go to putt. You putt first, then the AI. Fewest strokes wins.</span></p>
+      <p class="hint" id="hintPool" hidden><span class="h-mouse">8-ball against the AI. You break. Pot a ball to claim <strong>solids or stripes</strong>, keep shooting while you pot your own, then sink the <strong>8 last</strong>. <strong>Aim</strong> with the mouse: the line shows where the cue ball and the ball you hit will go. <strong>Shoot:</strong> press, <strong>pull back</strong> and let go (or use the POWER bar, or arrows + <kbd>Enter</kbd>; <kbd>Shift</kbd> aims finely). A scratch or hitting the wrong ball first is a foul and your turn ends. Sink the 8 early and you lose.</span><span class="h-touch">8-ball against the AI. Pot a ball to claim <strong>solids or stripes</strong>, then sink the <strong>8 last</strong>. <strong>Touch the table</strong> where you want to aim, then <strong>pull the POWER bar down</strong> and let go to shoot. A scratch or hitting the wrong ball first ends your turn. Sink the 8 early and you lose.</span></p>
       <p class="hint" id="hintPong"><span class="h-mouse">Move the mouse left and right to steer your paddle (or <kbd>A</kbd> / <kbd>D</kbd>). Where the ball hits your paddle sets its angle. <strong>Click or tap just as the ball reaches your paddle to spin it</strong>. Chain 3 spins for a boost: BIG PADDLE, SLOW-MO, TRIPLE BALL or FIREBALL. Long matches grow pins on the table. <kbd>Space</kbd> pauses, <kbd>M</kbd> mutes.</span><span class="h-touch"><strong>Drag anywhere</strong> to steer your paddle. Tap <strong>SPIN</strong> just as the ball reaches you to spin it; 3 spins in a row earn a boost: BIG PADDLE, SLOW-MO, TRIPLE BALL or FIREBALL. Long rallies grow pins on the table.</span></p>
     </div>
   </div>
@@ -756,6 +765,8 @@
     bucket() { this.tone(620, 0.08, 'square', 0.03, 1.4); this.tone(930, 0.12, 'triangle', 0.03, 0.9, 0.05); },
     power() { [784, 988, 1175, 1568].forEach((f, i) => this.tone(f, 0.1, 'square', 0.05, 1, i * 0.06)); },
     bounce() { this.tone(170, 0.05, 'sine', 0.09, 0.8); },
+    clack(v) { this.tone(1500 + v * 900, 0.035, 'triangle', 0.03 + v * 0.07, 0.6); }, // pool balls
+    pocket() { this.tone(180, 0.12, 'sine', 0.12, 0.5); this.tone(95, 0.18, 'triangle', 0.05, 0.7, 0.05); },
     talk() { [660, 880, 740].forEach((f, i) => this.tone(f, 0.05, 'square', 0.035, 1.2, i * 0.05)); },
     good() { [523, 659, 784].forEach((f, i) => this.tone(f, 0.12, 'square', 0.05, 1, i * 0.08)); },
     bad() { [330, 262, 196].forEach((f, i) => this.tone(f, 0.14, 'triangle', 0.07, 1, i * 0.09)); },
@@ -887,6 +898,7 @@
   // ---------------------------------------------------------------- flow
   function resetServe() {
     if (gameMode === 'golf') { gfReset(); return; }
+    if (gameMode === 'pool') { plReset(); return; }
     if (gameMode === 'hockey') { hkResetServe(); return; }
     if (gameMode === 'volley') { vbResetServe(); return; }
     phase = 'serve';
@@ -1572,6 +1584,7 @@
     if (gameMode === 'hockey') { hkStep(dt); return; }
     if (gameMode === 'volley') { vbStep(dt); return; }
     if (gameMode === 'golf') { gfStep(dt); return; }
+    if (gameMode === 'pool') { plStepGame(dt); return; }
     simTime += dt;
     tickPowers(dt);
     // player paddle
@@ -1605,7 +1618,7 @@
   // ================================================================ AIR HOCKEY
   // Second game mode. Shares the table, characters, menu, HUD, slime, pins and boost system with
   // Ping Pong. The puck is a little character; mallets move freely in their own half.
-  const MODES = ['pong', 'hockey', 'volley', 'golf'];
+  const MODES = ['pong', 'hockey', 'volley', 'golf', 'pool'];
   let gameMode = MODES.includes(store.get('pp-mode', 'pong')) ? store.get('pp-mode', 'pong') : 'pong';
   const HPOWER = {
     big: { name: 'BIG MALLET', dur: 8, css: '#5be38a' },
@@ -1709,9 +1722,11 @@
   function setGameMode(m) {
     gameMode = MODES.includes(m) ? m : 'pong';
     store.set('pp-mode', gameMode);
-    const hockey = gameMode === 'hockey', volley = gameMode === 'volley', pong = gameMode === 'pong', golf = gameMode === 'golf';
-    if (golf && duo) setDuo(false);
-    table.visible = pong || hockey; court.visible = volley; golfWorld.visible = golf;
+    const hockey = gameMode === 'hockey', volley = gameMode === 'volley', pong = gameMode === 'pong', golf = gameMode === 'golf', pool = gameMode === 'pool';
+    if ((golf || pool) && duo) setDuo(false);
+    table.visible = pong || hockey; court.visible = volley; golfWorld.visible = golf; poolWorld.visible = pool;
+    for (const rig of RIGS) rig.outer.rotation.y = 0; // (pool turns the characters to face its camera)
+    if (!pool) { $('#poolPow').hidden = true; pl.barShown = false; pl.charge = null; }
     if (!golf) {
       gfBall.visible = gfBallGlow.visible = gfShadow.visible = aimRing.visible = putter.visible = false;
       for (const m of [...aimDots, ...gfTrail]) m.visible = false;
@@ -1725,10 +1740,10 @@
     if (!hockey) puckSlots.forEach((sl) => { sl.group.visible = false; });
     if (!volley) { landRing.visible = false; spikeRing.visible = false; $('#spinBtn').classList.remove('ready'); spikeReady = false; }
     // Volleyball: the characters are the players, so both are life-size; otherwise they watch from the ends
-    nearRig.scale = nearRig2.scale = volley ? 1 : golf ? 0.45 : 0.85; farRig.scale = farRig2.scale = volley ? 1 : golf ? 0.45 : 1.3;
-    if (!volley && !golf) for (const rig of RIGS) rig.outer.position.set(rig.x, rig.side > 0 ? rig.outer.position.y : 0.05, rig.side * (rig.side > 0 ? 8.7 : 9.3));
+    nearRig.scale = nearRig2.scale = volley ? 1 : golf ? 0.45 : pool ? 1.15 : 0.85; farRig.scale = farRig2.scale = volley ? 1 : golf ? 0.45 : pool ? 1.15 : 1.3;
+    if (!volley && !golf && !pool) for (const rig of RIGS) rig.outer.position.set(rig.x, rig.side > 0 ? rig.outer.position.y : 0.05, rig.side * (rig.side > 0 ? 8.7 : 9.3));
     ballMesh.scale.setScalar(1); shownSpin = -1; // the pong ball looks after its own size/colour again
-    $('#hintPong').hidden = !pong; $('#hintHockey').hidden = !hockey; $('#hintVolley').hidden = !volley; $('#hintGolf').hidden = !golf;
+    $('#hintPong').hidden = !pong; $('#hintHockey').hidden = !hockey; $('#hintVolley').hidden = !volley; $('#hintGolf').hidden = !golf; $('#hintPool').hidden = !pool;
     $('#pipsLbl').textContent = hockey ? 'SMASH' : 'SPIN';
     $('#spinBtn').textContent = volley ? 'SPIKE' : 'SPIN';
     $('#spinBtn').setAttribute('aria-label', volley ? 'Spike' : 'Spin');
@@ -3726,6 +3741,595 @@
     if (golfFX.composer && !golfFX.off && real < 1) { golfFX.slow = real > 1 / 35 ? golfFX.slow + real : Math.max(0, golfFX.slow - real); if (golfFX.slow > 3) golfFX.off = true; }
   }
 
+  // ================================================================ POOL
+  // Fifth mode: 8-ball on a neon table, 1 v 1 against the AI. You break; pot a ball to claim solids or
+  // stripes, keep shooting while you pot your own, then sink the 8 last. A scratch or a wrong first
+  // hit is a foul and hands the table over; sinking the 8 early (or scratching on it) loses the game.
+  // Physics is 2D on the cloth (balls, cushions, pockets), so the AI plans by trying its shots with
+  // the very same physics, like the mini golf AI.
+  // Aim by pointing (mouse, or a finger on the table); shoot by pressing and pulling back (mouse), the
+  // POWER bar (touch or mouse) or the arrow keys + Enter.
+  const PL = {
+    L: 6.4, W: 3.2, BR: 0.16,     // half length (x) and half width (z) of the cloth, ball radius
+    CORNER: 0.48, SIDE: 0.32,     // cushions stop this far from a corner / either side of a side pocket
+    CORNER_R: 0.3,                // a ball this close to a corner drops
+    MAXV: 22, BREAK: 1.35, DECEL: 0.9, DRAG: 0.12, STOP: 0.05, E_BALL: 0.95, E_RAIL: 0.78, // (the break goes 35% faster)
+    SHOT_T: 18, FLOOR: -1.6,
+  };
+  const PDIFF = { // AI aim error (radians), power error (fraction), how many of its best shots it picks from
+    easy: { ang: 0.03, pow: 0.15, pick: 3 },
+    normal: { ang: 0.014, pow: 0.1, pick: 2 },
+    hard: { ang: 0.006, pow: 0.06, pick: 1 },
+  };
+  const PL_SEGS = (() => {
+    const { L, W, CORNER: c, SIDE: s } = PL;
+    return [[-L + c, -W, -s, -W], [s, -W, L - c, -W], [-L + c, W, -s, W], [s, W, L - c, W], [-L, -W + c, -L, W - c], [L, -W + c, L, W - c]];
+  })();
+  const PL_POCKETS = [[-PL.L, -PL.W], [0, -PL.W], [PL.L, -PL.W], [-PL.L, PL.W], [0, PL.W], [PL.L, PL.W]];
+  const PL_AIMS = PL_POCKETS.map(([x, z]) => [x, x ? z : z * 1.03]); // where the AI sends a ball (just inside a side pocket's mouth)
+  const plGroup = (id) => (id === 8 ? 'eight' : id < 8 ? 'solid' : 'stripe');
+  const plShotSpeed = (p) => 1 + p * (PL.MAXV - 1);
+  const HEAD = [-PL.L / 2, 0], FOOT = [PL.L / 2, 0];
+
+  // ---------------------------------------------------------------- physics
+  function plSeg(b, s) {
+    const [x1, z1, x2, z2] = s, dx = x2 - x1, dz = z2 - z1, L2 = dx * dx + dz * dz;
+    const u = clamp(((b.x - x1) * dx + (b.z - z1) * dz) / L2, 0, 1);
+    const cx = x1 + u * dx, cz = z1 + u * dz;
+    let nx = b.x - cx, nz = b.z - cz;
+    const d = Math.hypot(nx, nz);
+    if (d >= PL.BR) return 0;
+    if (d > 1e-6) { nx /= d; nz /= d; } else { nx = -b.vx; nz = -b.vz; const l = Math.hypot(nx, nz) || 1; nx /= l; nz /= l; }
+    b.x = cx + nx * (PL.BR + 1e-4); b.z = cz + nz * (PL.BR + 1e-4);
+    const vn = b.vx * nx + b.vz * nz;
+    if (vn >= 0) return 0;
+    b.vx -= (1 + PL.E_RAIL) * vn * nx; b.vz -= (1 + PL.E_RAIL) * vn * nz;
+    return -vn;
+  }
+  // which pocket a ball has dropped into, or -1 (past a cushion line can only be through a pocket's mouth)
+  function plPocketOf(b) {
+    const ax = Math.abs(b.x), az = Math.abs(b.z);
+    if (ax <= PL.L && az <= PL.W && Math.hypot(ax - PL.L, az - PL.W) >= PL.CORNER_R) return -1;
+    let best = 0, bd = 1e9;
+    PL_POCKETS.forEach(([x, z], i) => { const d = Math.hypot(b.x - x, b.z - z); if (d < bd) { bd = d; best = i; } });
+    return best;
+  }
+  // One step of every ball. ev collects the cue ball's first hit, the pots and how hard things clacked.
+  // Returns false once everything has stopped.
+  function plStep(bs, dt, ev) {
+    let maxSp = 0;
+    for (const b of bs) {
+      if (!b.on || (!b.vx && !b.vz)) continue;
+      const sp = Math.hypot(b.vx, b.vz), ns = Math.max(0, sp - (PL.DECEL + PL.DRAG * sp) * dt);
+      if (ns < PL.STOP) { b.vx = b.vz = 0; continue; }
+      b.vx *= ns / sp; b.vz *= ns / sp;
+      maxSp = Math.max(maxSp, ns);
+    }
+    if (!maxSp) return false;
+    const n = Math.max(1, Math.ceil((maxSp * dt) / (PL.BR * 0.5))), h = dt / n, D = 2 * PL.BR, D2 = D * D;
+    const walls = (b) => { // cushions, then pockets
+      for (const s of PL_SEGS) { const v = plSeg(b, s); if (v) { ev.rail = Math.max(ev.rail, v); ev.rails++; } }
+      const pk = plPocketOf(b);
+      if (pk >= 0) { b.on = false; b.sink = { pk, t: 0, x: b.x, z: b.z }; ev.pots.push({ id: b.id, pk }); b.vx = b.vz = 0; }
+    };
+    for (let k = 0; k < n; k++) {
+      for (const b of bs) {
+        b.act = b.on && !!(b.vx || b.vz); b.pushed = false; // (balls pushed apart below count as active too)
+        if (!b.act) continue;
+        b.x += b.vx * h; b.z += b.vz * h;
+        walls(b);
+      }
+      for (let i = 0; i < bs.length; i++) {
+        const a = bs[i];
+        if (!a.on) continue;
+        for (let j = i + 1; j < bs.length; j++) {
+          const b = bs[j];
+          if (!b.on || (!a.act && !b.act)) continue;
+          const dx = b.x - a.x, dz = b.z - a.z, d2 = dx * dx + dz * dz;
+          if (d2 >= D2) continue;
+          const d = Math.sqrt(d2) || 1e-6, nx = dx / d, nz = dz / d, push = (D - d) / 2 + 1e-5;
+          a.x -= nx * push; a.z -= nz * push; b.x += nx * push; b.z += nz * push;
+          a.act = b.act = a.pushed = b.pushed = true;
+          const vn = (a.vx - b.vx) * nx + (a.vz - b.vz) * nz;
+          if (vn <= 0) continue;
+          const imp = ((1 + PL.E_BALL) / 2) * vn;
+          a.vx -= imp * nx; a.vz -= imp * nz; b.vx += imp * nx; b.vz += imp * nz;
+          if (ev.first < 0 && (a.id === 0 || b.id === 0)) ev.first = a.id === 0 ? b.id : a.id;
+          ev.click = Math.max(ev.click, vn);
+        }
+      }
+      for (const b of bs) if (b.pushed && b.on) walls(b); // (a push must never shove a ball into a cushion)
+    }
+    return true;
+  }
+  const plEv = () => ({ first: -1, pots: [], rails: 0, rail: 0, click: 0 });
+
+  // ---------------------------------------------------------------- the game
+  const pl = {
+    balls: [], turn: 0, state: 'intro', timer: 0, t: 0, groups: [null, null], isBreak: true,
+    aimA: 0, pow: 0, keyPow: 0.5, charge: null, touch: null, plan: null, ev: null, shotT: 0, strikeT: 0, lastA: 0,
+    cam: null, players: [{ isAI: false }, { isAI: true }], winner: -1,
+  };
+  const plIsAI = (i) => pl.players[i].isAI || (i === 0 && dbg.autoPlayer);
+  const plName = (i) => (i === 0 ? 'YOU' : CHARS[farRig.key].name);
+  const plRig = (i) => (i === 0 ? nearRig : farRig);
+  const plOnTable = (bs, g) => bs.filter((b) => b.on && b.id && plGroup(b.id) === g);
+  const plOnEight = (i, bs = pl.balls) => !!pl.groups[i] && !plOnTable(bs, pl.groups[i]).length;
+  const plPotted = (g) => (g ? 7 - plOnTable(pl.balls, g).length : 0);
+  // the balls player i may hit first
+  function plTargets(i, bs = pl.balls) {
+    const g = pl.groups[i], on = bs.filter((b) => b.on && b.id);
+    if (!g) return on.filter((b) => b.id !== 8);
+    const mine = on.filter((b) => plGroup(b.id) === g);
+    return mine.length ? mine : on.filter((b) => b.id === 8);
+  }
+  function plRack() {
+    // 8 in the middle, a solid and a stripe in the back corners, the rest shuffled
+    const rest = [1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15].sort(() => Math.random() - 0.5);
+    const corner = [rest.splice(rest.findIndex((id) => id < 8), 1)[0], rest.splice(rest.findIndex((id) => id > 8), 1)[0]];
+    if (Math.random() < 0.5) corner.reverse();
+    pl.balls = [{ id: 0, x: HEAD[0], z: HEAD[1] }];
+    const gap = 2 * PL.BR + 0.004;
+    for (let r = 0; r < 5; r++) for (let k = 0; k <= r; k++) {
+      const id = r === 2 && k === 1 ? 8 : r === 4 && k === 0 ? corner[0] : r === 4 && k === 4 ? corner[1] : rest.pop();
+      pl.balls.push({ id, x: FOOT[0] + r * gap * Math.cos(Math.PI / 6) + rand(-1, 1) * 1e-4, z: (k - r / 2) * gap + rand(-1, 1) * 1e-4 });
+    }
+    pl.balls.sort((a, b) => a.id - b.id);
+    for (const b of pl.balls) Object.assign(b, { vx: 0, vz: 0, on: true, sink: null, px: b.x, pz: b.z });
+  }
+  function plReset() { // a new rack: you break
+    plRack();
+    pl.players[0].isAI = mode !== 'game'; pl.players[1].isAI = true;
+    Object.assign(pl, { turn: 0, state: 'intro', timer: mode === 'game' ? 1.4 : 0.6, t: 0, groups: [null, null], isBreak: true, aimA: 0, pow: 0, keyPow: 0.5, charge: null, touch: null, plan: null, ev: null, winner: -1 });
+    phase = 'play';
+    if (mode === 'game') showBanner('BREAK!', 'var(--you)');
+    plHud();
+  }
+  function plHud() {
+    if (gameMode !== 'pool') return;
+    score[0] = plPotted(pl.groups[0]); score[1] = plPotted(pl.groups[1]); updateHUD();
+    const g = (i) => (pl.groups[i] ? pl.groups[i].toUpperCase() + 'S' : '');
+    const who = pl.turn === 0 ? 'YOUR' : CHARS[farRig.key].name + "'S";
+    const groups = pl.groups[0] ? `YOU: ${g(0)} · ${CHARS[farRig.key].name}: ${g(1)}` : 'OPEN TABLE';
+    const what = pl.isBreak ? 'BREAK' : plOnEight(pl.turn) ? 'SHOT ON THE 8' : 'SHOT';
+    $('.first-to').textContent = pl.state === 'over' ? 'GAME OVER' : `${groups} · ${who} ${what}`;
+  }
+  // a shot by whoever's turn it is: direction a, power 0-1
+  function plShoot(a, p) {
+    if (pl.state !== 'aim') return;
+    const cue = pl.balls[0], sp = plShotSpeed(clamp(p, 0, 1)) * (pl.isBreak ? PL.BREAK : 1);
+    cue.vx = Math.cos(a) * sp; cue.vz = Math.sin(a) * sp;
+    pl.from = { x: cue.x, z: cue.z };
+    pl.ev = plEv(); pl.state = 'roll'; pl.shotT = 0; pl.strikeT = 0.12; pl.lastA = a; pl.aimA = a; pl.pow = p; pl.charge = null; pl.plan = null;
+    plRig(pl.turn).pulse = 1;
+    Sfx.tone(220 + p * 260, 0.07, 'triangle', 0.09, 0.7);
+    if (dbg.stats) dbg.stats.plShots[pl.turn]++;
+  }
+  // after a shot: fouls, groups, whose turn, the 8
+  function plJudge() {
+    const i = pl.turn, ev = pl.ev, brk = pl.isBreak, g0 = pl.groups[i], onEight = plOnEight(i, pl.balls.map((b) => ({ ...b, on: b.on || ev.pots.some((q) => q.id === b.id) })));
+    const pots = ev.pots.map((q) => q.id), cue = pots.includes(0), eight = pots.includes(8), first = ev.first;
+    const legal = first > 0 && (g0 ? (onEight ? first === 8 : plGroup(first) === g0) : first !== 8 || brk);
+    const foul = cue || !legal;
+    pl.isBreak = false;
+    if (dbg.stats) { const st = dbg.stats; st.plPots[i] += pots.filter((id) => id && id !== 8).length; if (foul) st.plFouls[i]++; if (cue) st.plScratches[i]++; }
+    if (eight) {
+      const won = (brk || onEight) && !foul, who = i === 0 ? 'You' : plName(i);
+      plEnd(won ? i : 1 - i, won ? (brk ? '8 BALL ON THE BREAK!' : `${who} sank the 8 ball.`) : cue ? `${who} scratched on the 8.` : `${who} sank the 8 too early.`);
+      return;
+    }
+    const firstPot = !g0 && !foul && pots.find((id) => id && id !== 8);
+    if (firstPot) { // the first ball potted picks the groups
+      const g = plGroup(firstPot);
+      pl.groups[i] = g; pl.groups[1 - i] = g === 'solid' ? 'stripe' : 'solid';
+      if (mode === 'game') popText(i === 0 ? `YOU'RE ${g.toUpperCase()}S` : `${plName(i)} TAKES ${g.toUpperCase()}S`, i === 0 ? 'var(--you)' : 'var(--ai)');
+    }
+    const g = pl.groups[i], mine = pots.filter((id) => id && id !== 8 && plGroup(id) === g).length;
+    if (cue) { // back on the head spot (or just behind it)
+      const c = pl.balls[0];
+      let x = HEAD[0];
+      while (pl.balls.some((b) => b.on && b.id && Math.hypot(b.x - x, b.z - HEAD[1]) < 2 * PL.BR + 0.02) && x > -PL.L + PL.BR) x -= 0.1;
+      Object.assign(c, { on: true, sink: null, x, z: HEAD[1], vx: 0, vz: 0, px: x, pz: HEAD[1] });
+    }
+    let next = 1 - i;
+    if (foul) {
+      if (mode === 'game') {
+        popText(cue ? 'SCRATCH!' : first < 0 ? 'MISSED EVERYTHING: FOUL' : 'WRONG BALL: FOUL', '#ff5d6c');
+        if (i === 0) { Sfx.bad(); if (!plIsAI(0) && plIsAI(1)) say(2, pickLine('rival')); } // (AIs only taunt people)
+        if (cue) { plRig(i).shakeT = 0.8; slimeOn(plRig(i), CHARS[plRig(1 - i).key], i === 0); }
+      }
+    } else if (mine) {
+      next = i;
+      if (mode === 'game' && !firstPot) popText(plOnEight(i) ? 'ON THE 8!' : mine > 1 ? `${mine} BALLS!` : 'NICE!', i === 0 ? 'var(--you)' : 'var(--ai)');
+    }
+    if (next !== i) plRig(next).pulse = 1;
+    pl.turn = next; pl.state = 'switch'; pl.timer = mode === 'game' ? 0.9 : 0.4; pl.plan = null;
+    if (next === 0) plAimAtNearest();
+    plHud();
+  }
+  function plAimAtNearest() {
+    const c = pl.balls[0], t = plTargets(0).sort((a, b) => Math.hypot(a.x - c.x, a.z - c.z) - Math.hypot(b.x - c.x, b.z - c.z))[0];
+    if (t) pl.aimA = Math.atan2(t.z - c.z, t.x - c.x);
+    pl.pow = 0;
+  }
+  function plEnd(winner, why) {
+    pl.winner = winner; pl.why = why;
+    if (dbg.stats) dbg.stats.plGames.push({ winner, why });
+    if (mode !== 'game') { pl.state = 'rerack'; pl.timer = 1.2; return; } // the menu demo racks again
+    pl.state = 'over'; phase = 'over';
+    const winRig = plRig(winner), loseRig = plRig(1 - winner);
+    winRig.loop = true; loseRig.shakeT = 1.2;
+    slimeOn(loseRig, CHARS[winRig.key], winner === 1);
+    if (winner === 1 && !plIsAI(0)) say(2, pickLine('rival'));
+    $('#overArt').innerHTML = gridSVG(CHARS[winRig.key]);
+    $('#overTitle').textContent = CHARS[winRig.key].name + ' WINS!';
+    $('#overTitle').style.color = CHARS[winRig.key].css;
+    $('#overSub').textContent = `${why} · You potted ${plPotted(pl.groups[0])}, ${CHARS[farRig.key].name} ${plPotted(pl.groups[1])}.`;
+    $('#overCard').hidden = true;
+    $('#btnRematch').style.background = CHARS[youKey].css;
+    $('#over').hidden = false;
+    document.body.classList.remove('playing');
+    winner === 0 ? Sfx.win() : Sfx.lose();
+    plHud();
+  }
+
+  // ---------------------------------------------------------------- AI: try the shots with the same physics
+  // How good a shot's outcome is for player i (bs: the balls afterwards).
+  function plClearShots(bs, i) { // how many of i's balls the cue ball can hit straight on
+    const c = bs[0];
+    if (!c.on) return 0;
+    let n = 0;
+    for (const t of plTargets(i, bs)) {
+      const dx = t.x - c.x, dz = t.z - c.z, L2 = dx * dx + dz * dz;
+      if (!bs.some((b) => b.on && b !== c && b !== t && (() => { const u = clamp(((b.x - c.x) * dx + (b.z - c.z) * dz) / L2, 0, 1); return Math.hypot(c.x + u * dx - b.x, c.z + u * dz - b.z) < 2 * PL.BR; })())) n++;
+    }
+    return n;
+  }
+  function plRate(i, bs, ev, brk, onEight) {
+    const g = pl.groups[i], pots = ev.pots.map((q) => q.id), cue = pots.includes(0), first = ev.first;
+    const legal = first > 0 && (g ? (onEight ? first === 8 : plGroup(first) === g) : first !== 8 || brk);
+    const foul = cue || !legal;
+    if (pots.includes(8)) return (brk || onEight) && !foul ? 1e4 : -1e4;
+    const firstPot = pots.find((id) => id && id !== 8), mg = g || (firstPot ? plGroup(firstPot) : null);
+    let mine = 0, theirs = 0;
+    for (const id of pots) if (id && id !== 8) { if (plGroup(id) === mg) mine++; else theirs++; }
+    if (foul) return -100 - 10 * mine;
+    if (!mine) return -20 * theirs - 4 * plClearShots(bs, 1 - i); // no pot: leave them nothing
+    const saved = pl.groups[i]; if (!g) pl.groups[i] = mg;
+    const leave = plClearShots(bs, i);
+    pl.groups[i] = saved;
+    return 100 * mine - 20 * theirs + 6 * Math.min(leave, 3);
+  }
+  function plSimShot(a, p) {
+    const bs = pl.balls.map((b) => ({ id: b.id, x: b.x, z: b.z, vx: 0, vz: 0, on: b.on })), sp = plShotSpeed(p) * (pl.isBreak ? PL.BREAK : 1), ev = plEv();
+    bs[0].vx = Math.cos(a) * sp; bs[0].vz = Math.sin(a) * sp;
+    for (let k = 0, n = PL.SHOT_T / STEP; k < n; k++) if (!plStep(bs, STEP, ev)) break;
+    return plRate(pl.turn, bs, ev, pl.isBreak, plOnEight(pl.turn));
+  }
+  function plPlanStart() {
+    const c = pl.balls[0], cands = [];
+    if (pl.isBreak) {
+      const a = Math.atan2(FOOT[1] - c.z, FOOT[0] - c.x);
+      for (let k = -2; k <= 2; k++) cands.push([a + k * 0.003, 1]);
+    } else {
+      for (const t of plTargets(pl.turn)) for (const [px, pz] of PL_AIMS) {
+        const ox = px - t.x, oz = pz - t.z, od = Math.hypot(ox, oz);
+        const gx = t.x - (ox / od) * 2 * PL.BR, gz = t.z - (oz / od) * 2 * PL.BR; // the ghost ball: where the cue ball must be at contact
+        const cx = gx - c.x, cz = gz - c.z, cd = Math.hypot(cx, cz);
+        if (cd < 1e-3 || (cx * ox + cz * oz) / (cd * od) < 0.26) continue; // (cuts sharper than ~75 degrees don't work)
+        for (const p of [0.22, 0.38, 0.6]) cands.push([Math.atan2(cz, cx), p]);
+      }
+      for (let k = 0; k < 32; k++) for (const p of [0.3, 0.55]) cands.push([(k / 32) * Math.PI * 2, p]); // anything legal, or a safety
+    }
+    pl.plan = { cands, i: 0, results: [], stage: 0, t0: pl.t + (mode === 'game' ? 1.1 : 0.5) };
+  }
+  // a few shots per step so it never stalls a frame; true once it has picked one
+  function plPlanWork(n) {
+    const P = pl.plan;
+    for (let k = 0; k < n && P.i < P.cands.length; k++, P.i++) {
+      const [a, p, of] = P.cands[P.i];
+      const s = plSimShot(a, p);
+      if (of == null) P.results.push({ a, p, score: s, tries: [s] });
+      else P.results[of].tries.push(s);
+    }
+    if (P.i < P.cands.length) return false;
+    if (P.stage === 0) { // check the best few still work with a little aim and power error
+      P.stage = 1;
+      P.top = P.results.map((r, idx) => idx).sort((x, y) => P.results[y].score - P.results[x].score).slice(0, 5);
+      for (const idx of P.top) { const r = P.results[idx]; for (const [da, dp] of [[-0.004, 0], [0.004, 0], [0, -0.05], [0, 0.05]]) P.cands.push([r.a + da, clamp(r.p + dp, 0.05, 1), idx]); }
+      return false;
+    }
+    const D = PDIFF[pl.turn === 0 && dbg.autoPlayer ? 'hard' : curDiffKey()];
+    const sure = P.top.map((idx) => P.results[idx]).map((r) => ({ ...r, sure: r.tries.reduce((x, y) => x + y, 0) / r.tries.length })).sort((x, y) => y.sure - x.sure);
+    const c = sure[Math.floor(Math.random() * Math.min(D.pick, sure.length))];
+    const err = () => rand(-1, 1) + rand(-1, 1); // (a bit more often small than big)
+    P.choice = { a: c.a + err() * 0.5 * D.ang, p: clamp(c.p * (1 + err() * 0.5 * D.pow), 0.05, 1), score: c.sure };
+    return true;
+  }
+
+  // ---------------------------------------------------------------- step
+  function plStepGame(dt) {
+    simTime += dt;
+    pl.t += dt;
+    if (pl.state === 'intro' || pl.state === 'switch') { pl.timer -= dt; if (pl.timer <= 0) pl.state = 'aim'; return; }
+    if (pl.state === 'rerack') { pl.timer -= dt; if (pl.timer <= 0) plReset(); return; }
+    if (pl.state === 'aim') {
+      if (!plIsAI(pl.turn)) return; // waiting for your shot
+      if (!pl.plan) plPlanStart();
+      if (!pl.plan.choice) plPlanWork(pl.turn === 0 && dbg.autoPlayer ? 100000 : 2);
+      else if (pl.t >= pl.plan.t0) plShoot(pl.plan.choice.a, pl.plan.choice.p);
+      if (pl.plan && pl.plan.choice) { // the AI lines up its shot and draws the cue back
+        pl.aimA = lerpAngle(pl.aimA, pl.plan.choice.a, Math.min(1, dt * 8));
+        pl.pow = pl.plan.choice.p * clamp(1 - (pl.plan.t0 - pl.t) / 0.6, 0, 1);
+      }
+      return;
+    }
+    if (pl.state === 'roll') {
+      pl.shotT += dt;
+      const ev = pl.ev, pots = ev.pots.length;
+      ev.click = ev.rail = 0;
+      const moving = plStep(pl.balls, dt, ev);
+      if (ev.click > 0.4) Sfx.clack(Math.min(1, ev.click / 10));
+      if (ev.rail > 0.6) Sfx.wall();
+      if (ev.pots.length > pots) Sfx.pocket();
+      if (!moving || pl.shotT > PL.SHOT_T) { for (const b of pl.balls) b.vx = b.vz = 0; plJudge(); }
+      return;
+    }
+  }
+
+  // ---------------------------------------------------------------- input
+  const plCanAim = () => gameMode === 'pool' && mode === 'game' && !paused && pl.state === 'aim' && pl.turn === 0 && !plIsAI(0);
+  function plAimAt(e) {
+    const at = tableAt(e.clientX, e.clientY, new THREE.Vector3()), c = pl.balls[0];
+    if (at && Math.hypot(at.x - c.x, at.z - c.z) > 0.25) pl.aimA = Math.atan2(at.z - c.z, at.x - c.x);
+  }
+  canvas.addEventListener('pointerdown', (e) => {
+    if (!plCanAim()) return;
+    if (e.pointerType === 'touch') { pl.touch = e.pointerId; plAimAt(e); } // a finger on the table aims
+    else if (e.button === 0) { plAimAt(e); pl.charge = { id: e.pointerId, x0: e.clientX, y0: e.clientY, src: 'pull' }; pl.pow = 0; } // press and pull back
+  });
+  window.addEventListener('pointermove', (e) => {
+    if (gameMode !== 'pool') return;
+    const ch = pl.charge;
+    if (ch && e.pointerId === ch.id) {
+      pl.pow = ch.src === 'bar' ? clamp((e.clientY - ch.y0) / ($('#poolPow').clientHeight * 0.9), 0, 1) : clamp(Math.hypot(e.clientX - ch.x0, e.clientY - ch.y0) / AIM_PX(), 0, 1);
+      return;
+    }
+    if (!plCanAim() || (e.pointerType === 'touch' && pl.touch !== e.pointerId)) return;
+    plAimAt(e);
+  });
+  const plRelease = (e, cancel) => {
+    if (pl.touch === e.pointerId) pl.touch = null;
+    const ch = pl.charge;
+    if (!ch || e.pointerId !== ch.id) return;
+    const p = pl.pow;
+    pl.charge = null;
+    if (!cancel && p > 0.04 && plCanAim()) plShoot(pl.aimA, p);
+    else pl.pow = 0;
+  };
+  window.addEventListener('pointerup', (e) => plRelease(e, false));
+  window.addEventListener('pointercancel', (e) => plRelease(e, true));
+  $('#poolPow').addEventListener('pointerdown', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    if (!plCanAim()) return;
+    pl.charge = { id: e.pointerId, y0: e.clientY, src: 'bar' }; pl.pow = 0;
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) { /* fine without */ }
+  });
+  // keyboard: arrows aim (Shift: finely) and set the power, Enter shoots
+  window.addEventListener('keydown', (e) => {
+    if (!plCanAim()) return;
+    const k = e.key;
+    if (['ArrowLeft', 'a', 'A'].includes(k)) pl.aimA -= e.shiftKey ? 0.0025 : 0.012;
+    else if (['ArrowRight', 'd', 'D'].includes(k)) pl.aimA += e.shiftKey ? 0.0025 : 0.012;
+    else if (['ArrowUp', 'w', 'W'].includes(k)) pl.pow = pl.keyPow = clamp(pl.keyPow + 0.05, 0.05, 1);
+    else if (['ArrowDown', 's', 'S'].includes(k)) pl.pow = pl.keyPow = clamp(pl.keyPow - 0.05, 0.05, 1);
+    else if (k === 'Enter') { e.preventDefault(); plShoot(pl.aimA, pl.keyPow); return; }
+    else return;
+    e.preventDefault();
+  });
+
+  // ---------------------------------------------------------------- 3D table
+  // Neon pool hall: a glowing blue cloth, cushions with light strips, a dark lacquered frame with LED
+  // edges and diamonds, black pockets with glowing rims, a lamp overhead and numbered balls that roll.
+  const poolWorld = new THREE.Group(); poolWorld.visible = false; scene.add(poolWorld);
+  const PL_CSS = { 1: '#ffd21f', 2: '#2f6bff', 3: '#ff3b30', 4: '#a24bff', 5: '#ff8a1f', 6: '#18c45a', 7: '#b3122e', 8: '#121212' };
+  const plCss = (id) => (id === 0 ? '#f6f3ea' : PL_CSS[id > 8 ? id - 8 : id]);
+  const PL_GUIDE = Array.from({ length: 16 }, (_, id) => (id === 8 ? 0xbbbbbb : new THREE.Color(plCss(id)).getHex())); // (the 8's path in grey)
+  (() => {
+    const { L, W } = PL, FR = 0.62, CU = 0.2; // frame width, cushion depth
+    const cloth = canvasTex(1024, 512, (g, w, h) => {
+      g.fillStyle = '#123a9e'; g.fillRect(0, 0, w, h);
+      for (let i = 0; i < 26000; i++) { g.fillStyle = `rgba(${30 + Math.random() * 40},${70 + Math.random() * 60},${190 + Math.random() * 65},0.25)`; g.fillRect(Math.random() * w, Math.random() * h, 1.5, 1.5); }
+      const sx = (x) => ((x + L + CU) / (2 * (L + CU))) * w, sz = (z) => ((z + W + CU) / (2 * (W + CU))) * h;
+      g.strokeStyle = 'rgba(160,210,255,0.28)'; g.lineWidth = 2; g.beginPath(); g.moveTo(sx(HEAD[0]), sz(-W)); g.lineTo(sx(HEAD[0]), sz(W)); g.stroke(); // the head string
+      g.fillStyle = 'rgba(200,230,255,0.6)';
+      for (const [x, z] of [HEAD, FOOT]) { g.beginPath(); g.arc(sx(x), sz(z), 5, 0, Math.PI * 2); g.fill(); }
+    });
+    const clothMesh = new THREE.Mesh(new THREE.PlaneGeometry(2 * (L + CU), 2 * (W + CU)), new THREE.MeshStandardMaterial({ map: cloth, roughness: 0.95, emissive: 0xffffff, emissiveMap: cloth, emissiveIntensity: 0.32 }));
+    clothMesh.rotation.x = -Math.PI / 2; poolWorld.add(clothMesh);
+    const cushionMat = new THREE.MeshStandardMaterial({ color: 0x0f2f86, roughness: 0.8, emissive: 0x0a1f66, emissiveIntensity: 0.5 });
+    const stripMat = glowMat(NEON.cyan);
+    for (const s of PL_SEGS) { // a cushion behind each cushion line, with a light strip along its nose
+      const [x1, z1, x2, z2] = s, len = Math.hypot(x2 - x1, z2 - z1), mx = (x1 + x2) / 2, mz = (z1 + z2) / 2;
+      const nx = Math.sign(mx) * (x1 === x2 ? 1 : 0), nz = Math.sign(mz) * (z1 === z2 ? 1 : 0); // outwards
+      const holder = new THREE.Group(); holder.position.set(mx + nx * CU / 2, 0, mz + nz * CU / 2); holder.rotation.y = x1 === x2 ? Math.PI / 2 : 0; poolWorld.add(holder);
+      const body = new THREE.Mesh(new THREE.BoxGeometry(len, 0.2, CU), cushionMat); body.position.y = 0.1; holder.add(body);
+      const strip = new THREE.Mesh(new THREE.BoxGeometry(len, 0.025, 0.03), stripMat); strip.position.set(0, 0.2, (x1 === x2 ? -nx : -nz) * (CU / 2 - 0.02)); holder.add(strip);
+    }
+    // the frame: four lacquered rails (full length, so they run under the pockets' rims)
+    const frameMat = new THREE.MeshStandardMaterial({ color: 0x1b1036, roughness: 0.3, metalness: 0.5 });
+    const ledMat = glowMat(NEON.pink);
+    for (const s of [-1, 1]) {
+      const long = new THREE.Mesh(new THREE.BoxGeometry(2 * (L + CU + FR), 0.3, FR), frameMat); long.position.set(0, 0.08, s * (W + CU + FR / 2)); poolWorld.add(long);
+      const short = new THREE.Mesh(new THREE.BoxGeometry(FR, 0.3, 2 * (W + CU)), frameMat); short.position.set(s * (L + CU + FR / 2), 0.08, 0); poolWorld.add(short);
+      const ledL = new THREE.Mesh(new THREE.BoxGeometry(2 * (L + CU + FR), 0.04, 0.04), ledMat); ledL.position.set(0, 0.2, s * (W + CU + FR)); poolWorld.add(ledL);
+      const ledS = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 2 * (W + CU + FR)), ledMat); ledS.position.set(s * (L + CU + FR), 0.2, 0); poolWorld.add(ledS);
+      for (let k = 1; k < 8; k++) if (k !== 4) { const d = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 6), glowMat(0xffffff)); d.position.set(-L + (k / 4) * L, 0.235, s * (W + CU + FR / 2)); poolWorld.add(d); }
+      for (let k = 1; k < 4; k++) { const d = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 6), glowMat(0xffffff)); d.position.set(s * (L + CU + FR / 2), 0.235, -W + (k / 2) * W); poolWorld.add(d); }
+    }
+    // the body under the top, legs, and a glow on the floor
+    const apron = new THREE.Mesh(new THREE.BoxGeometry(2 * (L + CU + FR) - 0.3, 0.55, 2 * (W + CU + FR) - 0.3), frameMat); apron.position.y = -0.35; poolWorld.add(apron);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.22, -PL.FLOOR - 0.5, 12), frameMat); leg.position.set(sx * (L - 0.6), (PL.FLOOR - 0.6) / 2, sz * (W - 0.4)); poolWorld.add(leg);
+    }
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(140, 140), new THREE.MeshStandardMaterial({ color: 0x090c1e, roughness: 0.8, metalness: 0.25 }));
+    floor.rotation.x = -Math.PI / 2; floor.position.y = PL.FLOOR; poolWorld.add(floor);
+    const spill = new THREE.Mesh(new THREE.PlaneGeometry(2 * L + 6, 2 * W + 6), new THREE.MeshBasicMaterial({ map: GLOW, color: NEON.pink, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false }));
+    spill.rotation.x = -Math.PI / 2; spill.position.y = PL.FLOOR + 0.01; poolWorld.add(spill);
+    // pockets: black holes with a glowing rim (corner ones a little bigger)
+    PL_POCKETS.forEach(([x, z]) => {
+      const r = x ? 0.4 : 0.37;
+      const hole = new THREE.Mesh(new THREE.CircleGeometry(r, 32), new THREE.MeshBasicMaterial({ color: 0x000000 }));
+      hole.rotation.x = -Math.PI / 2; hole.position.set(x, 0.004, z); poolWorld.add(hole);
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(r, 0.03, 8, 32), glowMat(NEON.cyan));
+      rim.rotation.x = -Math.PI / 2; rim.position.set(x, 0.02, z); poolWorld.add(rim);
+    });
+    // the lamp's light
+    const lamp = new THREE.PointLight(0xfff2dd, 1.1, 30, 1.6); lamp.position.set(0, 6, 0); poolWorld.add(lamp);
+    const lamp2 = new THREE.PointLight(0x7fb0ff, 0.5, 30, 2); lamp2.position.set(-L * 0.6, 5, 0); poolWorld.add(lamp2);
+  })();
+  // the balls, their shadows, the cue and the aim guide
+  const plBallMeshes = Array.from({ length: 16 }, (_, id) => {
+    const tex = canvasTex(256, 128, (g, w, h) => {
+      const c = plCss(id);
+      g.fillStyle = id > 8 || id === 0 ? '#f6f3ea' : c; g.fillRect(0, 0, w, h);
+      if (id > 8) { g.fillStyle = c; g.fillRect(0, h * 0.27, w, h * 0.46); }
+      for (const cx of [w * 0.25, w * 0.75]) {
+        if (id === 0) { g.fillStyle = '#ff3b30'; g.beginPath(); g.arc(cx, h / 2, 5, 0, Math.PI * 2); g.fill(); continue; } // (dots so you can see it roll)
+        g.fillStyle = '#fbfaf4'; g.beginPath(); g.arc(cx, h / 2, 20, 0, Math.PI * 2); g.fill();
+        g.fillStyle = '#111'; g.font = 'bold 24px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(id), cx, h / 2 + 1);
+      }
+    });
+    const m = new THREE.Mesh(new THREE.SphereGeometry(PL.BR, 28, 18), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.22, metalness: 0.05, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.22 }));
+    m.rotation.set(rand(0, 6), rand(0, 6), rand(0, 6));
+    const sh = new THREE.Mesh(new THREE.CircleGeometry(PL.BR * 1.05, 16), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.45, depthWrite: false }));
+    sh.rotation.x = -Math.PI / 2;
+    poolWorld.add(m, sh);
+    return { m, sh };
+  });
+  const cue = new THREE.Group(), cueTilt = new THREE.Group(); cue.add(cueTilt); poolWorld.add(cue);
+  const cueWrapMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.5, roughness: 0.4 });
+  (() => { // tip at the origin, butt along -x
+    const part = (r1, r2, len, x0, mat) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(r1, r2, len, 14), mat); m.rotation.z = Math.PI / 2; m.position.x = x0 - len / 2; cueTilt.add(m); };
+    part(0.03, 0.03, 0.04, 0, new THREE.MeshStandardMaterial({ color: 0x3a7bff, roughness: 0.6 }));        // tip
+    part(0.032, 0.032, 0.12, -0.04, new THREE.MeshStandardMaterial({ color: 0xf4f4f4, roughness: 0.3 }));  // ferrule
+    part(0.034, 0.05, 3.0, -0.16, new THREE.MeshStandardMaterial({ color: 0xe6cf9e, roughness: 0.45 }));   // shaft
+    part(0.05, 0.062, 0.9, -3.16, cueWrapMat);                                                              // wrap (the shooter's colour)
+    part(0.062, 0.07, 0.5, -4.06, new THREE.MeshStandardMaterial({ color: 0x15102a, roughness: 0.3, metalness: 0.4 })); // butt
+  })();
+  cueTilt.rotation.z = -0.1; // the butt rides up over the rail
+  const plDots = Array.from({ length: 40 }, () => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 })); m.visible = false; poolWorld.add(m); return m; });
+  const plGhost = new THREE.Mesh(new THREE.RingGeometry(PL.BR * 0.88, PL.BR, 32), new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.9 }));
+  plGhost.rotation.x = -Math.PI / 2; plGhost.visible = false; poolWorld.add(plGhost);
+  // where a shot along a goes first: the ghost ball, the ball it hits, and where both head
+  function plGuide(a) {
+    const c = pl.balls[0], dx = Math.cos(a), dz = Math.sin(a), R2 = 4 * PL.BR * PL.BR;
+    let t = 1e9, hit = null;
+    for (const b of pl.balls) {
+      if (!b.on || !b.id) continue;
+      const ox = b.x - c.x, oz = b.z - c.z, along = ox * dx + oz * dz, d2 = ox * ox + oz * oz - along * along;
+      if (along <= 0 || d2 > R2) continue;
+      const tt = along - Math.sqrt(R2 - d2);
+      if (tt < t) { t = tt; hit = b; }
+    }
+    const lim = (p, d, m) => (d > 1e-6 ? (m - p) / d : d < -1e-6 ? (-m - p) / d : 1e9);
+    const tw = Math.min(lim(c.x, dx, PL.L - PL.BR), lim(c.z, dz, PL.W - PL.BR));
+    if (tw < t) { t = tw; hit = null; }
+    const gx = c.x + dx * t, gz = c.z + dz * t;
+    if (!hit) return { gx, gz, hit };
+    const nx = (hit.x - gx) / (2 * PL.BR), nz = (hit.z - gz) / (2 * PL.BR), dn = dx * nx + dz * nz;
+    return { gx, gz, hit, nx, nz, tx: dx - dn * nx, tz: dz - dn * nz, dn };
+  }
+  // the camera: from the long side on wide screens, from the end on tall ones, looking down steeply
+  function plFitCamera(snap) {
+    const a = camera.aspect, port = a < 1, el = ((port ? 64 : 57) * Math.PI) / 180;
+    // (tall screens keep the bottom free for the POWER bar; wide ones keep its strip on the right)
+    const hx = port ? 1 : 0, hz = port ? 0 : 1, look = new THREE.Vector3(port ? 0.5 : 0.45, 0, port ? 0 : 0.6);
+    const ex = PL.L + 0.85, ez = PL.W + 0.85, pts = [];
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) pts.push(new THREE.Vector3(sx * ex, 0.2, sz * ez));
+    const probe = new THREE.PerspectiveCamera(camera.fov, a, 0.1, 200);
+    let d = 6;
+    for (; d < 90; d += 0.25) {
+      probe.position.set(look.x + hx * Math.cos(el) * d, Math.sin(el) * d, look.z + hz * Math.cos(el) * d);
+      probe.lookAt(look); probe.updateMatrixWorld();
+      if (pts.every((pt) => { fitTmp.copy(pt).project(probe); return fitTmp.x >= -0.96 && fitTmp.x <= (port ? 0.96 : 0.84) && fitTmp.y >= (port ? -0.52 : -0.84) && fitTmp.y <= (port ? 0.66 : 0.7); })) break;
+    }
+    pl.cam = { pos: probe.position.clone(), look, port };
+    if (snap) { camBase.pos.copy(pl.cam.pos); camBase.look.copy(look); refCam.position.copy(camBase.pos); refCam.lookAt(look); refCam.updateMatrixWorld(); }
+  }
+  const _plQ = new THREE.Quaternion(), _plAxis = new THREE.Vector3();
+  function plRender(dt) {
+    if (!pl.cam) plFitCamera(true);
+    const k = 1 - Math.exp(-dt * 4);
+    camBase.pos.lerp(pl.cam.pos, k); camBase.look.lerp(pl.cam.look, k);
+    refCam.position.copy(camBase.pos); refCam.lookAt(camBase.look); refCam.updateMatrixWorld();
+    // the balls roll (a little rotation per distance) and drop into the pockets
+    for (const b of pl.balls) {
+      const { m, sh } = plBallMeshes[b.id];
+      if (b.on) {
+        const dx = b.x - b.px, dz = b.z - b.pz, d = Math.hypot(dx, dz);
+        if (d > 1e-5 && d < 2) { _plAxis.set(dz / d, 0, -dx / d); _plQ.setFromAxisAngle(_plAxis, d / PL.BR); m.quaternion.premultiply(_plQ); }
+        b.px = b.x; b.pz = b.z;
+        m.visible = sh.visible = true;
+        m.position.set(b.x, PL.BR, b.z); m.scale.setScalar(1);
+        sh.position.set(b.x + 0.05, 0.006, b.z + 0.05);
+      } else if (b.sink && b.sink.t < 0.45) {
+        const s = b.sink, [px, pz] = PL_POCKETS[s.pk], f = Math.min(1, (s.t += dt) / 0.45);
+        m.visible = true; sh.visible = false;
+        m.position.set(s.x + (px - s.x) * Math.min(1, f * 2), PL.BR - f * 0.5, s.z + (pz - s.z) * Math.min(1, f * 2));
+        m.scale.setScalar(1 - f * 0.3);
+      } else m.visible = sh.visible = false;
+    }
+    // the aim guide (yours, or the AI lining up) and the cue
+    const c = pl.balls[0], aiming = pl.state === 'aim' && c.on;
+    const G = aiming ? plGuide(pl.aimA) : null;
+    let n = 0;
+    const dot = (x, z, color) => { const m = plDots[n++]; if (!m) return; m.visible = true; m.position.set(x, 0.035, z); m.material.color.setHex(color); };
+    if (G) {
+      const len = Math.hypot(G.gx - c.x, G.gz - c.z), wrong = G.hit && !plTargets(pl.turn).includes(G.hit);
+      for (let d = PL.BR * 1.6; d < len - PL.BR && n < 26; d += 0.28) dot(c.x + Math.cos(pl.aimA) * d, c.z + Math.sin(pl.aimA) * d, 0xffffff);
+      plGhost.visible = true; plGhost.position.set(G.gx, 0.03, G.gz); plGhost.material.color.setHex(wrong ? 0xff5d6c : 0xffffff);
+      if (G.hit) {
+        for (let i = 1; i <= 7; i++) dot(G.hit.x + G.nx * i * 0.22 * (0.4 + G.dn), G.hit.z + G.nz * i * 0.22 * (0.4 + G.dn), PL_GUIDE[G.hit.id]); // where it goes
+        for (let i = 1; i <= 3; i++) dot(G.gx + G.tx * i * 0.2, G.gz + G.tz * i * 0.2, 0x9fd3ff); // where the cue ball glances off
+      }
+    } else plGhost.visible = false;
+    for (let i = n; i < plDots.length; i++) plDots[i].visible = false;
+    // the cue: draws back with the power, snaps through on the shot, then fades out of the way
+    pl.strikeT = Math.max(0, pl.strikeT - dt);
+    const ca = aiming ? pl.aimA : pl.lastA, showCue = c.on && (aiming || (pl.state === 'roll' && pl.shotT < 0.45));
+    cue.visible = showCue;
+    if (showCue) {
+      const gap = aiming ? 0.05 + pl.pow * 1.1 + (pl.pow ? 0 : Math.sin(time * 3) * 0.03) : pl.strikeT > 0 ? (pl.strikeT / 0.12) * 0.3 : 0.02;
+      const at = aiming || !pl.from ? c : pl.from; // (after the shot it stays where it struck)
+      cue.position.set(at.x - Math.cos(ca) * (PL.BR + gap), PL.BR, at.z - Math.sin(ca) * (PL.BR + gap));
+      cue.rotation.set(0, -ca, 0);
+      cueWrapMat.color.setHex(CHARS[plRig(pl.turn).key].hex); cueWrapMat.emissive.setHex(CHARS[plRig(pl.turn).key].hex);
+    }
+    // the characters: the shooter stands at the end of the cue, the other one watches from the far side
+    // (from whichever spot there is furthest from the shooter). Nobody stands between the camera and
+    // the table: a shooter who would is moved round to the far side.
+    const port = pl.cam && pl.cam.port, ex = PL.L + 1.25, ez = PL.W + 1.25, mx = -Math.cos(ca), mz = -Math.sin(ca);
+    const st = Math.min(mx > 1e-6 ? (ex - c.x) / mx : mx < -1e-6 ? (-ex - c.x) / mx : 1e9, mz > 1e-6 ? (ez - c.z) / mz : mz < -1e-6 ? (-ez - c.z) / mz : 1e9);
+    let shooter = [c.x + mx * st, c.z + mz * st];
+    if (port && shooter[0] > PL.L) shooter = [-ex, clamp(shooter[1], -PL.W, PL.W)];
+    else if (!port && shooter[1] > PL.W) shooter = [clamp(shooter[0], -PL.L, PL.L), -ez];
+    const spots = port ? [[-ex, 2.6], [-ex, -2.6]] : [[-3.4, -ez], [3.4, -ez]];
+    const watch = spots.reduce((best, q) => (Math.hypot(q[0] - shooter[0], q[1] - shooter[1]) > Math.hypot(best[0] - shooter[0], best[1] - shooter[1]) ? q : best));
+    for (let i = 0; i < 2; i++) {
+      const rig = plRig(i), mine = i === pl.turn && pl.state !== 'over';
+      const [px, pz] = mine ? shooter : watch;
+      animRig(rig, { x: px, vx: 0 }, dt);
+      rig.outer.position.z += (pz - rig.outer.position.z) * Math.min(1, dt * 10);
+      rig.outer.position.y = PL.FLOOR;
+      rig.outer.rotation.y = Math.atan2(camBase.pos.x - rig.outer.position.x, camBase.pos.z - rig.outer.position.z); // face the camera
+    }
+    // the power bar (only while you aim)
+    const can = plCanAim();
+    if (pl.barShown !== can) { pl.barShown = can; $('#poolPow').hidden = !can; }
+    if (can) $('#poolPowFill').style.height = `${Math.round(pl.pow * 100)}%`;
+  }
+
   // ---------------------------------------------------------------- visuals
   function animRig(rig, pad, dt) {
     rig.x += (pad.x - rig.x) * Math.min(1, dt * 10);
@@ -3805,8 +4409,9 @@
     }
     slimes.forEach((sl) => updateSlime(sl, dt));
     updateBubbles();
-    const hockey = gameMode === 'hockey', volley = gameMode === 'volley', golf = gameMode === 'golf';
+    const hockey = gameMode === 'hockey', volley = gameMode === 'volley', golf = gameMode === 'golf', pool = gameMode === 'pool';
     if (golf) gfRender(dt);
+    else if (pool) plRender(dt);
     else {
     animRig(nearRig, hockey ? MP : volley ? VP : P, dt);
     animRig(farRig, hockey ? MA : volley ? VA : A, dt);
@@ -3816,7 +4421,8 @@
     if (volley) vbRender(dt);
 
     // ball (Ping Pong only)
-    if (!volley && !golf) { // (Volleyball and mini golf draw their own balls)
+    if (pool) { ballMesh.visible = ballGlow.visible = shadow.visible = false; ballLight.intensity = 0; trail.forEach((m) => { m.visible = false; }); }
+    if (!volley && !golf && !pool) { // (Volleyball, mini golf and pool draw their own balls)
     const showBall = !hockey && phase !== 'over' && Math.abs(ball.z) < HL + 4;
     let by = phase === 'serve' ? ballY(0) + Math.sin(time * 6) * 0.08 : ballY(ball.z);
     ballMesh.visible = ballGlow.visible = showBall && by > -2.8;
@@ -3847,7 +4453,7 @@
 
     // camera
     shake = Math.max(0, shake - dt * 1.6);
-    const sway = golf ? 0 : mode === 'game' ? (hockey ? MP.x : volley ? VP.x : P.x) * 0.1 : Math.sin(time * 0.25) * 1.2;
+    const sway = golf || pool ? 0 : mode === 'game' ? (hockey ? MP.x : volley ? VP.x : P.x) * 0.1 : Math.sin(time * 0.25) * 1.2;
     camera.position.set(
       camBase.pos.x + sway + (Math.random() - 0.5) * shake * 0.5,
       camBase.pos.y + (Math.random() - 0.5) * shake * 0.5,
@@ -3897,6 +4503,7 @@
     }
     refCam.position.copy(camBase.pos); refCam.lookAt(camBase.look); refCam.updateMatrixWorld();
     if (gameMode === 'golf') { gfFitCamera(false); gfResizeFX(); }
+    if (gameMode === 'pool') plFitCamera(true);
   }
   window.addEventListener('resize', resize);
   resize();
@@ -3965,7 +4572,7 @@
 
   // Spin: a click / trackpad tap / touch on the table (not on buttons), or Shift.
   function tapSpin() {
-    if (gameMode === 'golf') return;
+    if (gameMode === 'golf' || gameMode === 'pool') return;
     if (net.role === 'guest' && netLive() && gameMode !== 'hockey' && phase === 'play') netSend('spin', {}, true); // the host runs the game
     if (gameMode === 'volley') { vbSpikeTap(); return; }
     if (gameMode === 'hockey' || mode !== 'game' || paused || phase !== 'play') return;
@@ -4200,6 +4807,7 @@
 
   // ---------------------------------------------------------------- host
   async function netHost() {
+    if (gameMode === 'pool') return; // (pool is against the AI only, for now)
     netReset();
     net.role = 'host';
     net.duo = duo;
@@ -4439,7 +5047,7 @@
     ? Math.min(...pad.hist.map((h) => Math.abs(xc - h[1])))
     : Math.abs(xc - pad.x));
   const r3 = (v) => Math.round(v * 1000) / 1000;
-  const MODE_NAMES = { pong: 'PING PONG', hockey: 'AIR HOCKEY', volley: 'VOLLEYBALL', golf: 'MINI GOLF' };
+  const MODE_NAMES = { pong: 'PING PONG', hockey: 'AIR HOCKEY', volley: 'VOLLEYBALL', golf: 'MINI GOLF', pool: 'POOL' };
   function netSnapshot() {
     const s = { m: gameMode, ph: phase, sc: [...score], st: r3(serveT) };
     if (gameMode === 'golf') { // the friend is player 2 (turn 1)
@@ -4868,6 +5476,46 @@
         if (!opts.keep) toMenu();
         return out;
       },
+      // Headless pool: both sides played by the AI (yours as HARD unless opts.diff). Checks no ball ever gets
+      // through a cushion, overlaps another or goes NaN.
+      psim(seconds, opts = {}) {
+        setGameMode('pool'); toMenu();
+        dbg.diff = opts.diff || null;
+        dbg.stats = { ...freshStats(), plShots: [0, 0], plPots: [0, 0], plFouls: [0, 0], plScratches: [0, 0], plGames: [], plEscaped: 0, plOverlap: 0, plNaN: 0, plBad: [] };
+        if (opts.game) { startGame(); dbg.autoPlayer = true; }
+        const t0 = performance.now();
+        for (let i = 0, n = Math.round(seconds / STEP); i < n && phase !== 'over'; i++) {
+          step(STEP);
+          const st = dbg.stats, on = pl.balls.filter((b) => b.on);
+          for (const b of on) {
+            if (!Number.isFinite(b.x) || !Number.isFinite(b.z)) st.plNaN++;
+            const inMouth = PL_POCKETS.some(([x, z]) => Math.hypot(b.x - x, b.z - z) < 0.75);
+            if (!inMouth && (Math.abs(b.x) > PL.L - PL.BR + 0.01 || Math.abs(b.z) > PL.W - PL.BR + 0.01)) { st.plEscaped++; if (st.plBad.length < 5) st.plBad.push(['escaped', pl.state, b.id, b.x, b.z, b.vx, b.vz]); }
+          }
+          if (pl.state === 'aim') for (let a = 0; a < on.length; a++) for (let b = a + 1; b < on.length; b++) {
+            const d = Math.hypot(on[a].x - on[b].x, on[a].z - on[b].z);
+            if (d < 2 * PL.BR - 0.01) { st.plOverlap++; if (st.plBad.length < 5) st.plBad.push(['overlap', on[a].id, on[b].id, d, on[a].x, on[a].z]); }
+          }
+        }
+        const out = { ...dbg.stats, ms: performance.now() - t0, over: phase === 'over', winner: pl.winner, why: pl.why };
+        Object.assign(dbg, { diff: null, stats: null, autoPlayer: false });
+        if (!opts.keep) toMenu();
+        return out;
+      },
+      pool: () => ({ state: pl.state, turn: pl.turn, groups: [...pl.groups], isBreak: pl.isBreak, aim: pl.aimA, pow: pl.pow, winner: pl.winner, why: pl.why || '',
+        balls: pl.balls.map((b) => ({ id: b.id, x: b.x, z: b.z, on: b.on })), score: [...score], hud: $('.first-to').textContent, bar: !$('#poolPow').hidden,
+        cam: camBase.pos.toArray(), look: camBase.look.toArray(), cue: cue.visible, guide: plGhost.visible, ghost: [plGhost.position.x, plGhost.position.z], dots: plDots.filter((m) => m.visible).length }),
+      // put the balls where a test wants them: [[id, x, z], ...] (the rest are off the table)
+      poolSet(list, opts = {}) {
+        for (const b of pl.balls) { const q = list.find((e) => e[0] === b.id); Object.assign(b, q ? { on: true, x: q[1], z: q[2], px: q[1], pz: q[2] } : { on: false }, { vx: 0, vz: 0, sink: null }); }
+        Object.assign(pl, { state: 'aim', isBreak: false, plan: null, charge: null, pow: 0, turn: 0, groups: [null, null] }, opts);
+        plHud();
+      },
+      poolShoot(a, p) { plShoot(a, p); },
+      // run until the balls have stopped and the turn has been decided
+      poolSettle(maxSeconds = 30) { for (let i = 0, n = Math.round(maxSeconds / STEP); i < n && (pl.state === 'roll' || pl.state === 'switch' || pl.state === 'intro'); i++) step(STEP); return pl.state; },
+      // where a table point lands on screen (CSS pixels), for pointer tests
+      poolScreen(x, z) { fitTmp.set(x, 0, z).project(refCam); return [(fitTmp.x + 1) / 2 * window.innerWidth, (1 - fitTmp.y) / 2 * window.innerHeight]; },
       golf: () => ({ hole: gf.hole, turn: gf.turn, state: gf.state, ball: { ...gf.ball, special: undefined, after: undefined }, cur: gf.cur, strokes: gf.strokes, aim: gf.aim, t: gf.t,
         holes: HOLES.map((h) => ({ name: h.name, par: h.par, tee: h.tee, cup: h.cup })), totals: [gfTotal(0), gfTotal(1)], par: PAR_TOTAL,
         cam: camBase.pos.toArray(), look: camBase.look.toArray(), view: gf.view, pathDir: gf.pathDir, bloom: !!golfFX.composer && !golfFX.off }),

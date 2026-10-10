@@ -195,6 +195,16 @@ test("Pixel Pong has a 9-hole mini golf mode", () => {
   assert.match(pongDetailSource, /mínígolf/);
 });
 
+test("Pixel Pong has an 8-ball pool mode", () => {
+  assert.match(staticPongSource, /data-mode="pool"/);
+  assert.match(staticPongSource, /function plStep\(bs, dt, ev\)/);
+  assert.match(staticPongSource, /function plJudge\(\)/);
+  assert.match(staticPongSource, /id="hintPool"/);
+  assert.match(staticPongSource, /id="poolPow"/);
+  assert.match(projectsSource, /pool/);
+  assert.match(pongDetailSource, /pool/);
+});
+
 test("Pixel Pong AIs trash talk", () => {
   assert.match(staticPongSource, /id="bubbles"/);
   assert.match(staticPongSource, /Þetta verður svo EZ😭/);

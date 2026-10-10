@@ -39,7 +39,7 @@ export default async function PixelPongPage({ searchParams }: { searchParams: Pr
           <p className="hidden max-w-2xl items-start gap-3 text-xs leading-5 text-white/52 sm:flex sm:text-right">
             <Mouse className="mt-0.5 size-4 shrink-0 text-mint" />
             <span>
-              Veldu borðtennis, lofthokkí, blak eða 9 holu neon-mínígolf, einn á móti einum eða tveir á móti tveimur með gervigreindar-liðsfélaga, á móti gervigreind eða vini á netinu. Hreyfðu músina til að stýra spaðanum eða kylfunni. Smelltu rétt þegar boltinn kemur að spaðanum til að gefa honum snúning, og þrír snúningar í röð gefa boost. Í blaki ertu sjálfur leikmaðurinn: hlauptu undir boltann til að senda hann til baka og smelltu til að stökkva og smassa við netið. <kbd>Bil</kbd> setur leikinn á pásu og <kbd>M</kbd> slekkur á hljóði.
+              Veldu borðtennis, lofthokkí, blak, 9 holu neon-mínígolf eða pool (8-ball), einn á móti einum eða tveir á móti tveimur með gervigreindar-liðsfélaga, á móti gervigreind eða vini á netinu. Hreyfðu músina til að stýra spaðanum eða kylfunni. Smelltu rétt þegar boltinn kemur að spaðanum til að gefa honum snúning, og þrír snúningar í röð gefa boost. Í blaki ertu sjálfur leikmaðurinn: hlauptu undir boltann til að senda hann til baka og smelltu til að stökkva og smassa við netið. Í pool miðarðu með músinni og ýtir, dregur til baka og sleppir til að skjóta. <kbd>Bil</kbd> setur leikinn á pásu og <kbd>M</kbd> slekkur á hljóði.
             </span>
           </p>
         </div>
